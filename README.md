@@ -1,2 +1,3 @@
-# laser
-Light Agent Spatial modeling for ERadication
+# LASER
+
+**L**ight **A**gent **S**patial modeling for **ER**adication
