@@ -23,6 +23,7 @@
     - spatial connectivity
       - individual agent migration (genetics - vector _and_ parasite)
       - NxN matrix connectivity, contagion transport
+      - - multi-level (meso-scale?) connectivity (communities of communities)
     - community transmission dynamics
       - agents
       - cohorts
