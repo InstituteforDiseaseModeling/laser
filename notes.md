@@ -45,3 +45,10 @@
 * Documentation
 * Scenarios and examples
 * Test suite
+
+## Other
+
+* multiple independent species, e.g. humans, mosquitos, dogs, ...
+* multiple independent transmission networks, intra-mural and inter-state
+* event based modeling, e.g. draw for non-disease death date
+* state machine based modeling
