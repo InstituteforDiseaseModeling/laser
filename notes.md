@@ -52,3 +52,9 @@
 * multiple independent transmission networks, intra-mural and inter-state
 * event based modeling, e.g. draw for non-disease death date
 * state machine based modeling
+
+----
+
+* toolset vs. builtin - e.g. is building network a tool in the toolset or a function in the model setup?
+* relationship w/calibration
+* 
