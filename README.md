@@ -69,7 +69,12 @@ Are the individual communities well-mixed or should we also provide for explicit
 ## Technology
 
 - Python
-- NumPy / NUMBA / ¿PyCUDA?
+- high performance computing:
+  - [NumPy](https://numpy.org/)
+  - [NUMBA](https://numba.pydata.org/)
+  - [CuPy](https://cupy.dev/)
+  - [PyCUDA](https://documen.tician.de/pycuda/)
+  - [mlx](https://github.com/ml-explore/mlx)
 - native code
   - C++ (somewhat awkward interop with Python, but potentially accessible from other technologies, e.g., R)
   - Rust ([PyO3](https://github.com/PyO3/pyo3) is quite nice, but requires getting up to speed on Rust 😳)
