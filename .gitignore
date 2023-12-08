@@ -72,3 +72,9 @@ docs/_build
 
 # Mypy Cache
 .mypy_cache/
+
+# Testing
+tests/*.csv
+tests/*.xlsx
+tmp/*
+data/*

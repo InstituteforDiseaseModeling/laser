@@ -32,7 +32,7 @@ def test_sir():
     ITIMER_TYPE_NB = nb.uint8
 
     print(f"Creating a well-mixed SIR community with {POP_SIZE:_} individuals.")
-    community = abc(POP_SIZE)
+    community = abc(POP_SIZE, **{"beta": BETA})
     community.add_property("dob", dtype=DOB_TYPE_NP, default=0)
     community.add_property("susceptibility", dtype=SUSCEPTIBILITY_TYPE_NP, default=1.0)
     community.add_property("itimer", dtype=ITIMER_TYPE_NP, default=0)
@@ -85,7 +85,7 @@ def test_sir():
         # community.susceptibility[infected] = 0.0
         # community.itimer[infected] = np.random.normal(MEAN_INF, STD_INF, size=infected.sum()).round().astype(ITIMER_TYPE_NP)
 
-        transmission_inner(community.susceptibility, community.itimer, community.count)
+        transmission_inner(community.susceptibility, community.itimer, community.count, community.beta)
 
         return
 
