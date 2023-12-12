@@ -3,16 +3,23 @@ import random
 import csv
 
 # Globals! (not really)
-conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
+#conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
+conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
 #pop = 1000000
-pop = int(2e5)
-num_nodes = 5
+pop = int(1e6)
+num_nodes = 20
 nodes = [ x for x in range(num_nodes) ]
+duration = 200 # 1000
+import pdb
 
 def get_node_ids():
     import numpy as np
 
+    array = []
+    for node in nodes:
+        array.extend( np.ones(node+1)*(node) )
     # Generate the array based on the specified conditions
+    """
     array = np.concatenate([
         np.zeros(1),      # 0s
         np.ones(2),        # 1s
@@ -20,6 +27,7 @@ def get_node_ids():
         3 * np.ones(4),   # 3s
         4 * np.ones(5)    # 4s
     ])
+    """
 
     array = np.tile(array, (pop + len(array) - 1) // len(array))[:pop]
 
@@ -31,8 +39,6 @@ def get_node_ids():
 
     # Print the first few elements as an example
     print(array[:20])
-    import pdb
-    pdb.set_trace()
 
     return array
 
@@ -69,17 +75,28 @@ def initialize_database():
 def report( timestep, csvwriter ):
     cursor = conn.cursor()
     # Count agents in each state
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected = 0 AND NOT immunity GROUP BY node')
-    susceptible_counts = cursor.fetchall()
-    susceptible_counts = {idx: values[1] for idx, values in enumerate(susceptible_counts)}
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE NOT infected AND NOT immunity GROUP BY node')
+    # this seems slow and clunky
+    
+    susceptible_counts_db = cursor.fetchall()
+    susceptible_counts = {values[0]: values[1] for idx, values in enumerate(susceptible_counts_db)}
+    for node in nodes:
+        if node not in susceptible_counts:
+            susceptible_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected = 1 GROUP BY node')
-    infected_counts = cursor.fetchall()
-    infected_counts = {idx: values[1] for idx, values in enumerate(infected_counts)}
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected GROUP BY node')
+    infected_counts_db = cursor.fetchall()
+    infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
+    for node in nodes:
+        if node not in infected_counts:
+            infected_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity = 1 GROUP BY node')
-    recovered_counts = cursor.fetchall()
-    recovered_counts = {idx: values[1] for idx, values in enumerate(recovered_counts)}
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity GROUP BY node')
+    recovered_counts_db = cursor.fetchall()
+    recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
+    for node in nodes:
+        if node not in recovered_counts:
+            recovered_counts[node] = 0
 
     # Write the counts to the CSV file
     print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
@@ -114,7 +131,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             # infected=0, immunity=1, immunity_timer=30-ish
             cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
             cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
+            cursor.execute( "UPDATE agents SET infected=False, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=True AND infection_timer=0" )
         progress_infections()
 
         # Update immune agents
@@ -147,17 +164,18 @@ def run_simulation(conn, csvwriter, num_timesteps):
 
             #print( f"{new_infections} new infections based on foi of {foi} and susceptible cout of {currently_sus}" )
 
-            # Step 5: Update the infected flag for NEW susceptibles
+            # Step 5: Update the infected flag for NEW infectees
             cursor.execute('''
                 UPDATE agents
-                SET infected = 1
+                SET infected = True
                 WHERE id IN (SELECT id FROM agents WHERE NOT infected AND NOT immunity AND node=:node ORDER BY RANDOM() LIMIT :new_infections)
             ''', {'new_infections': new_infections, 'node': node })
+            #print( f"{new_infections} new infections in node {node}." )
 
         for node in nodes:
             handle_transmission( node )
             # handle new infectees, set new infection timer
-            cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
+            cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
 
         conn.commit()
         #print( f"{cursor.execute('select * from agents where infected limit 25').fetchall()}".replace("), ",")\n") )
@@ -177,5 +195,5 @@ if __name__ == "__main__":
 
 
     # Run the simulation for 1000 timesteps
-    run_simulation(connection, csvwriter, num_timesteps=1000 )
+    run_simulation(connection, csvwriter, num_timesteps=duration )
 
