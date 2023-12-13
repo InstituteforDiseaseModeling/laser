@@ -58,6 +58,19 @@
 * toolset vs. builtin - e.g. is building network a tool in the toolset or a function in the model setup?
 * relationship w/calibration
 
+## Edward on Model Architecture and Light Agent Spatial Models
+
+https://wiki.idmod.org/pages/viewpage.action?pageId=195791084
+
+> The spatial dimension is critical in modeling transmission from endemic conditions through to the last cases before elimination. In some cases, it's also important to explicitly model arbitrary details of individuals, their behavior, and the combinations of interventions they have ("heavy agent"). In other cases, questions are more about meta-population dynamics and village-scale variation in connectivity, vaccination, surveillance, etc. and more simplistic representations of individual state ("light agent") can improve performance, configurability, interpretability. We expect to scope + explore some of the design considerations within the Architecture Function, and we would expect the Advanced Spatial Modeling cluster to drive a lot of the problem-space assessment as well as the engineering work.
+
+* usability (API, syntax, portability, installation+configuration)
+* performance (algorithms, approximations)
+* generalizability (code design)
+* scientific validity (context relevance, dynamical system behavior)
+
+* calibration as a 1st class consideration
+
 ## Technicalities
 
 |Minimal Payload|bytes|
