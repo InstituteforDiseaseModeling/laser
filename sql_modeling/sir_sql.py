@@ -1,18 +1,11 @@
 import sqlite3
 import random
 import csv
+from settings import * # local file
 
 # Globals! (not really)
 conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
 #conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
-#pop = 1000000
-pop = int(1e5)
-num_nodes = 5
-nodes = [ x for x in range(num_nodes) ]
-duration = 365 # 1000
-#base_infectivity = 0.00001
-base_infectivity = 0.0001
-
 def get_node_ids():
     import numpy as np
 
