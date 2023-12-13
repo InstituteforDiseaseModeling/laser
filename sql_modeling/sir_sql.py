@@ -6,12 +6,12 @@ import csv
 conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
 #conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
 #pop = 1000000
-pop = int(5e5)
-num_nodes = 200
+pop = int(1e5)
+num_nodes = 5
 nodes = [ x for x in range(num_nodes) ]
-duration = 100 # 1000
+duration = 365 # 1000
 #base_infectivity = 0.00001
-base_infectivity = 0.001
+base_infectivity = 0.0001
 
 def get_node_ids():
     import numpy as np
@@ -72,7 +72,7 @@ def initialize_database():
     cursor.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
-    cursor.execute('UPDATE agents SET infected = 1, infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616), incubation_timer=3 WHERE id IN (SELECT id FROM agents ORDER BY RANDOM() LIMIT 100)')
+    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
 
     conn.commit()
 
@@ -207,17 +207,22 @@ def run_simulation(conn, csvwriter, num_timesteps):
             cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
             #print( "Back from...init_inftimers()" )
 
-        if timestep % 7 == 0: # every week
-            cursor.execute( '''
-                UPDATE agents SET node = ( node+1 ) % :num_nodes
-                WHERE node IN (
-                    SELECT node
-                        FROM agents
-                        WHERE RANDOM() <= 0.01  -- Select 1% of the rows randomly
-                        LIMIT (SELECT COUNT(*) / 100 )  -- Limit to 1% of the total rows
-                    )
-                ''', { 'num_nodes': num_nodes } )
-
+        def migrate():
+            # 1% weekly migration ought to cause infecteds from seed node to move to next node
+            if timestep % 7 == 0: # every week (or day, depending on what I've set it to)
+                cursor.execute( '''
+                    UPDATE agents SET node = CASE
+                        WHEN node-1 < 0 THEN :max_node
+                        ELSE node - 1
+                    END
+                    WHERE id IN (
+                        SELECT id
+                            FROM agents
+                            WHERE infected AND RANDOM()
+                            LIMIT (SELECT COUNT(*) FROM agents) / CAST(1/0.001 AS INTEGER)
+                        )
+                    ''', { 'max_node': num_nodes-1 } )
+        migrate()
         conn.commit()
         #print( "Back from...commit()" )
         #print( f"{cursor.execute('select * from agents where infected limit 25').fetchall()}".replace("), ",")\n") )
