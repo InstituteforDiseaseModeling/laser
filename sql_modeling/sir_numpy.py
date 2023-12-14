@@ -149,7 +149,6 @@ def run_simulation(data, csvwriter, num_timesteps):
             #raise ValueError( "node_counts_incubators came back size 0." )
         sorted_items = sorted(currently_infectious.items())
         inf_np = np.array([value for _, value in sorted_items])
-        #pdb.set_trace()
         foi = (inf_np-node_counts_incubators) * base_infectivity
         sus_np = np.array(list(currently_sus.values()))
         new_infections = (foi * sus_np).astype(int)
@@ -172,6 +171,7 @@ def run_simulation(data, csvwriter, num_timesteps):
 
                 # Update the 'infected' column based on the selected indices
                 data['infected'][selected_indices] = True
+                data['incubation_timer'][selected_indices] = 2
 
             #print( new_infections )
             if new_infections[node]>0:
