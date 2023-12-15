@@ -193,8 +193,6 @@ def run_simulation(data, csvwriter, num_timesteps):
         data['infection_timer'][condition] = np.random.randint(4, 15, size=np.sum(condition))
         #print( "Back from...init_inftimers()" )
 
-
-
         def migrate():
             if timestep % 7 == 0: # every week
                 cursor.execute( '''
@@ -210,18 +208,13 @@ def run_simulation(data, csvwriter, num_timesteps):
                         )
                     ''', { 'max_node': settings.num_nodes-1 } )
         def migrate_np():
-            if timestep % 7 == 0: # every week
+            if timestep % 2 == 0: # every week
                 #print( "It's Sunday, migrate." )
-                # Create a boolean mask based on the conditions in the subquery
-                subquery_condition = np.logical_and( np.random.random(size=len(data['id'])) <= 0.01, data['infected'] )
-
-                # Get the indices of eligible agents using the boolean mask
-                eligible_agents_indices = np.where(subquery_condition)[0]
-
-                #print( "I think this is .... ")
+                infected = np.where( data['infected'] )[0]
+                fraction = int(len(infected)*0.01)
+                selected = np.random.choice( infected, fraction )
                 # Update the 'nodes' array based on the specified conditions
-                data['node'][eligible_agents_indices] = np.where(data['node'][eligible_agents_indices] - 1 < 0, settings.num_nodes - 1, data['node'][eligible_agents_indices] - 1)
-                #print( "...slow" )
+                data['node'][selected] = np.where(data['node'][selected] - 1 < 0, settings.num_nodes - 1, data['node'][selected] - 1 )
 
         #migrate():
         migrate_np()
