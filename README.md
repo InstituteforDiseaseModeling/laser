@@ -104,3 +104,5 @@ Are the individual communities well-mixed or should we also provide for explicit
 - "spatial" : How good are the individual community models? Good enough for non-spatial questions?
 - dynamic properties (e.g. GPU flu simulation)
 - ¿Ace/clorton-based state machines?
+
+> Superficial simplicity isn’t the goal of design. Some things are, by nature, complex. In such cases, you should aim for clarity rather than “simplicity.” Users will be better served if you strive to make complex systems more understandable and learnable than simply simple.
