@@ -2,6 +2,36 @@
 <img src="https://user-images.githubusercontent.com/10873335/283954768-97685a6d-7b86-4bba-a3e6-07ac22d5a2b3.png" alt="LASER logo" width="600px"/>
 </p>
 
+## Temporary README for `well-mixed-abc` Branch
+
+- use `python3 -m pip install -e .` in the root to install the code<br>at the moment there is only a very little shared code in the poorly named `homogenous_abc.py` file
+- in the `tests` directory there are three sample models:
+  - `test_agentsir.py`
+  - `test_agentseir.py`
+  - `test_spatialseir.py`
+
+### `test_agentsir.py`
+
+Simulates a single well-mixed community with **_SIR_** infection dynamics.
+
+Use the `--help` option to see the command line parameters. The code will write a .CSV, `sir.csv`, to the working directory.
+
+### `test_agentseir.py`
+
+Simulates a single well-mixed community with **_SEIR_** infection dynamics.
+
+Use the `--help` option to see the command line parameters. The code will write a .CSV, `seir.csv`, to the working directory.
+
+### `test_spatialseir.py`
+
+Simulates a number of _connected communities_, each well-mixed and with **_SEIR_** infection dynamics.
+
+This model currently loads LGA, population, and connectivity data for 774 admin level 2 LGAs in Nigeria along with population data from 2015. The connectivity weights are from a gravity model.
+
+Use the `--help` option to see the command line parameters. The code will write two .CSV files, `spatial_seir.csv` and `spatial_seir_report.csv`, to the working directory. The former has aggregated S, E, I, and R populations at each timestep. The latter has a column for each community, at each timestep, with the number of infected agents in that community at that timestep.
+
+----
+
 ## Schedule
 
 ### First 30 Days (EOY 2023)
