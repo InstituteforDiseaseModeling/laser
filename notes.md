@@ -116,3 +116,9 @@ PRNG state appears to use between 16 and 268 bytes depending on the algorithm. C
 |Sobel32| 140 |
 |Sobel64| 268 |
 
+## Cohorts
+
+- How many properties are tracked?
+- How do cohorts progress over time?
+- How do cohorts interact with other entities/agents?
+- How do agents exit the cohort?
