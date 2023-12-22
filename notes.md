@@ -122,3 +122,9 @@ PRNG state appears to use between 16 and 268 bytes depending on the algorithm. C
 - How do cohorts progress over time?
 - How do cohorts interact with other entities/agents?
 - How do agents exit the cohort?
+
+## Other
+
+### Compose Rather than Configure
+
+Choose the necessary components for the model and for reporting rather than enabling/disabling features from a large feature set.
