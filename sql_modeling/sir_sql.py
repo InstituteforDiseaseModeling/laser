@@ -1,11 +1,19 @@
 import sqlite3
 import random
 import csv
+import concurrent.futures
+import pdb
+import sys
+
 from settings import * # local file
+import settings
+
+settings.base_infectivity = 0.00001
+write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 
 # Globals! (not really)
-conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
-#conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
+#conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
+conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
 def get_node_ids():
     import numpy as np
 
@@ -38,6 +46,7 @@ def get_node_ids():
 
 # Function to initialize the SQLite database
 def initialize_database():
+    print( "Initializing pop NOT from file." )
     cursor = conn.cursor()
 
     # Create agents table
@@ -53,7 +62,7 @@ def initialize_database():
             immunity_timer INTEGER
         )
     ''')
-    cursor.execute( "CREATE INDEX idx_agents_node_incubation_timer ON agents(node, incubation_timer)" )
+    #cursor.execute( "CREATE INDEX idx_agents_node ON agents(id, node)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_infected ON agents(node, infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_immunity ON agents(node, immunity)" )
                 
@@ -100,14 +109,15 @@ def report( timestep, csvwriter ):
 
     # Write the counts to the CSV file
     print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
-    for node in nodes:
-        csvwriter.writerow([timestep,
-            node,
-            susceptible_counts[node] if node in susceptible_counts else 0,
-            infected_counts[node] if node in infected_counts else 0,
-            recovered_counts[node] if node in recovered_counts else 0,
-            ]
-        )
+    if write_report:
+        for node in nodes:
+            csvwriter.writerow([timestep,
+                node,
+                susceptible_counts[node] if node in susceptible_counts else 0,
+                infected_counts[node] if node in infected_counts else 0,
+                recovered_counts[node] if node in recovered_counts else 0,
+                ]
+            )
     print( "Stop report." )
     return infected_counts, susceptible_counts
 
@@ -148,57 +158,51 @@ def run_simulation(conn, csvwriter, num_timesteps):
         progress_immunities()
         #print( "Back from...progress_immunities()" )
 
+        import numpy as np
+        node_counts_incubators = np.zeros( settings.num_nodes )
+        results = cursor.execute('SELECT node, COUNT(*) FROM agents WHERE incubation_timer >= 1 GROUP BY node').fetchall()
+        node_counts_incubators2 = {node: count for node, count in results}
+        for node in node_counts_incubators:
+            if int(node) in node_counts_incubators2:
+                node_counts_incubators += node_counts_incubators2[int(node)]
+
+        sorted_items = sorted(currently_infectious.items())
+        inf_np = np.array([value for _, value in sorted_items])
+        foi = (inf_np-node_counts_incubators) * settings.base_infectivity
+        foi = np.array([ min(1,x) for x in foi ])
+        sus_np = np.array(list(currently_sus.values()))
+        new_infections = list((foi * sus_np).astype(int))
+        #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{currently_sus}" )
+        print( "new infections = " + str(new_infections) )
+
         def handle_transmission( node=0 ):
-            # Step 1: Calculate the number of currently infected
-            incubating = cursor.execute('SELECT COUNT(*) FROM agents WHERE incubation_timer >= 1 and node=:node', { 'node': node }).fetchone()[0]
-
-            # Step 2: Calculate the force of infection (foi)
-            if node in currently_infectious:
-                if( incubating > currently_infectious[node] ):
-                    raise ValueError( f"incubating = {incubating} found to be > currently_infectious = {currently_infectious[node]} in node {node}!" )
-                foi = base_infectivity  * (currently_infectious[node]-incubating)  # Adjust the multiplier as needed
-            else:
-                foi = 0
-            #foi = 0.0000009 * (currently_infectious[node]-incubating)  # Adjust the multiplier as needed
-            #foi = 0.9 * pop * (currently_infectious[node]-incubating)  # Adjust the multiplier as needed
-
-            # Step 4: Calculate the number of new infections (NEW)
-            if node in currently_sus:
-                new_infections = int(foi * currently_sus[node])
-            else:
-                new_infections = 0
-
-            #print( f"{new_infections} new infections based on foi of {foi} and susceptible cout of {currently_sus}" )
-
             # Step 5: Update the infected flag for NEW infectees
-            def my_way():
-                cursor.execute('''
+            def infect( new_infections, node ):
+                #print( f"infect: ni = {new_infections}, node = {node}" )
+                cursor.execute("""
                     UPDATE agents
                     SET infected = True
-                    WHERE id IN (SELECT id FROM agents WHERE NOT infected AND NOT immunity AND node=:node ORDER BY RANDOM() LIMIT :new_infections)
-                ''', {'new_infections': new_infections, 'node': node })
-            def chat_way():
-                cursor.execute('''
-                    UPDATE agents
-                    SET infected = True
-                    FROM (
+                    WHERE id in (
                             SELECT id
                             FROM agents
                             WHERE NOT infected AND NOT immunity AND node = :node
-                            ORDER BY RANDOM() LIMIT :new_infections
-                            ) AS subquery
-                    WHERE agents.id = subquery.id
-                    ''', {'new_infections': new_infections, 'node': node } )
-            chat_way()
+                            ORDER BY RANDOM()
+                            LIMIT :new_infections
+                        )""", {'new_infections': int(new_infections), 'node': node } )
+            if new_infections[node]>0:
+                infect(new_infections[node], node )
 
             #print( f"{new_infections} new infections in node {node}." )
+        #with concurrent.futures.ThreadPoolExecutor() as executor:
+            #results = list(executor.map(handle_transmission, settings.nodes))
 
         for node in nodes:
             handle_transmission( node )
             #print( "Back from...handle_transmission()" )
             # handle new infectees, set new infection timer
-            cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
-            #print( "Back from...init_inftimers()" )
+        print( "Back from creating new infections." )
+        cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
+        #print( "Back from...init_inftimers()" )
 
         def migrate():
             # 1% weekly migration ought to cause infecteds from seed node to move to next node
