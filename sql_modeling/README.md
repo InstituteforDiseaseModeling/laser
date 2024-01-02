@@ -50,4 +50,13 @@ Some advantages of this are:
 - Updating model state can be done via high performing tabular data manipulation tools (e.g., SQL, numpy, Pandas).
 - It's almost trivial to go to and from SQL-based processing and numpy.
 
+### Polars Exploration
+I got the SQL model working in Polars. It was quite hard. Polars seems to be designed to do reads of your data very quickly, but updates are relatively hard to do (compared to SQL or numpy) and relatively slow. I am not a pandas person .It's possible that folks fluent in pandas would have found the Polars API more intuitive. I will get actual SQLite vs Polars perf numbers and add them here. There are some things I still haven't completely ported over to the Polars port (e.g., random  draws from distributions). Note that ChatGPT "support" for Polars is much weaker because Polars is pretty new and the latest API is newer than Chat3.5.
+
+### Numpy Exploration
+The numpy "port" was relatively easy even though I haven't used numpy before. All operations are essentially 1:1 comparable to the SQLite. While doing the numpy port I removed a for loop (over the nodes) and added parallelization to take advantage of available cores. It's not clear that this particular optimization can be done in the SQL version.
+
+### Numba Exploration
+I've found it very hard to get a working numba installation. I ended up using my personally owned Nvidia Jetson Nann and a docker image. They say that once you've removed all your foor loops, you've mostly taken away the thing that numba is best suited to optimize. The Non-cude numba version of the model was about 10x _slower_ than the numpy version. I haven't completed a numba.cuda port because there are much fewer numpy functions available for cuda. 
+
 More soon...
