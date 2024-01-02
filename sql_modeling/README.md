@@ -59,4 +59,15 @@ The numpy "port" was relatively easy even though I haven't used numpy before. Al
 ### Numba Exploration
 I've found it very hard to get a working numba installation. I ended up using my personally owned Nvidia Jetson Nann and a docker image. They say that once you've removed all your foor loops, you've mostly taken away the thing that numba is best suited to optimize. The Non-cude numba version of the model was about 10x _slower_ than the numpy version. I haven't completed a numba.cuda port because there are much fewer numpy functions available for cuda. 
 
+### Early Performance Numbers
+|Model | Pop | Nodes | DB Indices | Reporting? | Other         | Time         | Observations|
+|------|-----|-------|------------|------------|---------------|--------------|-------------|
+|SQL   |1e6  | 25    | Node-id    | Off        |               | 14 minutes   | Too slow|
+|SQL   |1e6  | 25    | Node-id    | On         |               | 13.5 minutes | Very odd|
+|SQL   |1e6  | 25    | None       | On         |               | 13.5 minutes | Also odd|
+|Numpy |1e6  | 25    | N/A        | On         | 12 cores      | 0.5 minutes  | Much faster than SQL|
+|Numpy |1e6  | 250   | N/A        | On         | 12 cores      | 0.5 minutes  | 10x nodes didn't slow it down|
+|Numpy |1e7  | 250   | N/A        | On         | 12 cores      | 3.0 minutes  | Prevalence was high|
+|Polars|1e7  | 250   | None       | On         |               | 21.0 minutes | |
+
 More soon...
