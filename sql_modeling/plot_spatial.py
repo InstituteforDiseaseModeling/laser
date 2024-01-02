@@ -42,6 +42,7 @@ def plot_grid():
     # Adjust layout to prevent clipping of labels
     plt.tight_layout()
 
+prevalences = prevalences[-25:]
 plot_grid()
 #plot_together()
 
