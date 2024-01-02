@@ -5,6 +5,7 @@ import pdb
 from settings import * # local file
 import settings
 
+settings.base_infectivity = 0.00001
 
 def load():
     # Replace 'your_file.csv' with the actual path to your CSV file
@@ -67,7 +68,7 @@ def run_simulation(df, csvwriter, num_timesteps):
 
         def update_ages( df ):
             #cursor.execute("UPDATE agents SET age = age+1/365")
-            df = df.with_columns(pl.col("age") + 1/365)
+            df = df.with_columns(age=pl.col("age") + 1/365)
             return df
         df = update_ages( df )
         #print( "Back from...update_ages()" )
@@ -78,19 +79,30 @@ def run_simulation(df, csvwriter, num_timesteps):
             # Clear Recovereds
             # infected=0, immunity=1, immunity_timer=30-ish
             #cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
-            df = df.with_columns(pl.when( pl.col("infection_timer")>1 ).then(pl.col("infection_timer") - 1).otherwise( 0 ) )
+            df = df.with_columns(infection_timer=pl.when( pl.col("infection_timer")>1 ).then(pl.col("infection_timer") - 1).otherwise( 0 ) )
             #cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-            df = df.with_columns(pl.when( pl.col("incubation_timer")>1 ).then(pl.col("incubation_timer") - 1).otherwise( 0 ) )
+            df = df.with_columns(incubation_timer=pl.when( pl.col("incubation_timer")>1 ).then(pl.col("incubation_timer") - 1).otherwise( 0 ) )
             #cursor.execute( "UPDATE agents SET infected=False, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=True AND infection_timer=0" )
-            df = df.with_columns(
+            # Working
+            df = df.with_columns( newly_cleared=
                     pl.when( (
                         (pl.col("infected") == 1 ) &
                         (pl.col("infection_timer") == 0))
-                    ).then(True).otherwise(False).alias( "newly_cleared" )
+                    ).then(True).otherwise(False)
                 )
-            df = df.with_columns( "infected", pl.when( pl.col( "newly_cleared" ) == 1 ).then(0).otherwise( pl.col( "infected" ) ) )
-            df = df.with_columns( "immunity", pl.when( pl.col( "newly_cleared" ) == 1 ).then(1).otherwise( pl.col( "immunity" ) ) )
-            df = df.with_columns( "immunity_timer", pl.when( pl.col( "newly_cleared" ) == 1 ).then(30).otherwise( pl.col( "immunity_timer" ) ) ) # TBD: Needs to be from distribution
+            #results = ctx.execute('SELECT node, COUNT(*) FROM agents WHERE newly_cleared=True GROUP BY node')
+            # The check for newly_cleared is never returning anything even though the query above shows it should
+            #df = df.with_columns( "infected", pl.when( pl.col( "newly_cleared" ) ).then(0).otherwise( pl.col( "infected" ) ) )
+            df = df.with_columns( infected=pl.when( pl.col( "newly_cleared" ) ).then(0).otherwise( pl.col( "infected" ) ) )
+            #df = df.with_columns( "immunity", pl.when( pl.col( "newly_cleared" ) ).then(1).otherwise( pl.col( "immunity" ) ) )
+            df = df.with_columns( immunity=pl.when( pl.col( "newly_cleared" ) ).then(1).otherwise( pl.col( "immunity" ) ) )
+            #df = df.with_columns( "immunity_timer", pl.when( pl.col( "newly_cleared" ) == 1 ).then(300).otherwise( pl.col( "immunity_timer" ) ) ) # TBD: Needs to be from distribution
+            df = df.with_columns( immunity_timer=pl.when( pl.col( "newly_cleared" ) == 1 ).then(20).otherwise( pl.col( "immunity_timer" ) ) ) # TBD: Needs to be from distribution
+            df = df.drop( "newly_cleared" )
+            ctx = pl.SQLContext(agents=df, eager_execution=True)
+            results = ctx.execute('SELECT node, immunity_timer FROM agents WHERE immunity_timer>0')
+            #print( "Expecting to see people with immunity timers counting down." )
+            #print( results )
 
             return df
         df = progress_infections(df)
@@ -101,16 +113,17 @@ def run_simulation(df, csvwriter, num_timesteps):
             # immunity timer: decrement for each immune person
             # immunity flag: clear for each new sus person
             #cursor.execute("UPDATE agents SET immunity_timer = (immunity_timer-1) WHERE immunity=1 AND immunity_timer>0" )
-            df = df.with_columns( pl.when( 
+            #pdb.set_trace()
+            df = df.with_columns( immunity_timer=pl.when( 
                     (pl.col( "immunity" ) == 1 ) &
                     (pl.col( "immunity_timer" ) > 0 ) 
                 ).then(
                     pl.col( "immunity_timer" ) - 1
                 ).otherwise(
                     pl.col( "immunity_timer" )
-                ).alias( "immunity_timer") )
+                ) )
             #cursor.execute("UPDATE agents SET immunity = 0 WHERE immunity = 1 AND immunity_timer=0" )
-            df = df.with_columns( "immunity", pl.when( 
+            df = df.with_columns( immunity=pl.when( 
                     (pl.col( "immunity" ) == 1 ) &
                     (pl.col( "immunity_timer" ) == 0 ) 
                 ).then(
@@ -118,7 +131,8 @@ def run_simulation(df, csvwriter, num_timesteps):
                 ).otherwise(
                     pl.col( "immunity" )
                 ) )
-        progress_immunities(df)
+            return df
+        df = progress_immunities(df)
         #print( "Back from...progress_immunities()" )
 
         def handle_transmission( df, node=0 ):
@@ -139,7 +153,7 @@ def run_simulation(df, csvwriter, num_timesteps):
             # Infect: CONVERT: data['infected'][selected_indices] = True
             # Set incubation timer: CONVERT: data['incubation_timer'][selected_indices] = 2
             df = df.update( sampled_df, left_on="id", right_on="id", how="outer" )
-            print( f"{new_infections} new infections in node {node}." )
+            print( f"{new_infections[node]} new infections in node {node}." )
             return df
 
         # We want to get a dict of node ids to number of new_infections to create...
@@ -156,7 +170,9 @@ def run_simulation(df, csvwriter, num_timesteps):
             #raise ValueError( "node_counts_incubators came back size 0." )
         sorted_items = sorted(currently_infectious.items())
         inf_np = np.array([value for _, value in sorted_items])
-        foi = (inf_np-node_counts_incubators) * base_infectivity
+        foi = (inf_np-node_counts_incubators) * settings.base_infectivity
+        # foi should be more of a probability of getting infected but we're being simplistic for now. Cap at 1.
+        foi = np.array([ min(1,x) for x in foi ])
         sus_np = [value for key, value in sorted(currently_sus.items())]
         new_infections = (foi * sus_np).astype(int)
 
