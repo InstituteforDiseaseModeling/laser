@@ -6,6 +6,7 @@ from sir_sql import initialize_database
 conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
 initialize_database( conn )
 
+print( f"Writing population file out out to csv: {settings.pop_file_out}." )
 cursor = conn.cursor()
 get_all_query = "SELECT * FROM agents"
 cursor.execute( get_all_query )
