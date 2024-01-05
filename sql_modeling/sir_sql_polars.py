@@ -7,9 +7,9 @@ import settings
 
 settings.base_infectivity = 0.00001
 
-def load():
+def load( pop_file ):
     # Replace 'your_file.csv' with the actual path to your CSV file
-    df = pl.read_csv( settings.pop_file )
+    df = pl.read_csv( pop_file )
 
     settings.pop = df.shape[0]
     print( f"Population={settings.pop}" )
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     csvfile = open('simulation_report.csv', 'w', newline='') 
     csvwriter = csv.writer(csvfile)
     csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'Recovered'])
-    df = load()
+    df = load( settings.pop_file )
 
     # Run the simulation for 1000 timesteps
     run_simulation(df, csvwriter, num_timesteps=duration )
