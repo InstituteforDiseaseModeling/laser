@@ -4,7 +4,6 @@ from tqdm import tqdm
 import pdb
 
 # Connect to SQLite database (create one if it doesn't exist)
-#conn = sqlite3.connect('agents.db')
 conn = sqlite3.connect(":memory:")
 cursor = conn.cursor()
 
@@ -20,7 +19,7 @@ cursor.execute('''
 
 # Insert 1e7 agents into the table with random dob and initial active status
 num_agents = int(1e7)
-initial_active_percentdob = 0.1
+
 for i in range(num_agents):
     dob = random.randint(-36500, 36500)
     active = ( dob <= 5 * 365 and dob > 0 )
@@ -28,6 +27,12 @@ for i in range(num_agents):
     cursor.execute('''
         INSERT INTO agents (dob, active, test) VALUES (?, ?, ?)
     ''', (dob, active, test))
+cursor.execute( "CREATE TABLE ordered_agents AS SELECT * FROM agents ORDER BY dob" )
+cursor.execute( "DROP TABLE agents" )
+cursor.execute( "CREATE INDEX idx_dob ON ordered_agents (dob)" )
+cursor.execute( "CREATE INDEX idx_active ON ordered_agents(active)" )
+cursor.execute( "CREATE INDEX idx_dob_active ON ordered_agents(dob, active)" )
+
 
 # Commit changes
 conn.commit()
@@ -39,29 +44,30 @@ num_timesteps = 3650 # 36500
 
 # Simulation loop
 for timestep in tqdm(range(1, num_timesteps + 1)):
-    # Update active status based on dob and current timestep
-    cursor.execute(f"UPDATE agents SET active = 1 WHERE dob = {-timestep}" )
+    #actives = cursor.execute( "SELECT COUNT(*) FROM ordered_agents WHERE active=1" ).fetchall()
+    #print( actives[0] )
 
-    # Increment 'test' value for active agents
+    # Update active status based on dob and current timestep
+    cursor.execute(f"UPDATE ordered_agents SET active = 1 WHERE dob = {-timestep}" )
+    print( f"{cursor.rowcount} newborns." )
+
+    # Increment 'test' value for active ordered_agents
     cursor.execute('''
-        UPDATE agents
+        UPDATE ordered_agents
         SET test = test + 1
         WHERE active = 1
     ''')
+    print( f"{cursor.rowcount} actives updated." )
 
-    # Deactivate 0.1% of active agents randomly
+    # Deactivate 0.1% of active ordered_agents randomly
     cursor.execute('''
-        UPDATE agents
-        SET active = 0
-        WHERE active = 1 AND RANDOM() < ?
-    ''', (0.001,))
-
-    actives = cursor.execute( "SELECT COUNT(*) FROM agents WHERE active=1" ).fetchall()
-    print( actives )
+        UPDATE ordered_agents SET active=0 WHERE active=1 ORDER BY RANDOM() LIMIT ( SELECT COUNT(*) FROM ordered_agents WHERE active=1 )/1000
+    ''')
+    print( f"{cursor.rowcount} fewer actives." )
+    #pdb.set_trace()
 
     # Commit changes at each timestep
     conn.commit()
 
 # Close the database connection
 conn.close()
-
