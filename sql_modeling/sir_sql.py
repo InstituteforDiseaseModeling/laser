@@ -81,11 +81,11 @@ def initialize_database( conn ):
 
     return
 
-def report( timestep, csvwriter ):
+def report( conn, timestep, csvwriter ):
     print( "Start report." )
     cursor = conn.cursor()
     # Count agents in each state
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE NOT infected AND NOT immunity GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND NOT immunity GROUP BY node')
     # this seems slow and clunky
     
     susceptible_counts_db = cursor.fetchall()
@@ -94,7 +94,7 @@ def report( timestep, csvwriter ):
         if node not in susceptible_counts:
             susceptible_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=1 GROUP BY node')
     infected_counts_db = cursor.fetchall()
     infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
     for node in nodes:
@@ -125,7 +125,7 @@ def report( timestep, csvwriter ):
 # Function to run the simulation for a given number of timesteps
 def run_simulation(conn, csvwriter, num_timesteps):
     import timeit
-    currently_infectious, currently_sus = report( 0, csvwriter )
+    currently_infectious, currently_sus = report( conn, 0, csvwriter )
     cursor = conn.cursor()
 
     for timestep in range(1, num_timesteps + 1):
@@ -146,7 +146,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             # infected=0, immunity=1, immunity_timer=30-ish
             cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
             cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-            cursor.execute( "UPDATE agents SET infected=False, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=True AND infection_timer=0" )
+            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
         progress_infections()
         #print( "Back from...progress_infections()" )
 
@@ -182,11 +182,11 @@ def run_simulation(conn, csvwriter, num_timesteps):
                 #print( f"infect: ni = {new_infections}, node = {node}" )
                 cursor.execute("""
                     UPDATE agents
-                    SET infected = True
+                    SET infected = 1
                     WHERE id in (
                             SELECT id
                             FROM agents
-                            WHERE NOT infected AND NOT immunity AND node = :node
+                            WHERE infected=0 AND NOT immunity AND node = :node
                             ORDER BY RANDOM()
                             LIMIT :new_infections
                         )""", {'new_infections': int(new_infections), 'node': node } )
@@ -202,7 +202,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             #print( "Back from...handle_transmission()" )
             # handle new infectees, set new infection timer
         print( "Back from creating new infections." )
-        cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
+        cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
         #print( "Back from...init_inftimers()" )
 
         def migrate():
@@ -216,7 +216,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
                     WHERE id IN (
                         SELECT id
                             FROM agents
-                            WHERE infected AND RANDOM()
+                            WHERE infected=1 AND RANDOM()
                             LIMIT (SELECT COUNT(*) FROM agents) / CAST(1/0.001 AS INTEGER)
                         )
                     ''', { 'max_node': num_nodes-1 } )
@@ -225,7 +225,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
         #print( "Back from...commit()" )
         #print( f"{cursor.execute('select * from agents where infected limit 25').fetchall()}".replace("), ",")\n") )
         #print( "*****" )
-        currently_infectious, currently_sus = report( timestep, csvwriter )
+        currently_infectious, currently_sus = report( conn, timestep, csvwriter )
 
 
 
