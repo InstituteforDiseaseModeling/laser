@@ -4,6 +4,7 @@ import csv
 import concurrent.futures
 import pdb
 import sys
+import os
 
 from settings import * # local file
 import settings
@@ -12,8 +13,8 @@ settings.base_infectivity = 0.00001
 write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 
 # Globals! (not really)
-#conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
-conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
+conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
+#conn = sqlite3.connect("simulation.db")  # Use in-memory database for simplicity
 def get_node_ids():
     import numpy as np
 
@@ -45,7 +46,7 @@ def get_node_ids():
     return array
 
 # Function to initialize the SQLite database
-def initialize_database():
+def initialize_database( conn ):
     print( "Initializing pop NOT from file." )
     cursor = conn.cursor()
 
@@ -78,7 +79,7 @@ def initialize_database():
 
     conn.commit()
 
-    return conn
+    return
 
 def report( timestep, csvwriter ):
     print( "Start report." )
@@ -233,13 +234,13 @@ def run_simulation(conn, csvwriter, num_timesteps):
 # Main simulation
 if __name__ == "__main__":
     # Initialize the database
-    connection = initialize_database()
+    initialize_database( conn )
     # Create a CSV file for reporting
-    csvfile = open('simulation_report.csv', 'w', newline='') 
+    csvfile = open( settings.report_filename, 'w', newline='') 
     csvwriter = csv.writer(csvfile)
     csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'Recovered'])
 
 
     # Run the simulation for 1000 timesteps
-    run_simulation(connection, csvwriter, num_timesteps=duration )
+    run_simulation(conn, csvwriter, num_timesteps=duration )
 
