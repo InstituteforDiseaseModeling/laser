@@ -48,7 +48,7 @@ for timestep in tqdm(range(1, num_timesteps + 1)):
     #print( actives[0] )
 
     # Update active status based on dob and current timestep
-    cursor.execute(f"UPDATE ordered_agents SET active = 1 WHERE dob = {-timestep}" )
+    cursor.execute(f"UPDATE ordered_agents SET active = true WHERE dob = {-timestep}" )
     print( f"{cursor.rowcount} newborns." )
 
     # Increment 'test' value for active ordered_agents
@@ -61,7 +61,7 @@ for timestep in tqdm(range(1, num_timesteps + 1)):
 
     # Deactivate 0.1% of active ordered_agents randomly
     cursor.execute('''
-        UPDATE ordered_agents SET active=0 WHERE active=1 ORDER BY RANDOM() LIMIT ( SELECT COUNT(*) FROM ordered_agents WHERE active=1 )/1000
+        UPDATE ordered_agents SET active=false WHERE active=true ORDER BY RANDOM() LIMIT ( SELECT COUNT(*) FROM ordered_agents WHERE active=true )/1000
     ''')
     print( f"{cursor.rowcount} fewer actives." )
     #pdb.set_trace()
