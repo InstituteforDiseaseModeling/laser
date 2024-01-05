@@ -14,19 +14,21 @@
 
 Simulates a single well-mixed community with **_SIR_** infection dynamics.
 
-Use the `--help` option to see the command line parameters. The code will write a .CSV, `sir.csv`, to the working directory.
+Use the `--help` option to see the command line parameters. The code will write a .CSV, `sir.csv`, to the script directory (`tests`).
 
 ### `test_agentseir.py`
 
 Simulates a single well-mixed community with **_SEIR_** infection dynamics.
 
-Use the `--help` option to see the command line parameters. The code will write a .CSV, `seir.csv`, to the working directory.
+Use the `--help` option to see the command line parameters. The code will write a .CSV, `seir.csv`, to the script directory (`tests`).
 
 ### `test_spatialseir.py`
 
 Simulates a number of _connected communities_, each well-mixed and with **_SEIR_** infection dynamics.
 
 This model currently loads LGA, population, and connectivity data for 774 admin level 2 LGAs in Nigeria along with population data from 2015. The connectivity weights are from a gravity model.
+
+`load_population()` and `load_network()` are in their own functions now to make it easier to customize for another scenario (e.g., England/Wales).
 
 Use the `--help` option to see the command line parameters. The code will write two .CSV files, `spatial_seir.csv` and `spatial_seir_report.csv`, to the working directory. The former has aggregated S, E, I, and R populations at each timestep. The latter has a column for each community, at each timestep, with the number of infected agents in that community at that timestep.
 
