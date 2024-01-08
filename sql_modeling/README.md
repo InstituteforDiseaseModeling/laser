@@ -1,6 +1,6 @@
 # 1e6 SQL SEIRS Model
 
-## Single node (for now)
+## Single node (just to get started)
 
 ![SIR plot](sql_seirs_output.png)
 
@@ -11,14 +11,16 @@ Every row is an agent. Every column is an attribute. Every calculation is done a
 
 Note that plotting is a separate step.
 
-SQL is SQLite for now. Going to compare with Polars soon.
+SQL is SQLite for now. We then compare with Polars and NumPy. Potentially other SQL implementations.
+
+Note that I started by calling this experiment "SQL Modeling" but some people fine SQL intimidating. It's probably better to call it "Dataframe Modeling". Because the whole model is essentially a single dataframe. SQL is just a natural choice for manipulating dataframes. But there are other popular SQL-wrappers nowadays like Pandas, etc. And in the limit, if you convert each of your dataframe columns to an numpy array, all the same things can be done with numpy. And we also open the door to numba implementations. But dataframes are very nice and easy to think about.
 
 ## 1e7 Numpy SEIRS Spatial Model
 
 ![Spatial_numpy_plot](10Magents_250nodes_migration.png)
 
 ### Summary
-This model has 10 million agents, and 25 nodes. The population varies across the nodes, with population proportional to the node index. We seed the infection in node 25. We migrate 1% of infecteds "down" to the next node counting down. Here we plot just the top 25 nodes. We see infection spread from node to node. Incubation lasts 2 days. Infection last a week on average with some spread. Immunity lasts a month on average with some spread.
+This model has 10 million agents, and 25 nodes. The population varies widely across the nodes, with population proportional to the node index. We seed the infection in node 25. We migrate 1% of infecteds "down" to the next node counting down. Here we plot just the top 25 nodes. We see infection spread from node to node. Incubation lasts 2 days. Infection last a week on average with some spread. Immunity lasts a month on average with some spread.
 
 The simulation runs in a few minutes. I've done a 250 node one also which runs quickly if prevalence is low. Don't have any real eye-candy associated with that experiment yet.
 
@@ -49,9 +51,10 @@ Some advantages of this are:
 - Serialization to/from csv files comes for free.
 - Updating model state can be done via high performing tabular data manipulation tools (e.g., SQL, numpy, Pandas).
 - It's almost trivial to go to and from SQL-based processing and numpy.
+- In case it's not obvious from the above, the model can be run for some time, and the entire state written out to a csv. Then that csv can be analyzed and/or manipulated in a separate tool, and then the model can be resumed using the updated csv file as the input. There's no meaningful distinction between and input model dataframe and an output.
 
 ### Polars Exploration
-I got the SQL model working in Polars. It was quite hard. Polars seems to be designed to do reads of your data very quickly, but updates are relatively hard to do (compared to SQL or numpy) and relatively slow. I am not a pandas person .It's possible that folks fluent in pandas would have found the Polars API more intuitive. I will get actual SQLite vs Polars perf numbers and add them here. There are some things I still haven't completely ported over to the Polars port (e.g., random  draws from distributions). Note that ChatGPT "support" for Polars is much weaker because Polars is pretty new and the latest API is newer than Chat3.5.
+I got the SQL model working in Polars. It was quite hard. Polars seems to be designed to do reads of your data very quickly, but updates are relatively hard to do (compared to SQL or numpy) and relatively slow. I am not a pandas person. It's possible that folks fluent in pandas would have found the Polars API more intuitive. I will get actual SQLite vs Polars perf numbers and add them here (done). There are some things I still haven't completely ported over to the Polars port (e.g., random  draws from distributions). Note that ChatGPT "support" for Polars is much weaker because Polars is pretty new and the latest API is newer than Chat3.5.
 
 ### Numpy Exploration
 The numpy "port" was relatively easy even though I haven't used numpy before. All operations are essentially 1:1 comparable to the SQLite. While doing the numpy port I removed a for loop (over the nodes) and added parallelization to take advantage of available cores. It's not clear that this particular optimization can be done in the SQL version.
@@ -69,5 +72,9 @@ I've found it very hard to get a working numba installation. I ended up using my
 |Numpy |1e6  | 250   | N/A        | On         | 12 cores      | 0.5 minutes  | 10x nodes didn't slow it down|
 |Numpy |1e7  | 250   | N/A        | On         | 12 cores      | 3.0 minutes  | Prevalence was high|
 |Polars|1e7  | 250   | None       | On         |               | 21.0 minutes | |
+
+### Notes
+- My disease transmission math doesn't normalize by node population size just yet.
+- The SQL model build its population from a couple of parameters (pop size and num nodes). The other models start from an existing csv. I've just pushed a tool which creates a population csv from params. Instructions coming soon.
 
 More soon...
