@@ -1,12 +1,13 @@
 import polars as pl
 import random
 import csv
+import os
 import numpy as np 
 from sparklines import sparklines
 import time
 import pdb
-from settings import * # local file
-import settings
+#from settings import * # local file
+import settings # do this just one way
 
 settings.base_infectivity = 0.00001
 start_timer = time.time()
@@ -14,6 +15,8 @@ last_time = time.time()
 
 def load( pop_file ):
     # Replace 'your_file.csv' with the actual path to your CSV file
+    if not os.path.exists( pop_file  ):
+        raise ValueError( f"{pop_file} not found. You may need to create it by running the 'create_pop_as_csv.py' script. And point settings.pop_file to the file it creates." )
     df = pl.read_csv( pop_file )
 
     settings.pop = df.shape[0]
@@ -49,10 +52,18 @@ def report( df, timestep, csvwriter ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
+    # Maybe don't need to do this each time
+    total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
+
     # Write the counts to the CSV file
     #print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
     print( f"T={timestep}" )
-    print( list( sparklines( infected_counts.values() ) ) )
+    # OK this turned into an ordeal... I bet my cute sparklines reporting is slowing us down.
+    infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
+    totals = np.array([total[key] for key in sorted(total.keys(), reverse=True)])
+    prev = infecteds/totals
+    print( list( sparklines( prev ) ) )
+
     for node in settings.nodes:
         csvwriter.writerow([timestep,
             node,
@@ -118,7 +129,6 @@ def run_simulation(df, csvwriter, num_timesteps):
             # immunity timer: decrement for each immune person
             # immunity flag: clear for each new sus person
             #cursor.execute("UPDATE agents SET immunity_timer = (immunity_timer-1) WHERE immunity=1 AND immunity_timer>0" )
-            #pdb.set_trace()
             df = df.with_columns( immunity_timer=pl.when( 
                     (pl.col( "immunity" ) == 1 ) &
                     (pl.col( "immunity_timer" ) > 0 ) 
