@@ -225,5 +225,5 @@ if __name__ == "__main__":
     df = load( settings.pop_file )
 
     # Run the simulation for 1000 timesteps
-    run_simulation(df, csvwriter, num_timesteps=duration )
+    run_simulation(df, csvwriter, num_timesteps=settings.duration )
 

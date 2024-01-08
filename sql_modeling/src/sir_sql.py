@@ -75,7 +75,7 @@ def initialize_database( conn ):
     cursor.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
-    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
+    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INT ), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
 
     conn.commit()
 
@@ -146,7 +146,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             # infected=0, immunity=1, immunity_timer=30-ish
             cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
             cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
+            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=10+30*(RANDOM() + CAST( 9223372036854775808)/18446744073709551616 AS INT) WHERE infected=1 AND infection_timer=0" )
         progress_infections()
         #print( "Back from...progress_infections()" )
 
@@ -202,7 +202,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             #print( "Back from...handle_transmission()" )
             # handle new infectees, set new infection timer
         print( "Back from creating new infections." )
-        cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=1 AND infection_timer=0" )
+        cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INT) WHERE infected=1 AND infection_timer=0" )
         #print( "Back from...init_inftimers()" )
 
         def migrate():
