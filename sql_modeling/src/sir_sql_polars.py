@@ -1,11 +1,16 @@
 import polars as pl
 import random
 import csv
+import numpy as np 
+from sparklines import sparklines
+import time
 import pdb
 from settings import * # local file
 import settings
 
 settings.base_infectivity = 0.00001
+start_timer = time.time()
+last_time = time.time()
 
 def load( pop_file ):
     # Replace 'your_file.csv' with the actual path to your CSV file
@@ -21,7 +26,7 @@ def load( pop_file ):
     return df
 
 def report( df, timestep, csvwriter ):
-    print( "Start report." )
+    #print( "Start report." )
     # Count agents in each state
     ctx = pl.SQLContext(agents=df, eager_execution=True)
     results = ctx.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node')
@@ -45,7 +50,9 @@ def report( df, timestep, csvwriter ):
             recovered_counts[node] = 0
 
     # Write the counts to the CSV file
-    print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
+    #print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
+    print( f"T={timestep}" )
+    print( list( sparklines( infected_counts.values() ) ) )
     for node in settings.nodes:
         csvwriter.writerow([timestep,
             node,
@@ -54,7 +61,10 @@ def report( df, timestep, csvwriter ):
             recovered_counts[node] if node in recovered_counts else 0,
             ]
         )
-    print( "Stop report." )
+    #print( "Stop report." )
+    global last_time
+    print( f"Elapsed Time for timestep: {(time.time()-last_time):0.2f}" )
+    last_time = time.time()
     return infected_counts, susceptible_counts
 
 # Function to run the simulation for a given number of timesteps
@@ -78,33 +88,28 @@ def run_simulation(df, csvwriter, num_timesteps):
             # Progress Existing Infections
             # Clear Recovereds
             # infected=0, immunity=1, immunity_timer=30-ish
-            #cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
             df = df.with_columns(infection_timer=pl.when( pl.col("infection_timer")>1 ).then(pl.col("infection_timer") - 1).otherwise( 0 ) )
-            #cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
             df = df.with_columns(incubation_timer=pl.when( pl.col("incubation_timer")>1 ).then(pl.col("incubation_timer") - 1).otherwise( 0 ) )
-            #cursor.execute( "UPDATE agents SET infected=False, immunity=1, immunity_timer=FLOOR(10+30*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected=True AND infection_timer=0" )
-            # Working
-            df = df.with_columns( newly_cleared=
-                    pl.when( (
+            df = df.with_columns( newly_cleared=pl.when( (
                         (pl.col("infected") == 1 ) &
                         (pl.col("infection_timer") == 0))
                     ).then(True).otherwise(False)
                 )
-            #results = ctx.execute('SELECT node, COUNT(*) FROM agents WHERE newly_cleared=True GROUP BY node')
             # The check for newly_cleared is never returning anything even though the query above shows it should
-            #df = df.with_columns( "infected", pl.when( pl.col( "newly_cleared" ) ).then(0).otherwise( pl.col( "infected" ) ) )
             df = df.with_columns( infected=pl.when( pl.col( "newly_cleared" ) ).then(0).otherwise( pl.col( "infected" ) ) )
-            #df = df.with_columns( "immunity", pl.when( pl.col( "newly_cleared" ) ).then(1).otherwise( pl.col( "immunity" ) ) )
             df = df.with_columns( immunity=pl.when( pl.col( "newly_cleared" ) ).then(1).otherwise( pl.col( "immunity" ) ) )
-            #df = df.with_columns( "immunity_timer", pl.when( pl.col( "newly_cleared" ) == 1 ).then(300).otherwise( pl.col( "immunity_timer" ) ) ) # TBD: Needs to be from distribution
-            df = df.with_columns( immunity_timer=pl.when( pl.col( "newly_cleared" ) == 1 ).then(20).otherwise( pl.col( "immunity_timer" ) ) ) # TBD: Needs to be from distribution
+            df = df.with_columns( immunity_timer=pl.when( pl.col( "newly_cleared" ) == 1 ).then(
+                pl.lit( np.random.randint(
+                    10,40, size=df.height
+                ) ) ).otherwise(
+                    pl.col( "immunity_timer"
+                ) ) ) # TBD: Needs to be from distribution
             df = df.drop( "newly_cleared" )
             ctx = pl.SQLContext(agents=df, eager_execution=True)
             results = ctx.execute('SELECT node, immunity_timer FROM agents WHERE immunity_timer>0')
-            #print( "Expecting to see people with immunity timers counting down." )
-            #print( results )
 
             return df
+
         df = progress_infections(df)
         #print( "Back from...progress_infections()" )
 
@@ -147,18 +152,22 @@ def run_simulation(df, csvwriter, num_timesteps):
             # Should we add a newly_infected=True col/flag for these guys so make them easy to catch?
             sampled_df = sampled_df.with_columns( infected=1 )
             sampled_df = sampled_df.with_columns( incubation_timer=2 )
-            sampled_df = sampled_df.with_columns( infection_timer=7 ) # should be a draw
+            def get_infection_timer_init():
+                return random.randint( 4,10 )
+            #sampled_df = sampled_df.with_columns( infection_timer=get_infection_timer_init() ) # should be a draw
+            sampled_df = sampled_df.with_columns( infection_timer=pl.lit(np.random.randint(
+                4,10, size= sampled_df.height
+            ) ) )
             # We should set their infection timer here or globally, not do incubation_timer here 
             # and infection timer globally
             # Infect: CONVERT: data['infected'][selected_indices] = True
             # Set incubation timer: CONVERT: data['incubation_timer'][selected_indices] = 2
             df = df.update( sampled_df, left_on="id", right_on="id", how="outer" )
-            print( f"{new_infections[node]} new infections in node {node}." )
+            #print( f"{new_infections[node]} new infections in node {node}." )
             return df
 
         # We want to get a dict of node ids to number of new_infections to create...
         filtered_df = df.filter(pl.col("incubation_timer") >= 1)
-        import numpy as np # first us of np --- might not be necessary
         node_counts_incubators = np.zeros( settings.num_nodes )
         results = ( filtered_df.groupby( "node" ).agg( pl.col( "node" ).count().alias( "count" )).sort( "node" ) )
         node_counts_incubators2 = dict(zip(results['node'],results['count']))
@@ -180,10 +189,6 @@ def run_simulation(df, csvwriter, num_timesteps):
             df = handle_transmission( df, node )
             #print( "Back from...handle_transmission()" )
 
-        # handle new infectees globally
-        #cursor.execute( "UPDATE agents SET infection_timer=FLOOR(4+10*(RANDOM() + 9223372036854775808)/18446744073709551616) WHERE infected AND infection_timer=0" )
-            #print( "Back from...init_inftimers()" )
-
         def migrate( df ):
             # 1% weekly migration ought to cause infecteds from seed node to move to next node
             if timestep % 7 == 0: # every week (or day, depending on what I've set it to)
@@ -193,9 +198,7 @@ def run_simulation(df, csvwriter, num_timesteps):
                 df = df.update( sampled_df, left_on="id", right_on="id", how="outer" )
             return df
         df = migrate( df )
-        #conn.commit()
-        #print( "Back from...commit()" )
-        #print( f"{cursor.execute('select * from agents where infected limit 25').fetchall()}".replace("), ",")\n") )
+        
         #print( "*****" )
         currently_infectious, currently_sus = report( df, timestep, csvwriter )
 
