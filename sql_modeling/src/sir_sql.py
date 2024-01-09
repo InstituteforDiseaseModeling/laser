@@ -2,6 +2,8 @@ import sqlite3
 import random
 import csv
 import concurrent.futures
+from sparklines import sparklines
+import numpy as np # not for modeling
 import pdb
 import sys
 import os
@@ -9,7 +11,7 @@ import os
 from settings import * # local file
 import settings
 
-settings.base_infectivity = 0.00001
+settings.base_infectivity = 0.0001
 write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 
 # Globals! (not really)
@@ -63,6 +65,10 @@ def initialize_database( conn ):
             immunity_timer INTEGER
         )
     ''')
+    #cursor.execute( "CREATE INDEX node_idx ON agents(node)" )
+    cursor.execute( "CREATE INDEX immunity_idx ON agents(immunity)" )
+    cursor.execute( "CREATE INDEX immunity_node_idx ON agents(immunity,node)" )
+    #cursor.execute( "CREATE INDEX infected_idx ON agents(infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node ON agents(id, node)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_infected ON agents(node, infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_immunity ON agents(node, immunity)" )
@@ -75,17 +81,19 @@ def initialize_database( conn ):
     cursor.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
-    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INT ), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
+    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER ), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
+    # Make everyone over some age perman-immune
+    cursor.execute( "UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > 5*365" )
 
     conn.commit()
 
     return
 
 def report( conn, timestep, csvwriter ):
-    print( "Start report." )
+    #print( "Start report." ) # helps with visually sensing how long this takes.
     cursor = conn.cursor()
     # Count agents in each state
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND NOT immunity GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node')
     # this seems slow and clunky
     
     susceptible_counts_db = cursor.fetchall()
@@ -101,15 +109,21 @@ def report( conn, timestep, csvwriter ):
         if node not in infected_counts:
             infected_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node')
     recovered_counts_db = cursor.fetchall()
     recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
     for node in nodes:
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
+    infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
+    total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
+    totals = np.array([total[key] for key in sorted(total.keys(), reverse=True)])
+    prev = infecteds/totals
+    print( f"T={timestep}" )
+    print( list( sparklines( prev ) ) )
     # Write the counts to the CSV file
-    print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
+    #print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
     if write_report:
         for node in nodes:
             csvwriter.writerow([timestep,
@@ -119,7 +133,7 @@ def report( conn, timestep, csvwriter ):
                 recovered_counts[node] if node in recovered_counts else 0,
                 ]
             )
-    print( "Stop report." )
+    # print( "Stop report." ) # helps with visually sensing how long this takes.
     return infected_counts, susceptible_counts
 
 # Function to run the simulation for a given number of timesteps
@@ -146,7 +160,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
             # infected=0, immunity=1, immunity_timer=30-ish
             cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
             cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=10+30*(RANDOM() + CAST( 9223372036854775808)/18446744073709551616 AS INT) WHERE infected=1 AND infection_timer=0" )
+            cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=CAST( 10+30*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
         progress_infections()
         #print( "Back from...progress_infections()" )
 
@@ -174,7 +188,7 @@ def run_simulation(conn, csvwriter, num_timesteps):
         sus_np = np.array(list(currently_sus.values()))
         new_infections = list((foi * sus_np).astype(int))
         #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{currently_sus}" )
-        print( "new infections = " + str(new_infections) )
+        #print( "new infections = " + str(new_infections) )
 
         def handle_transmission( node=0 ):
             # Step 5: Update the infected flag for NEW infectees
@@ -201,8 +215,8 @@ def run_simulation(conn, csvwriter, num_timesteps):
             handle_transmission( node )
             #print( "Back from...handle_transmission()" )
             # handle new infectees, set new infection timer
-        print( "Back from creating new infections." )
-        cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INT) WHERE infected=1 AND infection_timer=0" )
+        #print( "Back from creating new infections." )
+        cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
         #print( "Back from...init_inftimers()" )
 
         def migrate():
