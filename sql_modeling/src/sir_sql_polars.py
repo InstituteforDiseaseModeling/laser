@@ -107,17 +107,17 @@ def run_simulation(df, csvwriter, num_timesteps):
                     ).then(True).otherwise(False)
                 )
             # The check for newly_cleared is never returning anything even though the query above shows it should
-            df = df.with_columns( infected=pl.when( pl.col( "newly_cleared" ) ).then(0).otherwise( pl.col( "infected" ) ) )
-            df = df.with_columns( immunity=pl.when( pl.col( "newly_cleared" ) ).then(1).otherwise( pl.col( "immunity" ) ) )
+            df = df.with_columns( infected=pl.when( pl.col( "newly_cleared" ) == 1 ).then(0).otherwise( pl.col( "infected" ) ) )
+            df = df.with_columns( immunity=pl.when( pl.col( "newly_cleared" ) == 1 ).then(1).otherwise( pl.col( "immunity" ) ) )
             df = df.with_columns( immunity_timer=pl.when( pl.col( "newly_cleared" ) == 1 ).then(
                 pl.lit( np.random.randint(
                     10,40, size=df.height
                 ) ) ).otherwise(
                     pl.col( "immunity_timer"
-                ) ) ) # TBD: Needs to be from distribution
+                ) ) )
             df = df.drop( "newly_cleared" )
-            ctx = pl.SQLContext(agents=df, eager_execution=True)
-            results = ctx.execute('SELECT node, immunity_timer FROM agents WHERE immunity_timer>0')
+            #ctx = pl.SQLContext(agents=df, eager_execution=True)
+            #results = ctx.execute('SELECT node, immunity_timer FROM agents WHERE immunity_timer>0')
 
             return df
 
