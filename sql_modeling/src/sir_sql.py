@@ -2,7 +2,6 @@ import sqlite3
 import random
 import csv
 import concurrent.futures
-from sparklines import sparklines
 import numpy as np # not for modeling
 import pdb
 import sys
@@ -12,7 +11,6 @@ from settings import * # local file
 import settings
 
 settings.base_infectivity = 0.0001
-write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 
 # Globals! (not really)
 conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
@@ -71,6 +69,7 @@ def initialize_database( conn=None ):
             immunity_timer INTEGER
         )
     ''')
+    # lots of index experiments going on here
     #cursor.execute( "CREATE INDEX node_idx ON agents(node)" )
     cursor.execute( "CREATE INDEX immunity_idx ON agents(immunity)" )
     cursor.execute( "CREATE INDEX immunity_node_idx ON agents(immunity,node)" )
@@ -87,6 +86,7 @@ def initialize_database( conn=None ):
     cursor.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
+    # uniform distribution draws seem a bit clunky in SQLite. Probably better to use %
     cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER ), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
     # Make everyone over some age perman-immune
     cursor.execute( "UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > 5*365" )
@@ -95,7 +95,7 @@ def initialize_database( conn=None ):
 
     return cursor
 
-def report( cursor, timestep, csvwriter ):
+def collect_report( cursor ):
     #print( "Start report." ) # helps with visually sensing how long this takes.
     # Count agents in each state
     cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node')
@@ -121,25 +121,8 @@ def report( cursor, timestep, csvwriter ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
-    infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
-    total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
-    totals = np.array([total[key] for key in sorted(total.keys(), reverse=True)])
-    prev = infecteds/totals
-    print( f"T={timestep}" )
-    print( list( sparklines( prev ) ) )
-    # Write the counts to the CSV file
-    #print( f"T={timestep},\nS={susceptible_counts},\nI={infected_counts},\nR={recovered_counts}" )
-    if write_report:
-        for node in nodes:
-            csvwriter.writerow([timestep,
-                node,
-                susceptible_counts[node] if node in susceptible_counts else 0,
-                infected_counts[node] if node in infected_counts else 0,
-                recovered_counts[node] if node in recovered_counts else 0,
-                ]
-            )
     # print( "Stop report." ) # helps with visually sensing how long this takes.
-    return infected_counts, susceptible_counts
+    return infected_counts, susceptible_counts, recovered_counts 
 
 def update_ages( cursor ):
     cursor.execute('''
@@ -230,7 +213,8 @@ def migrate( cursor, timestep, **kwargs ): # ignore kwargs
 # Function to run the simulation for a given number of timesteps
 def run_simulation(cursor, csvwriter, num_timesteps):
     #import timeit
-    currently_infectious, currently_sus = report( cursor, 0, csvwriter )
+    currently_infectious, currently_sus, cur_reco = collect_report( cursor )
+    write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     for timestep in range(1, num_timesteps + 1):
         update_ages( cursor )
@@ -247,7 +231,8 @@ def run_simulation(cursor, csvwriter, num_timesteps):
         add_new_infections(cursor)
         migrate(cursor, timestep)
         #conn.commit() # using global conn here, a bit of a cheat
-        currently_infectious, currently_sus = report( cursor, timestep, csvwriter )
+        currently_infectious, currently_sus, cur_reco = collect_report( cursor )
+        write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
 
