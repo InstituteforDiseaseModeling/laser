@@ -1,6 +1,6 @@
 import csv
-#import sir_sql as model
-import sir_sql_polars as model
+import sir_sql as model
+#import sir_sql_polars as model
 import settings
 
 def init_report():

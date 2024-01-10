@@ -145,6 +145,7 @@ def update_ages( cursor ):
     cursor.execute('''
         UPDATE agents SET age = age+1/365
     ''')
+    return cursor # for pattern
 
 def progress_infections( cursor ):
     # Update infected agents/Progress Existing Infections
@@ -154,6 +155,7 @@ def progress_infections( cursor ):
     cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
     cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
     cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=CAST( 10+30*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
+    return cursor # for pattern
 
 # Update immune agents
 def progress_immunities( cursor ):
@@ -161,6 +163,7 @@ def progress_immunities( cursor ):
     # immunity flag: clear for each new sus person
     cursor.execute("UPDATE agents SET immunity_timer = (immunity_timer-1) WHERE immunity=1 AND immunity_timer>0" )
     cursor.execute("UPDATE agents SET immunity = 0 WHERE immunity = 1 AND immunity_timer=0" )
+    return cursor # for pattern
 
 def calculate_new_infections( cursor, inf, sus ):
     import numpy as np
@@ -197,6 +200,7 @@ def handle_transmission( cursor, new_infections, node=0 ):
                 )""", {'new_infections': int(new_infections), 'node': node } )
     if new_infections>0:
         infect(new_infections, node )
+    return cursor # for pattern
 
     #print( f"{new_infections} new infections in node {node}." )
 #with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -204,6 +208,7 @@ def handle_transmission( cursor, new_infections, node=0 ):
 
 def add_new_infections( cursor ):
     cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
+    return cursor # for pattern
 
 def migrate( cursor, timestep, **kwargs ): # ignore kwargs
     # 1% weekly migration ought to cause infecteds from seed node to move to next node
@@ -220,6 +225,7 @@ def migrate( cursor, timestep, **kwargs ): # ignore kwargs
                     LIMIT (SELECT COUNT(*) FROM agents) / CAST(1/0.001 AS INTEGER)
                 )
             ''', { 'max_node': settings.num_nodes-1 } )
+    return cursor # for pattern
 
 # Function to run the simulation for a given number of timesteps
 def run_simulation(cursor, csvwriter, num_timesteps):
