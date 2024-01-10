@@ -205,7 +205,7 @@ def handle_transmission( cursor, new_infections, node=0 ):
 def add_new_infections( cursor ):
     cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
 
-def migrate( cursor, timestep ):
+def migrate( cursor, timestep, **kwargs ): # ignore kwargs
     # 1% weekly migration ought to cause infecteds from seed node to move to next node
     if timestep % 7 == 0: # every week (or day, depending on what I've set it to)
         cursor.execute( '''

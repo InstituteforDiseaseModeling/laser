@@ -1,5 +1,6 @@
 import csv
-import sir_sql as model
+#import sir_sql as model
+import sir_sql_polars as model
 import settings
 
 def init_report():
@@ -13,19 +14,19 @@ def run_simulation(ctx, csvwriter, num_timesteps):
     currently_infectious, currently_sus = model.report( ctx, 0, csvwriter )
 
     for timestep in range(1, num_timesteps + 1):
-        model.update_ages( ctx )
+        ctx = model.update_ages( ctx )
 
-        model.progress_infections( ctx )
+        ctx = model.progress_infections( ctx )
 
-        model.progress_immunities( ctx )
+        ctx = model.progress_immunities( ctx )
 
         new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus )
 
         for node in settings.nodes:
-            model.handle_transmission( ctx, new_infections[node], node )
+            ctx = model.handle_transmission( ctx, new_infections[node], node )
 
-        model.add_new_infections( ctx )
-        model.migrate( ctx, timestep )
+        ctx = model.add_new_infections( ctx )
+        ctx = model.migrate( ctx, timestep, num_infected=sum(currently_infectious.values()) )
         #conn.commit() # deb-specific
         currently_infectious, currently_sus = model.report( ctx, timestep, csvwriter )
 
@@ -33,7 +34,8 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
 # Main simulation
 if __name__ == "__main__":
-    # Initialize the database
+    # Initialize the 'database' (or load the dataframe/csv)
+    # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
 
     csv_writer = init_report()
