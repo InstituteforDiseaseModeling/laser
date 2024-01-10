@@ -168,7 +168,7 @@ def calculate_new_infections( cursor, inf, sus ):
     #print( "new infections = " + str(new_infections) )
     return new_infections 
 
-def handle_transmission( cursor, new_infections, node=0 ):
+def _handle_transmission_inner( cursor, new_infections, node=0 ):
     # Step 5: Update the infected flag for NEW infectees
     def infect( new_infections, node ):
         #print( f"infect: ni = {new_infections}, node = {node}" )
@@ -189,6 +189,12 @@ def handle_transmission( cursor, new_infections, node=0 ):
     #print( f"{new_infections} new infections in node {node}." )
 #with concurrent.futures.ThreadPoolExecutor() as executor:
     #results = list(executor.map(handle_transmission, settings.nodes))
+
+def handle_transmission( df, new_infections ):
+    for node in settings.nodes:
+        if new_infections[ node ] > 0:
+            df = _handle_transmission_inner( df, new_infections[ node ], node )
+    return df
 
 def add_new_infections( cursor ):
     cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )

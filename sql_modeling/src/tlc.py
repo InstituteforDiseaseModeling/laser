@@ -1,7 +1,7 @@
 # Import a model
-import sir_sql as model
+#import sir_sql as model
 #import sir_sql_polars as model
-#import sir_numpy as model
+import sir_numpy as model
 
 import settings
 import report
@@ -30,8 +30,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus )
 
         # TBD: for loop should probably be implementation-specific
-        for node in settings.nodes:
-            ctx = model.handle_transmission( ctx, new_infections[node], node )
+        ctx = model.handle_transmission( ctx, new_infections )
 
         ctx = model.add_new_infections( ctx )
 

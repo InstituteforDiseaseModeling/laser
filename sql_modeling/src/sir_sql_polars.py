@@ -140,10 +140,13 @@ def calculate_new_infections( df, inf, sus ):
     new_infections = (foi * sus_np).astype(int)
     return new_infections 
 
-def handle_transmission( df, new_infections, node=0 ):
-    if new_infections == 0:
-        return df
+def handle_transmission( df, new_infections ):
+    for node in settings.nodes:
+        if new_infections[ node ] > 0:
+            df = _handle_transmission_inner( df, new_infections[ node ], node )
+    return df
 
+def _handle_transmission_inner( df, new_infections, node=0 ):
     # We have total susceptibles by node, but not the individuals
     condition = (pl.col("infected") == 0) & (pl.col("immunity") == 0) & (pl.col("node") == node)
     if new_infections > len( df.filter(condition) ):
@@ -195,8 +198,8 @@ def run_simulation(df, csvwriter, num_timesteps):
 
         new_infections = calculate_new_infections( df, currently_infectious, currently_sus )
 
-        for node in settings.nodes:
-            df = handle_transmission( df, new_infections[ node ], node )
+        #for node in settings.nodes:
+            #df = handle_transmission( df, new_infections[ node ], node )
 
         df = add_new_infections( df )
 

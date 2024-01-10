@@ -1,27 +1,26 @@
 import random
 import csv
 import numpy as np
-import settings
 import concurrent.futures
 from functools import partial
 import pdb
 
-# Globals! (not really)
-base_infectivity = 0.000002
-safe_mode = False
+import settings
+import report
 
-def load():
+# Globals! (not really)
+#base_infectivity = 0.000002
+settings.base_infectivity = 0.00001
+
+def load( pop_file ):
     """
     Load population from csv file as np arrays. Each property column is an np array.
     """
-    # Replace 'your_file.csv' with the actual path to your CSV file
-    csv_file = settings.pop_file
-
     # Load the entire CSV file into a NumPy array
-    header_row = np.genfromtxt(csv_file, delimiter=',', dtype=str, max_rows=1)
+    header_row = np.genfromtxt(pop_file, delimiter=',', dtype=str, max_rows=1)
 
     # Load the remaining data as numerical values, skipping the header row
-    data = np.genfromtxt(csv_file, delimiter=',', dtype=float, skip_header=1)
+    data = np.genfromtxt(pop_file, delimiter=',', dtype=float, skip_header=1)
 
     # Extract headers from the header row
     headers = header_row
@@ -40,12 +39,14 @@ def load():
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
     return columns
 
+def initialize_database():
+    return load( settings.pop_file )
     
-def report( data, timestep, csvwriter ):
+def collect_report( data ):
     """
     Report data to file for a given timestep.
     """
-    print( "Start timestep report." )
+    #print( "Start timestep report." )
     condition_mask = np.logical_and(~data['infected'], ~data['immunity'])
     unique_nodes, counts = np.unique(data['node'][condition_mask], return_counts=True)
 
@@ -70,38 +71,33 @@ def report( data, timestep, csvwriter ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
-    # Write the counts to the CSV file
-    #print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
-    print( f"T={timestep}, I={infected_counts}" )
-    for node in settings.nodes:
-        csvwriter.writerow([timestep,
-            node,
-            susceptible_counts[node] if node in susceptible_counts else 0,
-            infected_counts[node] if node in infected_counts else 0,
-            recovered_counts[node] if node in recovered_counts else 0,
-            ]
-        )
-    print( "Stop timestep report." )
-    return infected_counts, susceptible_counts
+    #print( "Stop timestep report." )
+    return infected_counts, susceptible_counts, recovered_counts
 
 def update_ages( data ):
     data['age'] += 1/365
     return data
 
 def progress_infections( data ):
+    #pdb.set_trace()
     # Update infected agents
     # infection timer: decrement for each infected person
     data['infection_timer'][data['infection_timer'] >= 1] -= 1
     data['incubation_timer'][data['incubation_timer'] >= 1] -= 1
+    # some people clear
     condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
     data['infected'][condition] = False
+    # recovereds gain immunity
     data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
+    data['immunity'][condition] = True
     return data
 
 # Update immune agents
 def progress_immunities( data ):
+    # immunity decays
     condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
     data['immunity_timer'][condition] -= 1
+    # Recoverd->Susceptible
     condition = np.logical_and(data['immunity'], data['immunity_timer'] == 0)
     data['immunity'][condition] = False
     return data
@@ -115,7 +111,7 @@ def calculate_new_infections( data, inf, sus ):
         #raise ValueError( "node_counts_incubators came back size 0." )
     sorted_items = sorted(inf.items())
     inf_np = np.array([value for _, value in sorted_items])
-    foi = (inf_np-node_counts_incubators) * base_infectivity
+    foi = (inf_np-node_counts_incubators) * settings.base_infectivity
     sus_np = np.array(list(sus.values()))
     new_infections = (foi * sus_np).astype(int)
     #print( new_infections )
@@ -154,7 +150,7 @@ def handle_transmission( data_in, new_infections_in ):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(htbn, settings.nodes))
         #results = list(executor.map(handle_new_infections_np, settings.nodes))
-    return data
+    return data_in
 
 def add_new_infections( data ):
     # Actually this just sets the new infection timers (globally) for all the new infections
@@ -163,7 +159,7 @@ def add_new_infections( data ):
     data['infection_timer'][condition] = np.random.randint(4, 15, size=np.sum(condition))
     return data
 
-def migrate( data, timestep ):
+def migrate( data, timestep, num_infected=None ):
     if timestep % 7 == 0: # every week
         infected = np.where( data['infected'] )[0]
         fraction = int(len(infected)*0.01)
@@ -174,7 +170,8 @@ def migrate( data, timestep ):
 
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):
-    currently_infectious, currently_sus = report( data, 0, csvwriter )
+    currently_infectious, currently_sus, cur_reco  = report( data )
+    report.write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     for timestep in range(1, num_timesteps + 1):
         data = update_ages( data )
@@ -191,7 +188,8 @@ def run_simulation(data, csvwriter, num_timesteps):
 
         data = migrate( data, timestep )
 
-        currently_infectious, currently_sus = report( data, timestep, csvwriter )
+        currently_infectious, currently_sus, cur_reco = collect_report( data )
+        report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
