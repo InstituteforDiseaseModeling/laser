@@ -9,6 +9,7 @@ import os
 
 from settings import * # local file
 import settings
+import report
 
 settings.base_infectivity = 0.0001
 
@@ -214,7 +215,7 @@ def migrate( cursor, timestep, **kwargs ): # ignore kwargs
 def run_simulation(cursor, csvwriter, num_timesteps):
     #import timeit
     currently_infectious, currently_sus, cur_reco = collect_report( cursor )
-    write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
+    report.write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     for timestep in range(1, num_timesteps + 1):
         update_ages( cursor )
@@ -232,7 +233,7 @@ def run_simulation(cursor, csvwriter, num_timesteps):
         migrate(cursor, timestep)
         #conn.commit() # using global conn here, a bit of a cheat
         currently_infectious, currently_sus, cur_reco = collect_report( cursor )
-        write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
+        report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
 

@@ -8,6 +8,7 @@ import time
 import pdb
 #from settings import * # local file
 import settings # do this just one way
+import report
 
 settings.base_infectivity = 0.00001
 start_timer = time.time()
@@ -31,7 +32,7 @@ def load( pop_file ):
 def initialize_database():
     return load( settings.pop_file )
 
-def report( df, timestep, csvwriter ):
+def collect_report( df ):
     #print( "Start report." )
     # Count agents in each state
     ctx = pl.SQLContext(agents=df, eager_execution=True)
@@ -55,31 +56,11 @@ def report( df, timestep, csvwriter ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
-    # Maybe don't need to do this each time
-    total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
-
-    # Write the counts to the CSV file
-    #print( f"T={timestep}, S={susceptible_counts}, I={infected_counts}, R={recovered_counts}" )
-    print( f"T={timestep}" )
-    # OK this turned into an ordeal... I bet my cute sparklines reporting is slowing us down.
-    infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
-    totals = np.array([total[key] for key in sorted(total.keys(), reverse=True)])
-    prev = infecteds/totals
-    print( list( sparklines( prev ) ) )
-
-    for node in settings.nodes:
-        csvwriter.writerow([timestep,
-            node,
-            susceptible_counts[node] if node in susceptible_counts else 0,
-            infected_counts[node] if node in infected_counts else 0,
-            recovered_counts[node] if node in recovered_counts else 0,
-            ]
-        )
     #print( "Stop report." )
     global last_time
     print( f"Elapsed Time for timestep: {(time.time()-last_time):0.2f}" )
     last_time = time.time()
-    return infected_counts, susceptible_counts
+    return infected_counts, susceptible_counts, recovered_counts
 
 def update_ages( df ):
     #cursor.execute("UPDATE agents SET age = age+1/365")
@@ -196,10 +177,12 @@ def migrate( df, timestep, **kwargs ):
         df = df.update( sampled_df, left_on="id", right_on="id", how="outer" )
     return df
 
+# You can run from tlc or from here directly
 # Function to run the simulation for a given number of timesteps
 def run_simulation(df, csvwriter, num_timesteps):
     import timeit
-    currently_infectious, currently_sus = report( df, 0, csvwriter )
+    currently_infectious, currently_sus, cur_reco = collect_report( df )
+    report.write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     for timestep in range(1, num_timesteps + 1):
         # Update infected agents
@@ -219,7 +202,8 @@ def run_simulation(df, csvwriter, num_timesteps):
 
         df = migrate( df, timestep, num_infected=sum(currently_infectious.values()) )
 
-        currently_infectious, currently_sus = report( df, timestep, csvwriter )
+        currently_infectious, currently_sus, cur_reco = collect_report( df )
+        report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
 

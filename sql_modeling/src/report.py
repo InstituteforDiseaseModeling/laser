@@ -3,6 +3,8 @@ import numpy as np
 from sparklines import sparklines
 import settings
 
+write_report = True
+
 def init():
     # Create a CSV file for reporting
     csvfile = open( settings.report_filename, 'w', newline='') 
