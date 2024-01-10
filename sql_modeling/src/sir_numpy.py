@@ -3,6 +3,7 @@ import csv
 import numpy as np
 import settings
 import concurrent.futures
+from functools import partial
 import pdb
 
 # Globals! (not really)
@@ -83,99 +84,113 @@ def report( data, timestep, csvwriter ):
     print( "Stop timestep report." )
     return infected_counts, susceptible_counts
 
+def update_ages( data ):
+    data['age'] += 1/365
+    return data
+
+def progress_infections( data ):
+    # Update infected agents
+    # infection timer: decrement for each infected person
+    data['infection_timer'][data['infection_timer'] >= 1] -= 1
+    data['incubation_timer'][data['incubation_timer'] >= 1] -= 1
+    condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
+    data['infected'][condition] = False
+    data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
+    return data
+
+# Update immune agents
+def progress_immunities( data ):
+    condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
+    data['immunity_timer'][condition] -= 1
+    condition = np.logical_and(data['immunity'], data['immunity_timer'] == 0)
+    data['immunity'][condition] = False
+    return data
+
+def calculate_new_infections( data, inf, sus ):
+    # We want to count the number of incubators by now all at once not in a for loop.
+    node_counts_incubators = np.bincount( data['node'][data['incubation_timer']>=1] )
+    if len( node_counts_incubators ) == 0:
+        print( "node_counts_incubators came back size 0." )
+        node_counts_incubators = np.zeros( settings.num_nodes )
+        #raise ValueError( "node_counts_incubators came back size 0." )
+    sorted_items = sorted(inf.items())
+    inf_np = np.array([value for _, value in sorted_items])
+    foi = (inf_np-node_counts_incubators) * base_infectivity
+    sus_np = np.array(list(sus.values()))
+    new_infections = (foi * sus_np).astype(int)
+    #print( new_infections )
+    return new_infections
+
+def handle_transmission_by_node( data, new_infections, node=0 ):
+    # Step 5: Update the infected flag for NEW infectees
+    def handle_new_infections(new_infections):
+        # print( f"We are doing transmission to {new_infections} in node {node}." )
+        # Create a boolean mask based on the conditions in the subquery
+        subquery_condition = np.logical_and(~data['infected'], ~data['immunity'])
+        subquery_condition = np.logical_and(subquery_condition, (data['node'] == node))
+
+        # Get the indices of eligible agents using the boolean mask
+        eligible_agents_indices = np.where(subquery_condition)[0]
+
+        # Randomly sample 'new_infections' number of indices
+        selected_indices = np.random.choice(eligible_agents_indices, size=min(new_infections, len(eligible_agents_indices)), replace=False)
+
+        # Update the 'infected' column based on the selected indices
+        data['infected'][selected_indices] = True
+        data['incubation_timer'][selected_indices] = 2
+
+    #print( new_infections[node] )
+    if new_infections[node]>0:
+        handle_new_infections(new_infections[node])
+        #handle_new_infections(new_infections)
+
+    #print( f"{new_infections} new infections in node {node}." )
+    return data
+
+def handle_transmission( data_in, new_infections_in ):
+    #print( "handle_transmission" )
+    # We want to do this in parallel
+    htbn = partial( handle_transmission_by_node, data_in, new_infections_in )
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(executor.map(htbn, settings.nodes))
+        #results = list(executor.map(handle_new_infections_np, settings.nodes))
+    return data
+
+def add_new_infections( data ):
+    # Actually this just sets the new infection timers (globally) for all the new infections
+    # New infections themselves are set node-wise
+    condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
+    data['infection_timer'][condition] = np.random.randint(4, 15, size=np.sum(condition))
+    return data
+
+def migrate( data, timestep ):
+    if timestep % 7 == 0: # every week
+        infected = np.where( data['infected'] )[0]
+        fraction = int(len(infected)*0.01)
+        selected = np.random.choice( infected, fraction )
+        # Update the 'nodes' array based on the specified conditions
+        data['node'][selected] = np.where(data['node'][selected] - 1 < 0, settings.num_nodes - 1, data['node'][selected] - 1 )
+    return data
+
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):
     currently_infectious, currently_sus = report( data, 0, csvwriter )
 
     for timestep in range(1, num_timesteps + 1):
-        # Update infected agents
-        # infection timer: decrement for each infected person
+        data = update_ages( data )
 
-        def update_ages_np():
-            data['age'] += 1/365
-        update_ages_np()
-        #print( "Back from...update_ages()" )
-        #print( f"update_ages took {age_time}" )
+        data = progress_infections( data )
 
-        def progress_infections_np():
-            data['infection_timer'][data['infection_timer'] >= 1] -= 1
-            data['incubation_timer'][data['incubation_timer'] >= 1] -= 1
-            condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
-            data['infected'][condition] = False
-            data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
+        data = progress_immunities( data )
 
-        progress_infections_np()
-        #print( "Back from...progress_infections()" )
+        new_infections = calculate_new_infections( data, currently_infectious, currently_sus )
 
-        # Update immune agents
-        def progress_immunities_np():
-            condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
-            data['immunity_timer'][condition] -= 1
-            condition = np.logical_and(data['immunity'], data['immunity_timer'] == 0)
-            data['immunity'][condition] = False
+        data = handle_transmission( data_in=data, new_infections_in=new_infections )
 
-        progress_immunities_np()
-        #print( "Back from...progress_immunities()" )
+        data = add_new_infections( data )
 
-        # We want to count the number of incubators by now all at once not in a for loop.
-        node_counts_incubators = np.bincount( data['node'][data['incubation_timer']>=1] )
-        if len( node_counts_incubators ) == 0:
-            print( "node_counts_incubators came back size 0." )
-            node_counts_incubators = np.zeros( settings.num_nodes )
-            #raise ValueError( "node_counts_incubators came back size 0." )
-        sorted_items = sorted(currently_infectious.items())
-        inf_np = np.array([value for _, value in sorted_items])
-        foi = (inf_np-node_counts_incubators) * base_infectivity
-        sus_np = np.array(list(currently_sus.values()))
-        new_infections = (foi * sus_np).astype(int)
-        #print( new_infections )
+        data = migrate( data, timestep )
 
-        def handle_transmission( node=0 ):
-            # Step 5: Update the infected flag for NEW infectees
-            def handle_new_infections_np(new_infections):
-                #print( f"We are doing transmission to {new_infections} in node {node}." )
-                # Create a boolean mask based on the conditions in the subquery
-                subquery_condition = np.logical_and(~data['infected'], ~data['immunity'])
-                subquery_condition = np.logical_and(subquery_condition, (data['node'] == node))
-
-                # Get the indices of eligible agents using the boolean mask
-                eligible_agents_indices = np.where(subquery_condition)[0]
-
-                # Randomly sample 'new_infections' number of indices
-                selected_indices = np.random.choice(eligible_agents_indices, size=min(new_infections, len(eligible_agents_indices)), replace=False)
-
-                # Update the 'infected' column based on the selected indices
-                data['infected'][selected_indices] = True
-                data['incubation_timer'][selected_indices] = 2
-
-            #print( new_infections )
-            if new_infections[node]>0:
-                handle_new_infections_np(new_infections[node])
-                #print( "Back from new_infections_np" )
-
-            #print( f"{new_infections} new infections in node {node}." )
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            results = list(executor.map(handle_transmission, settings.nodes))
-            #results = list(executor.map(handle_new_infections_np, settings.nodes))
-
-        condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
-        data['infection_timer'][condition] = np.random.randint(4, 15, size=np.sum(condition))
-        #print( "Back from...init_inftimers()" )
-
-        def migrate_np():
-            if timestep % 2 == 0: # every week
-                #print( "It's Sunday, migrate." )
-                infected = np.where( data['infected'] )[0]
-                fraction = int(len(infected)*0.01)
-                selected = np.random.choice( infected, fraction )
-                # Update the 'nodes' array based on the specified conditions
-                data['node'][selected] = np.where(data['node'][selected] - 1 < 0, settings.num_nodes - 1, data['node'][selected] - 1 )
-
-        migrate_np()
-        #print( "Back from migrate_np" )
-
-        print( "*" )
         currently_infectious, currently_sus = report( data, timestep, csvwriter )
 
 
