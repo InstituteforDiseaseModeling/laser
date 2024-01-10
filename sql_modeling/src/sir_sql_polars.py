@@ -210,14 +210,14 @@ def run_simulation(df, csvwriter, num_timesteps):
 
         df = progress_immunities(df)
 
-        new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus )
+        new_infections = calculate_new_infections( df, currently_infectious, currently_sus )
 
         for node in settings.nodes:
             df = handle_transmission( df, new_infections[ node ], node )
 
         df = add_new_infections( df )
 
-        df = migrate( df, timestep )
+        df = migrate( df, timestep, num_infected=sum(currently_infectious.values()) )
 
         currently_infectious, currently_sus = report( df, timestep, csvwriter )
 
