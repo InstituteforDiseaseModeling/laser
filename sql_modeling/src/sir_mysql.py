@@ -11,7 +11,7 @@ from settings import * # local file
 import settings
 import report
 
-settings.base_infectivity = 0.001
+settings.base_infectivity = 0.0001
 
 # Globals! (not really)
 config = {
@@ -85,9 +85,8 @@ def initialize_database(): # conn=None ):
     ''')
     # lots of index experiments going on here
     #cursor.execute( "CREATE INDEX node_idx ON agents(node)" )
-    if False:
-        cursor.execute( "CREATE INDEX IF NOT EXISTS immunity_idx ON agents(immunity)" )
-        cursor.execute( "CREATE INDEX IF NOT EXISTS immunity_node_idx ON agents(immunity,node)" )
+    cursor.execute( "CREATE INDEX immunity_idx ON agents(immunity)" )
+    cursor.execute( "CREATE INDEX immunity_node_idx ON agents(immunity,node)" )
     #cursor.execute( "CREATE INDEX infected_idx ON agents(infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node ON agents(id, node)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_infected ON agents(node, infected)" )
@@ -124,7 +123,7 @@ def initialize_database(): # conn=None ):
 def collect_report( cursor ):
     #print( "Start report." ) # helps with visually sensing how long this takes.
     # Count agents in each state
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node ORDER BY NODE')
     # this seems slow and clunky
     
     susceptible_counts_db = cursor.fetchall()
@@ -133,14 +132,14 @@ def collect_report( cursor ):
         if node not in susceptible_counts:
             susceptible_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=1 GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE infected=1 GROUP BY node ORDER BY NODE')
     infected_counts_db = cursor.fetchall()
     infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
     for node in nodes:
         if node not in infected_counts:
             infected_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node ORDER BY NODE')
     recovered_counts_db = cursor.fetchall()
     recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
     for node in nodes:
@@ -190,7 +189,7 @@ def calculate_new_infections( cursor, inf, sus ):
     foi = np.array([ min(1,x) for x in foi ])
     sus_np = np.array(list(sus.values()))
     new_infections = list((foi * sus_np).astype(int))
-    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{currently_sus}" )
+    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{sus}" )
     #print( "new infections = " + str(new_infections) )
     return new_infections 
 
@@ -244,14 +243,17 @@ def migrate( cursor, timestep, **kwargs ): # ignore kwargs
         count_infected = cursor.fetchone()[0]
 
         # Calculate the limit for updating 0.1% of rows
-        limit_percentage = 0.01
+        limit_percentage = 0.001
         update_limit = max(1, int(limit_percentage * count_infected))
         print( f"update_limit = {update_limit}" )
 
         # Update 0.1% of rows, ensuring node doesn't become negative
         update_query = f'''
             UPDATE agents
-            SET node = ( node -1) % {settings.num_nodes-1}
+            SET node = CASE
+                WHEN node > 0 THEN node-1
+                ELSE {settings.num_nodes-1}
+            END
             WHERE infected = 1
             ORDER BY RAND()
             LIMIT {update_limit}
