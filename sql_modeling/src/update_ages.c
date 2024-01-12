@@ -58,8 +58,8 @@ void calculate_new_infections(
     int num_nodes,
     float * incubation_timer,
     uint32_t * node,
-    int64_t * infection_counts,
-    int64_t * sus,
+    uint32_t * infection_counts,
+    uint32_t * sus,
     uint32_t * new_infs_out
 ) {
     // We need number of infected not incubating
@@ -144,6 +144,28 @@ void migrate( int num_agents, bool * infected, uint32_t * node ) {
 	    {
 		node[ i ] --;
 	    }
+	}
+    }
+}
+
+void collect_report( 
+    int num_agents,
+    uint32_t * node,
+    bool * infected,
+    bool * immunity,
+    uint32_t * infection_count,
+    uint32_t * susceptible_count,
+    uint32_t * recovered_count
+)
+{
+    for (int i = 0; i < num_agents; ++i) {
+	uint32_t node_id = node[i];
+	if( infected[ i ] ) {
+	    infection_count[ node_id ]++;
+	} else if( immunity[ i ] ) {
+	    recovered_count[ node_id ]++;
+	} else {
+	    susceptible_count[ node_id ]++;
 	}
     }
 }
