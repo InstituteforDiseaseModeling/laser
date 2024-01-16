@@ -76,5 +76,6 @@ docs/_build
 # Testing
 tests/*.csv
 tests/*.xlsx
+tests/results*/*
 tmp/*
 data/*
