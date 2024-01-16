@@ -80,7 +80,9 @@ def test_sir(params):
     # consider including +1 since the first action in processing is to decrement the infection timer
     initial_infs = prng.choice(community.count, size=params.initial_inf, replace=False)
     # prng.normal() _could_ draw negative numbers, consider making the minimum initial timer 1 day
-    community.itimer[initial_infs] = prng.normal(params.inf_mean, params.inf_std, size=params.initial_inf).round().astype(ITIMER_TYPE_NP)
+    community.itimer[initial_infs] = (
+        prng.normal(params.inf_mean, params.inf_std, size=params.initial_inf).round().astype(ITIMER_TYPE_NP).clip(min=1) + 1
+    )
     community.susceptibility[initial_infs] = 0
 
     # We do the dance seen below a couple of times because Numba doesn't know what it can
@@ -118,7 +120,14 @@ def test_sir(params):
                 target = targets[i]
                 if np.random.random_sample() < susceptibility[target]:
                     susceptibility[target] = 0
-                    itimer[target] = ITIMER_TYPE_NP(np.round(np.random.normal(inf_mean, inf_std)))
+                    # Add 1 because the first action in processing is to decrement the infection timer
+                    # So, for example, if the timer is initially 1, it will be set to 0 and the individual
+                    # will be removed from the infected pool before they have a chance to infect anyone.
+                    timer = np.round(np.random.normal(inf_mean, inf_std))
+                    if timer < 1:
+                        timer = 1
+                    timer = timer + 1
+                    itimer[target] = ITIMER_TYPE_NP(timer)
 
             return
 
@@ -147,7 +156,14 @@ def test_sir(params):
             for i in nb.prange(count):
                 if np.random.random_sample() < (force * susceptibility[i]):
                     susceptibility[i] = 0
-                    itimer[i] = ITIMER_TYPE_NP(np.round(np.random.normal(inf_mean, inf_std)))
+                    # Add 1 because the first action in processing is to decrement the infection timer
+                    # So, for example, if the timer is initially 1, it will be set to 0 and the individual
+                    # will be removed from the infected pool before they have a chance to infect anyone.
+                    timer = np.round(np.random.normal(inf_mean, inf_std))
+                    if timer < 1:
+                        timer = 1
+                    timer = timer + 1
+                    itimer[i] = ITIMER_TYPE_NP(timer)
 
             return
 
