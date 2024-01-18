@@ -7,9 +7,10 @@
 #include <string.h>
 #include <stdint.h>
 
-void update_ages(double *ages, size_t length) {
+const float one_day = 1.0f/365.0f;
+void update_ages(size_t length, float *ages) {
     for (size_t i = 0; i < length; i++) {
-        ages[i] += 1.0 / 365.0;
+        ages[i] += one_day;
     }
 }
 

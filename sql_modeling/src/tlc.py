@@ -1,7 +1,9 @@
 # Import a model
 #import sir_sql as model
+#import sir_mysql as model
 #import sir_sql_polars as model
 import sir_numpy as model
+#import sir_numpy_c as model
 
 import settings
 import report
@@ -17,7 +19,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
-        #ctx = model.update_ages( ctx )
+        ctx = model.update_ages( ctx )
 
         # We should always be in a low prev setting so this should only really ever operate
         # on ~1% of the active population
@@ -34,6 +36,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         ctx = model.add_new_infections( ctx )
 
+        #ctx = model.distribute_interventions( ctx, timestep )
         # Transmission is done, now migrate some. Only infected?
         ctx = model.migrate( ctx, timestep, num_infected=sum(currently_infectious.values()) )
         #conn.commit() # deb-specific

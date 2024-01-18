@@ -49,6 +49,14 @@ def get_node_ids():
 
     return array
 
+def get_rand_lifespan():
+    mean_lifespan = 75  # Mean lifespan in years
+    stddev_lifespan = 10  # Standard deviation of lifespan in years
+
+    # Draw a random number from the normal distribution
+    random_lifespan = round(max(np.random.normal(mean_lifespan, stddev_lifespan),0))
+    return random_lifespan 
+
 # Function to initialize the SQLite database
 def initialize_database( conn=None ):
     print( "Initializing pop NOT from file." )
@@ -60,14 +68,15 @@ def initialize_database( conn=None ):
     # Create agents table
     cursor.execute('''
         CREATE TABLE agents (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             node INTEGER,
             age REAL,
             infected BOOLEAN,
             infection_timer INTEGER,
             incubation_timer INTEGER,
             immunity BOOLEAN,
-            immunity_timer INTEGER
+            immunity_timer INTEGER,
+            expected_lifespan INTEGER
         )
     ''')
     # lots of index experiments going on here
@@ -83,8 +92,9 @@ def initialize_database( conn=None ):
     # Insert 10,000 agents with random age and all initially uninfected
     #agents_data = [(i, random.randint(0, num_nodes-1), random.randint(0, 100), False, 0, 0, False, 0) for i in range(1, pop)]
     node_assignments = get_node_ids()
-    agents_data = [(i, node_assignments[i], random.randint(0, 100), False, 0, 0, False, 0) for i in range(1, pop)]
-    cursor.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+
+    agents_data = [(node_assignments[i], random.randint(0, 100)+random.randint(0,365)/365.0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(pop)]
+    cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
     # uniform distribution draws seem a bit clunky in SQLite. Probably better to use %
@@ -126,9 +136,29 @@ def collect_report( cursor ):
     return infected_counts, susceptible_counts, recovered_counts 
 
 def update_ages( cursor ):
-    cursor.execute('''
-        UPDATE agents SET age = age+1/365
-    ''')
+    cursor.execute("UPDATE agents SET age = age+1/365.0")
+    # Births: Let's aim for 100 births per 1,000 woman of cba per year. So 
+    # 0.1/365 per day or 2.7e-4
+    wocba = cursor.execute( "SELECT node, COUNT(*)/2 FROM agents WHERE age>15 and age<45 GROUP BY node ORDER BY node").fetchall()
+    wocba  = {values[0]: values[1] for idx, values in enumerate(wocba)}
+    def add_newborns( node, babies ):
+        agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(babies)]
+        cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+        conn.commit()
+
+    for node,count in wocba.items():
+        newbabies = np.sum( np.random.rand(count) <  2.7e-4)
+        #print( f"node,newborns = {node},{newbabies}" )
+        if newbabies > 0:
+            add_newborns( node, newbabies )
+    num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+    #print( f"pop after births = {num_agents}" )
+    # Deaths
+    #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
+    cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
+    #pdb.set_trace()
+    num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+    #print( f"pop after deaths = {num_agents}" )
     return cursor # for pattern
 
 def progress_infections( cursor ):
@@ -164,7 +194,7 @@ def calculate_new_infections( cursor, inf, sus ):
     foi = np.array([ min(1,x) for x in foi ])
     sus_np = np.array(list(sus.values()))
     new_infections = list((foi * sus_np).astype(int))
-    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{currently_sus}" )
+    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{sus}" )
     #print( "new infections = " + str(new_infections) )
     return new_infections 
 
@@ -232,8 +262,9 @@ def run_simulation(cursor, csvwriter, num_timesteps):
 
         new_infections = calculate_new_infections( cursor, currently_infectious, currently_sus )
 
-        for node in nodes:
-            handle_transmission( cursor, new_infections[node], node )
+        #for node in nodes:
+            #handle_transmission( cursor, new_infections[node], node )
+        handle_transmission( cursor, new_infections[node] )
 
         add_new_infections(cursor)
         migrate(cursor, timestep)

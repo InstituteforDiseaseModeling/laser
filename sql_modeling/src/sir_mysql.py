@@ -84,9 +84,9 @@ def initialize_database(): # conn=None ):
         )
     ''')
     # lots of index experiments going on here
-    #cursor.execute( "CREATE INDEX node_idx ON agents(node)" )
+    cursor.execute( "CREATE INDEX node_idx ON agents(node)" )
     cursor.execute( "CREATE INDEX immunity_idx ON agents(immunity)" )
-    cursor.execute( "CREATE INDEX immunity_node_idx ON agents(immunity,node)" )
+    #cursor.execute( "CREATE INDEX immunity_node_idx ON agents(immunity,node)" )
     #cursor.execute( "CREATE INDEX infected_idx ON agents(infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node ON agents(id, node)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_infected ON agents(node, infected)" )
