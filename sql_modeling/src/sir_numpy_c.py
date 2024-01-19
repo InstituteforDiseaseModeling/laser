@@ -98,17 +98,16 @@ def load( pop_file ):
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
-    def eula():
-        # test out what happens if we render big chunks of the population epi-borrowing
-        condition = np.logical_and(~columns['infected'], columns['age']>15)
-        columns['immunity'][condition] = 1
-        columns['immunity_timer'][condition] = -1
-    eula()
     return columns
 
 def initialize_database():
     return load( settings.pop_file )
-    
+
+def eula( ctx, age_threshold_yrs = 5, eula_strategy=None ):
+    # For now just use numpy version
+    import sir_numpy
+    return sir_numpy.eula( ctx, age_threshold_yrs, eula_strategy )
+
 def collect_report( data ):
     """
     Report data to file for a given timestep.
@@ -228,6 +227,10 @@ def migrate( data, timestep, num_infected=None ):
                 data['node'])
         migrate_c()
     return data
+
+def distribute_interventions( ctx, timestep ):
+    import sir_numpy
+    return sir_numpy.distribute_interventions( ctx, timestep )
 
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):

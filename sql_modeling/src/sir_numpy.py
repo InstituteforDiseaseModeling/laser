@@ -54,6 +54,21 @@ def load( pop_file ):
 def initialize_database():
     return load( settings.pop_file )
     
+def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
+    # Create a boolean mask for elements to keep
+    def filter_strategy():
+        # test out what happens if we render big chunks of the population epi-borrowing
+        condition = np.logical_and(~columns['infected'], columns['age']>15)
+        columns['immunity'][condition] = 1
+        columns['immunity_timer'][condition] = -1
+
+    def purge_strategy():
+        mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
+        for column in df.keys():
+            df[column] = df[column][mask]
+    purge_strategy()
+    return df
+
 def collect_report( data ):
     """
     Report data to file for a given timestep.
@@ -102,14 +117,76 @@ def update_ages( data ):
         return ages
 
     data['age'] = update_ages_np( data['age'] )
+    data = update_births_deaths( data )
     return data
 
-def update_births_deaths( data ):
+def births(data):
     # Births
     # Calculate number of women of child-bearing age: constant across nodes
     # Add new babies as percentage of that.
-    update_ages_lib.update_ages(len(ages), ages)
+
+    # Create a boolean mask for the age condition
+    age_condition_mask = (data['age'] > 15) & (data['age'] < 45)
+
+    # Filter data based on the age condition
+    filtered_nodes = data['node'][age_condition_mask]
+    filtered_ages  = data['age'][age_condition_mask]
+
+    # Calculate the count of data per node and divide by 2
+    unique_nodes, counts = np.unique(filtered_nodes, return_counts=True)
+    wocba = np.column_stack((unique_nodes, counts // 2))
+
+    # Create a dictionary from the wocba array
+    wocba_dict = dict(wocba)
+
+    # Function to add newborns
+    def add_newborns(node, babies):
+        # Generate newborn data
+        last_id = data['id'][-1]
+        new_ids = np.arange(last_id + 1, last_id + 1 + babies)
+        new_nodes = np.full(babies, node)
+        new_ages = np.zeros(babies)
+        new_infected = np.full(babies,False)
+        new_infection_timer = np.zeros(babies)
+        new_incubation_timer = np.zeros(babies)
+        new_immunity = np.full(babies,False)
+        new_immunity_timer = np.zeros(babies)
+        new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
+
+        # Append newborns to arrays
+        data['id'] = np.concatenate((data['id'], new_ids))
+        data['node'] = np.concatenate((data['node'], new_nodes))
+        data['age'] = np.concatenate((data['age'], new_ages))
+        data['infected'] = np.concatenate((data['infected'], new_infected))
+        data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
+        data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
+        data['immunity'] = np.concatenate((data['immunity'], new_immunity))
+        data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
+        data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
+
+    # Iterate over nodes and add newborns
+    for node, count in wocba_dict.items():
+        new_babies = np.sum(np.random.rand(count) < 2.7e-4)
+        if new_babies > 0:
+            add_newborns(node, new_babies)
+
+    return data
+
+def deaths(data):
     # Non-disease deaths
+    # Create a boolean mask for the deletion condition
+    delete_mask = data['age'] >= data['expected_lifespan']
+
+    for col in data:
+        #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
+        data[col] = np.delete( data[col], np.where( delete_mask ) )
+
+    print( f"{len(delete_mask)} new deaths." )
+    return data
+
+def update_births_deaths( data ):
+    data = births(data)
+    data = deaths(data)
     return data
 
 def progress_infections( data ):
@@ -221,6 +298,51 @@ def migrate( data, timestep, num_infected=None ):
 
         migrate_np()
     return data
+
+def distribute_interventions( ctx, timestep ):
+    def ria_9mo():
+        condition_mask = (
+            (ctx['age'] > 290/365.0) &
+            (ctx['age'] < 291/365.0) &
+            (ctx['immunity'] == 0) &
+            (ctx['node'] == 15)
+        )
+
+        # Apply the update using the boolean mask
+        ctx['immunity'][condition_mask] = 1
+        ctx['immunity_timer'][condition_mask] = 3650
+ 
+    def campaign( coverage = 1.0 ):
+        # Create a boolean mask for the conditions specified in the WHERE clause
+        condition_mask = (
+            (ctx['immunity'] == 0) &
+            (ctx['age'] < 16) &
+            (ctx['node'] == 15)
+        )
+
+        # Shuffle the array to simulate ORDER BY RANDOM()
+        #np.random.shuffle(ctx[condition_mask])
+
+        # Get the indices of elements that satisfy the condition
+        selected_indices = np.where(condition_mask)[0]
+
+        # Calculate the number of elements to select based on the specified coverage
+        num_to_select = int(len(selected_indices) * coverage)
+
+        # Randomly select X% of indices
+        selected_indices_subset = np.random.choice(selected_indices, size=num_to_select, replace=False)
+
+        # Calculate the limit based on the specified coverage
+        #limit = int(np.sum(condition_mask) * coverage)
+
+        # Apply the update to the limited subset
+        ctx['immunity'][selected_indices_subset] = 1
+        ctx['immunity_timer'][selected_indices_subset] = -1
+
+    ria_9mo()
+    if timestep == 60:
+        campaign()
+    return ctx
 
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):

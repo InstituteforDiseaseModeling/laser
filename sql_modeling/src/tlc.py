@@ -1,8 +1,8 @@
 # Import a model
-#import sir_sql as model
+import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-import sir_numpy as model
+#import sir_numpy as model
 #import sir_numpy_c as model
 
 import settings
@@ -36,7 +36,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         ctx = model.add_new_infections( ctx )
 
-        #ctx = model.distribute_interventions( ctx, timestep )
+        ctx = model.distribute_interventions( ctx, timestep )
         # Transmission is done, now migrate some. Only infected?
         ctx = model.migrate( ctx, timestep, num_infected=sum(currently_infectious.values()) )
         #conn.commit() # deb-specific
@@ -52,9 +52,15 @@ if __name__ == "__main__":
     # Initialize the 'database' (or load the dataframe/csv)
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
+    #ctx = model.init_db_from_csv( settings )
+    ctx = model.eula( ctx, 15, eula_strategy="discard" )
 
     csv_writer = report.init()
 
     # Run the simulation for 1000 timesteps
-    run_simulation(ctx, csv_writer, num_timesteps=settings.duration )
+    from timeit import timeit
+    from functools import partial
+    runsim = partial( run_simulation, ctx=ctx, csvwriter=csv_writer, num_timesteps=settings.duration )
+    runtime = timeit( runsim, number=1 )
+    print( f"Execution time = {runtime}." )
 
