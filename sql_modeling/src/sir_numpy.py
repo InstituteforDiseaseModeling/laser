@@ -36,19 +36,39 @@ def load( pop_file ):
     columns['incubation_timer'] = columns['incubation_timer'].astype(np.float32) # int better?
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
+    columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.uint32)
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
+
+    print( "Adding 1e4 expansion slots for future babies." )
+    new_ids = [ x for x in range( settings.pop, settings.pop+10000 ) ]
+    new_nodes = np.ones( 10000, dtype=np.uint32 )*-1
+    new_ages = np.ones( 10000 )*-1
+    new_infected = np.zeros( 10000, dtype=bool )
+    new_immunity = np.zeros( 10000, dtype=bool )
+    new_immunity_timer = np.zeros( 10000 )
+    new_infection_timer = np.zeros( 10000 )
+    new_incubation_timer = np.zeros( 10000 )
+    new_expected_lifespan = np.ones( 10000 )*-1
+
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
-    def eula():
-        # test out what happens if we render big chunks of the population epi-borrowing
-        condition = np.logical_and(~columns['infected'], columns['age']>15)
-        columns['immunity'][condition] = 1
-        columns['immunity_timer'][condition] = -1
-    eula()
+
+    columns['id'] = np.concatenate((columns['id'], new_ids))
+    columns['node'] = np.concatenate((columns['node'], new_nodes))
+    columns['age'] = np.concatenate((columns['age'], new_ages))
+    columns['infected'] = np.concatenate((columns['infected'], new_infected))
+    columns['infection_timer'] = np.concatenate((columns['infection_timer'], new_infection_timer))
+    columns['incubation_timer'] = np.concatenate((columns['incubation_timer'], new_incubation_timer))
+    columns['immunity'] = np.concatenate((columns['immunity'], new_immunity))
+    columns['immunity_timer'] = np.concatenate((columns['immunity_timer'], new_immunity_timer))
+    columns['expected_lifespan'] = np.concatenate((columns['expected_lifespan'], new_expected_lifespan))
+
+
+    # Pad with a bunch of zeros
     return columns
 
 def initialize_database():
@@ -75,6 +95,7 @@ def collect_report( data ):
     """
     #print( "Start timestep report." )
     def collect_report_np():
+        # THIS IS MESSED UP BUT I WASTED AN HOUR ON THE ALTERNATIVE!!!
         condition_mask = np.logical_and(~data['infected'], ~data['immunity'])
         unique_nodes, counts = np.unique(data['node'][condition_mask], return_counts=True)
 
@@ -85,12 +106,23 @@ def collect_report( data ):
             if node not in susceptible_counts:
                 susceptible_counts[node] = 0
 
+        # Because we put dead people in "purgatory"...
+        if 4294967295 in susceptible_counts.keys(): # int(-1)
+            susceptible_counts.pop(4294967295)
+        if -1 in susceptible_counts.keys(): 
+            susceptible_counts.pop(-1)
+        if len(susceptible_counts) > len(settings.nodes):
+            pdb.set_trace()
+            raise ValueError( f"Too many susceptible nodes." )
+
         unique_nodes, counts = np.unique(data['node'][data['infected']], return_counts=True)
         infected_counts_db = list(zip(unique_nodes, counts))
         infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
         for node in settings.nodes:
             if node not in infected_counts:
                 infected_counts[node] = 0
+        if len(infected_counts) > len(settings.nodes):
+            raise ValueError( f"Too many infected nodes." )
 
         unique_nodes, counts = np.unique(data['node'][data['immunity']], return_counts=True)
         recovered_counts_db  = list(zip(unique_nodes, counts))
@@ -98,6 +130,8 @@ def collect_report( data ):
         for node in settings.nodes:
             if node not in recovered_counts:
                 recovered_counts[node] = 0
+        if len(recovered_counts) > len(settings.nodes):
+            raise ValueError( f"Too many recovered nodes." )
 
         #print( "Stop timestep report." )
         return infected_counts, susceptible_counts, recovered_counts 
@@ -113,7 +147,7 @@ def update_ages( data ):
         return ages
         #data['age'] += 1/365
     def update_ages_np( ages ):
-        ages += 1/365
+        ages[ages>0] += 1/365
         return ages
 
     data['age'] = update_ages_np( data['age'] )
@@ -142,8 +176,12 @@ def births(data):
     # Function to add newborns
     def add_newborns(node, babies):
         # Generate newborn data
-        last_id = data['id'][-1]
-        new_ids = np.arange(last_id + 1, last_id + 1 + babies)
+        #last_id = data['id'][-1]
+        #pdb.set_trace()
+        # find an entry with age==-1 to use, or find a bunch
+        indices = np.where( data['age'] == -1 )[0][:babies]
+        #new_ids = np.arange(last_id + 1, last_id + 1 + babies)
+        #new_ids = data['id'][indices][:babies]
         new_nodes = np.full(babies, node)
         new_ages = np.zeros(babies)
         new_infected = np.full(babies,False)
@@ -153,16 +191,25 @@ def births(data):
         new_immunity_timer = np.zeros(babies)
         new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
 
-        # Append newborns to arrays
-        data['id'] = np.concatenate((data['id'], new_ids))
-        data['node'] = np.concatenate((data['node'], new_nodes))
-        data['age'] = np.concatenate((data['age'], new_ages))
-        data['infected'] = np.concatenate((data['infected'], new_infected))
-        data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
-        data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
-        data['immunity'] = np.concatenate((data['immunity'], new_immunity))
-        data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
-        data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
+        def append():
+            # Append newborns to arrays
+            data['id'] = np.concatenate((data['id'], new_ids))
+            data['node'] = np.concatenate((data['node'], new_nodes))
+            data['age'] = np.concatenate((data['age'], new_ages))
+            data['infected'] = np.concatenate((data['infected'], new_infected))
+            data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
+            data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
+            data['immunity'] = np.concatenate((data['immunity'], new_immunity))
+            data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
+            data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
+        data['node'][indices] = new_nodes
+        data['age'][indices] = new_ages
+        data['infected'][indices] = new_infected
+        data['infection_timer'][indices] = new_infection_timer
+        data['incubation_timer'][indices] = new_incubation_timer
+        data['immunity'][indices] = new_immunity
+        data['immunity_timer'][indices] = new_immunity_timer
+        data['expected_lifespan'][indices] = new_expected_lifespan
 
     # Iterate over nodes and add newborns
     for node, count in wocba_dict.items():
@@ -175,18 +222,26 @@ def births(data):
 def deaths(data):
     # Non-disease deaths
     # Create a boolean mask for the deletion condition
-    delete_mask = data['age'] >= data['expected_lifespan']
+    delete_mask = (data['age'] >= data['expected_lifespan']) & (data['age']>=0)
 
-    for col in data:
-        #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
-        data[col] = np.delete( data[col], np.where( delete_mask ) )
+    #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
+    #data[col] = np.delete( data[col], np.where( delete_mask ) )
+    #data[col] = data[col][~delete_mask]
+    data['node'][delete_mask]  = -1
+    data['age'][delete_mask] = -1
+    data['infected'][delete_mask] = 0
+    data['immunity'][delete_mask] = 0
+    data['infection_timer'][delete_mask] = 0
+    data['immunity_timer'][delete_mask] = 0
+    data['incubation_timer'][delete_mask] = 0
+    data['expected_lifespan'][delete_mask] = -1
 
-    print( f"{len(delete_mask)} new deaths." )
+    #print( f"{np.count_nonzero(delete_mask)} new deaths." )
     return data
 
 def update_births_deaths( data ):
-    data = births(data)
     data = deaths(data)
+    data = births(data)
     return data
 
 def progress_infections( data ):
@@ -222,22 +277,27 @@ def calculate_new_infections( data, inf, sus ):
     def calculate_new_infections_np( data, inf, sus ):
         # We want to count the number of incubators by now all at once not in a for loop.
         node_counts_incubators = np.zeros(len(inf))
-        node_counts_incubators = np.bincount( data['node'][data['incubation_timer']>=1] )
+        node_counts_incubators = np.bincount( data['node'][data['age']>=0], weights=(data['incubation_timer']>=1)[data['age']>=0] )
         if len( node_counts_incubators ) == 0:
             print( "node_counts_incubators came back size 0." ) # this can be OK at the beginning.
             node_counts_incubators = np.zeros( settings.num_nodes )
         elif len( node_counts_incubators ) != len( inf ):
             #print( "node_counts_incubators came back missing a node." )
             node_counts_incubators = np.pad( node_counts_incubators, (0, len(inf)-len(node_counts_incubators) ), 'constant', constant_values=0 )
-
-        sorted_items = sorted(inf.items())
-        inf_np = np.array([value for _, value in sorted_items])
-        if inf_np.shape != node_counts_incubators.shape:
+        # ignore passed-in inf if we're calculating incubation now, after births & deaths
+        inf = np.bincount( data['node'][data['age']>=0], weights=(data['infection_timer']>=1)[data['age']>=0] )
+        sus = np.bincount( data['node'][data['age']>=0], weights=(~data['infected'] & ~data['immunity'])[data['age']>=0] )
+        #sorted_items = sorted(inf.items())
+        #inf_np = np.array([value for _, value in sorted_items])
+        #if inf_np.shape != node_counts_incubators.shape:
+        if inf.shape != node_counts_incubators.shape:
             raise RuntimeError( f"inf_np shape ({inf_np.shape}) has different size from node_counts_incubators ({node_counts_incubators.shape})." )
+        inf_np = inf
+        sus_np = sus
         foi = (inf_np-node_counts_incubators) * settings.base_infectivity
-        sus_np = np.array(list(sus.values()))
+        #sus_np = np.array(list(sus.values()))
         new_infections = (foi * sus_np).astype(int)
-        #print( new_infections )
+        #print( f"New Infections: {new_infections}" )
         return new_infections
      
     return calculate_new_infections_np( data, inf, sus )
@@ -341,7 +401,7 @@ def distribute_interventions( ctx, timestep ):
 
     ria_9mo()
     if timestep == 60:
-        campaign()
+        campaign(0.8)
     return ctx
 
 # Function to run the simulation for a given number of timesteps
