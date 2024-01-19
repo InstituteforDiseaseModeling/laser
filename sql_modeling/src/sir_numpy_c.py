@@ -132,13 +132,18 @@ def update_ages( data ):
         update_ages_lib.update_ages(len(ages), ages)
         return ages
 
-    data['age'] = update_ages_c( data['age'] )
+    #data['age'] = update_ages_c( data['age'] )
+    import sir_numpy
+    #data = sir_numpy.births( data )
+    #data = sir_numpy.deaths( data )
     return data
+    #return update_births_deaths( data )
 
 def update_births_deaths( data ):
     # Births
     # Calculate number of women of child-bearing age: constant across nodes
     # Add new babies as percentage of that.
+    # TBD NOT IMPLEMENTED YET
     update_ages_lib.update_ages(len(ages), ages)
     # Non-disease deaths
     return data
@@ -204,6 +209,7 @@ def handle_transmission_by_node( data, new_infections, node=0 ):
 
 def handle_transmission( data_in, new_infections_in ):
     # We want to do this in parallel;
+    print( f"DEBUG: New Infections: {new_infections_in}" )
     htbn = partial( handle_transmission_by_node, data_in, new_infections_in )
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(htbn, settings.nodes))
