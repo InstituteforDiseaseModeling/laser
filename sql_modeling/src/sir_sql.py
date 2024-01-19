@@ -132,8 +132,8 @@ def initialize_database( conn=None, from_file=True ):
     cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
-    # uniform distribution draws seem a bit clunky in SQLite. Probably better to use %
-    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer= 4+CAST( RANDOM() % 10 AS INTEGER ), incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
+    # uniform distribution draws seem a bit clunky in SQLite. Just looking for values from 4 to 14. Ish.
+    cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=9+RANDOM()%6, incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
 
     conn.commit()
 
@@ -191,7 +191,6 @@ def update_ages( cursor ):
         # Deaths
         #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
         cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
-        #pdb.set_trace()
         num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
         #print( f"pop after deaths = {num_agents}" )
     births()
@@ -205,7 +204,7 @@ def progress_infections( cursor ):
     # infected=0, immunity=1, immunity_timer=30-ish
     cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
     cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=CAST( 10+30*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
+    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=CAST( 10+RANDOM()%30 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
     return cursor # for pattern
 
 # Update immune agents
@@ -264,7 +263,7 @@ def handle_transmission( df, new_infections ):
     return df
 
 def add_new_infections( cursor ):
-    cursor.execute( "UPDATE agents SET infection_timer=CAST( 4+10*(RANDOM() + 9223372036854775808)/18446744073709551616 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
+    cursor.execute( "UPDATE agents SET infection_timer=9+RANDOM()%6 WHERE infected=1 AND infection_timer=0" )
     return cursor # for pattern
 
 def distribute_interventions( cursor, timestep ):
@@ -301,7 +300,6 @@ def distribute_interventions( cursor, timestep ):
         """
         cursor.execute( query )
         print( f"Vaccinated {cursor.rowcount} in node 15 at timestep 15." )
-        #pdb.set_trace()
     ria_9mo()
     if timestep == 60:
         campaign()
