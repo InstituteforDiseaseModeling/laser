@@ -4,7 +4,7 @@ import settings
 from sir_sql import initialize_database
 
 conn = sqlite3.connect(":memory:")  # Use in-memory database for simplicity
-initialize_database( conn )
+initialize_database( conn, from_file=False )
 
 print( f"Writing population file out out to csv: {settings.pop_file_out}." )
 cursor = conn.cursor()
