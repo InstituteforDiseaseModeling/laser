@@ -17,24 +17,24 @@ void update_ages(size_t length, float *ages) {
 void progress_infections(int n, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity) {
     for (int i = 0; i < n; ++i) {
         if (infected[i] ) {
-        // Infection timer: decrement for each infected person
-        if (infection_timer[i] >= 1) {
-            infection_timer[i] -= 1;
+            // Infection timer: decrement for each infected person
+            if (infection_timer[i] >= 1) {
+                infection_timer[i] -= 1;
 
-        // Incubation timer: decrement for each person
-        if (incubation_timer[i] >= 1) {
-            incubation_timer[i] -= 1;
-        }
+                // Incubation timer: decrement for each person
+                if (incubation_timer[i] >= 1) {
+                    incubation_timer[i] -= 1;
+                }
 
-            // Some people clear
-            if ( infection_timer[i] == 0) {
-                infected[i] = 0;
+                // Some people clear
+                if ( infection_timer[i] == 0) {
+                    infected[i] = 0;
 
-            // Recovereds gain immunity
-                immunity_timer[i] = rand() % (41 - 10 + 1) + 10;  // Random integer between 10 and 40
-                immunity[i] = 1;
+                    // Recovereds gain immunity
+                    immunity_timer[i] = rand() % (41 - 10 + 1) + 10;  // Random integer between 10 and 40
+                    immunity[i] = 1;
+                }
             }
-        }
         }
     }
 }
@@ -42,13 +42,13 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
 void progress_immunities(int n, float* immunity_timer, bool* immunity) {
     for (int i = 0; i < n; ++i) {
         if( immunity[i] && immunity_timer[i] > 0 )
-	{
+        {
             immunity_timer[i]--;
-	    if( immunity_timer[i] == 0 )
-	    {
-	        immunity[i] = true;
-	    }
-	}	
+            if( immunity_timer[i] == 0 )
+            {
+                immunity[i] = false;
+            }
+        }    
     }
 }
 
@@ -57,28 +57,39 @@ void progress_immunities(int n, float* immunity_timer, bool* immunity) {
 void calculate_new_infections(
     int num_agents,
     int num_nodes,
-    float * incubation_timer,
     uint32_t * node,
-    uint32_t * infection_counts,
-    uint32_t * sus,
+    float * incubation_timer,
+    float * infection_counts,
+    float * sus,
+    float * totals,
     uint32_t * new_infs_out
 ) {
     // We need number of infected not incubating
-    const float base_inf = 0.0001f;
-    int exposed_counts_by_bin[ num_nodes ];
+    const float base_inf = 7500.0f; // 0.0001f;
+    float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
     for (int i = 0; i < num_agents; ++i) {
-	if( incubation_timer[i] >= 1 ) {
-	    exposed_counts_by_bin[ node[ i ] ] ++;
-	}
+        if( incubation_timer[i] >= 1 ) {
+            exposed_counts_by_bin[ node[ i ] ] ++;
+        }
     }
 
     // new infections = Infecteds * infectivity * susceptibles
     for (int i = 0; i < num_nodes; ++i) {
-	infection_counts[ i ] -= exposed_counts_by_bin[ i ];
-	float foi = infection_counts[ i ] * base_inf;
-	new_infs_out[ i ] = (int)( foi * sus[ i ] );
+    exposed_counts_by_bin[ i ] /= totals[ i ];
+    if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
+    {
+        printf( "Exposed should never be > infection.\n" );
+        printf( "i = %d, exposed = %f, infected = %f.\n", i, exposed_counts_by_bin[ i ], infection_counts[ i ] );
+        abort();
+    }
+    infection_counts[ i ] -= exposed_counts_by_bin[ i ];
+    //printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
+    float foi = infection_counts[ i ] * base_inf;
+    //printf( "foi[%d] = %f\n", i, foi );
+    new_infs_out[ i ] = (int)( foi * sus[ i ] );
+    //printf( "new infs[%d] = foi(%f) * sus(%f) = %d.\n", i, foi, sus[i], new_infs_out[i] );
     }
 }
 
@@ -119,14 +130,14 @@ void handle_new_infections(
 
     for (uint32_t i = 0; i < new_infections && i < count; ++i) {
         int random_index = rand() % count;
-	// TBD: This needs to be change to avoid duplicates (with replacement or whatever)
+    // TBD: This needs to be change to avoid duplicates (with replacement or whatever)
         selected_indices[i] = eligible_agents_indices[random_index];
     }
 
     // Update the 'infected' column based on the selected indices
     for (uint32_t i = 0; i < new_infections && i < count; ++i) {
         infected[selected_indices[i]] = 1;  // Assuming 1 represents True
-        incubation_timer[selected_indices[i]] = 2; 
+        incubation_timer[selected_indices[i]] = 3; 
         infection_timer[selected_indices[i]] = rand() % (10) + 4; // Random integer between 4 and 14;
     }
 
@@ -136,16 +147,20 @@ void handle_new_infections(
 }
 
 void migrate( int num_agents, bool * infected, uint32_t * node ) {
-    int fraction = (int)(0.01f*100);
+    int fraction = (int)(0.005*1000); // this fraction of infecteds migrate
     unsigned int counter = 0;
     for (int i = 0; i < num_agents; ++i) {
-	if( infected[ i ] && rand()%100 < fraction )
-	{
-	    if( node[ i ] > 0 )
-	    {
-		node[ i ] --;
-	    }
-	}
+        if( infected[ i ] && rand()%1000 < fraction )
+        {
+            if( node[ i ] > 0 )
+            {
+                node[ i ] --;
+            }
+            else
+            {
+                node[ i ] = 24; // this should be param
+            }
+        }
     }
 }
 
@@ -160,13 +175,13 @@ void collect_report(
 )
 {
     for (int i = 0; i < num_agents; ++i) {
-	uint32_t node_id = node[i];
-	if( infected[ i ] ) {
-	    infection_count[ node_id ]++;
-	} else if( immunity[ i ] ) {
-	    recovered_count[ node_id ]++;
-	} else {
-	    susceptible_count[ node_id ]++;
-	}
+        uint32_t node_id = node[i];
+        if( infected[ i ] ) {
+            infection_count[ node_id ]++;
+        } else if( immunity[ i ] ) {
+            recovered_count[ node_id ]++;
+        } else {
+            susceptible_count[ node_id ]++;
+        }
     }
 }

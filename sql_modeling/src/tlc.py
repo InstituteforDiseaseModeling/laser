@@ -1,9 +1,10 @@
+import pdb
 # Import a model
-import sir_sql as model
+#import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
 #import sir_numpy as model
-#import sir_numpy_c as model
+import sir_numpy_c as model
 
 import settings
 import report
@@ -13,6 +14,15 @@ report.write_report = True # sometimes we want to turn this off to check for non
 
 def run_simulation(ctx, csvwriter, num_timesteps):
     currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
+    def normalize( sus, inf, rec ):
+        totals = {}
+        for idx in currently_sus.keys():
+            totals[ idx ] = sus[ idx ] + inf[ idx ] + rec[ idx ]
+            sus[ idx ] /= totals[ idx ] 
+            inf[ idx ] /= totals[ idx ] 
+            rec[ idx ]/= totals[ idx ] 
+        return totals
+    totals = normalize( currently_sus, currently_infectious, cur_reco )
     report.write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
 
     for timestep in range(1, num_timesteps + 1):
@@ -29,7 +39,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         ctx = model.progress_immunities( ctx )
 
         # The core transmission part begins
-        new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus )
+        new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus, totals )
 
         # TBD: for loop should probably be implementation-specific
         ctx = model.handle_transmission( ctx, new_infections )
@@ -43,6 +53,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # Report
         currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
+        totals = normalize( currently_sus, currently_infectious, cur_reco )
         report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
