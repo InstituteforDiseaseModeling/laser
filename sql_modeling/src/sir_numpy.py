@@ -37,6 +37,7 @@ def load( pop_file ):
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
     columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.uint32)
+    columns['mcw'] = columns['mcw'].astype(np.uint32)
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
@@ -51,6 +52,7 @@ def load( pop_file ):
     new_infection_timer = np.zeros( 10000 )
     new_incubation_timer = np.zeros( 10000 )
     new_expected_lifespan = np.ones( 10000 )*-1
+    new_mcw = np.ones( 10000 ).astype(np.uint32)
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
@@ -66,6 +68,7 @@ def load( pop_file ):
     columns['immunity'] = np.concatenate((columns['immunity'], new_immunity))
     columns['immunity_timer'] = np.concatenate((columns['immunity_timer'], new_immunity_timer))
     columns['expected_lifespan'] = np.concatenate((columns['expected_lifespan'], new_expected_lifespan))
+    columns['mcw'] = np.concatenate((columns['mcw'], new_mcw))
 
 
     # Pad with a bunch of zeros
@@ -91,15 +94,49 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
     def downsample_strategy():
         mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
         number_recovereds = np.count_nonzero(~mask)
+        # need this by node
+        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
+
         # We are going to delete number_recovereds agents
         # Then we're going to add 1 with a huge mcw
         # TBD: Recycle 1 of the deletes instead of delete and add
         print( f"WARNING/TBD: We are purging {number_recovereds} recovered agents without accounting for them in our total population." )
         for column in df.keys():
             df[column] = df[column][mask]
+        # Add 1 perma-immune, mega-agent per node...
+        for idx in range(len(node_counts_recovereds)):
+            # 1 agent, mcw=node_counts_recovereds[i], immune, uninfected, age=1000.
+            settings.pop += 1
+            new_ids = [ settings.pop ]
+            new_nodes = np.full(1, idx).astype( np.uint32 )
+            new_ages = np.ones(1)*1000
+            new_infected = np.full(1,False)
+            new_infection_timer = np.zeros(1).astype(np.float32)
+            new_incubation_timer = np.zeros(1).astype(np.float32)
+            new_immunity = np.full(1,True)
+            new_immunity_timer = np.ones(1).astype(np.float32)*-1
+            new_expected_lifespan = np.ones(1)*999999
+            new_mcw = np.ones(1).astype(np.uint32)*node_counts_recovereds[idx]
+            append( df, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw )
     #purge_strategy()
     downsample_strategy()
     return df
+
+def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
+    # Append newborns to arrays
+    # This was first, naive solution; seems memory-bad
+    # Also I hate functions with more than 5 params.
+    data['id'] = np.concatenate((data['id'], new_ids))
+    data['node'] = np.concatenate((data['node'], new_nodes))
+    data['age'] = np.concatenate((data['age'], new_ages))
+    data['infected'] = np.concatenate((data['infected'], new_infected))
+    data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
+    data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
+    data['immunity'] = np.concatenate((data['immunity'], new_immunity))
+    data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
+    data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
+    data['mcw'] = np.concatenate((data['mcw'], new_mcw))
+    return data
 
 def collect_report( data ):
     """
@@ -202,20 +239,7 @@ def births(data):
         new_immunity = np.full(babies,False)
         new_immunity_timer = np.zeros(babies)
         new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
-
-        def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
-            # Append newborns to arrays
-            # This was first, naive solution; seems memory-bad
-            # Also I hate functions with more than 5 params.
-            data['id'] = np.concatenate((data['id'], new_ids))
-            data['node'] = np.concatenate((data['node'], new_nodes))
-            data['age'] = np.concatenate((data['age'], new_ages))
-            data['infected'] = np.concatenate((data['infected'], new_infected))
-            data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
-            data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
-            data['immunity'] = np.concatenate((data['immunity'], new_immunity))
-            data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
-            data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
+        new_mcw = np.ones(babies)
 
         def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
             # This is memory-smarter option where we recycle agents
@@ -227,6 +251,7 @@ def births(data):
             data['immunity'][indices] = new_immunity
             data['immunity_timer'][indices] = new_immunity_timer
             data['expected_lifespan'][indices] = new_expected_lifespan
+            data['mcw'][indices] = new_mcw
         reincarnate()
 
     # Iterate over nodes and add newborns

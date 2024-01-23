@@ -65,7 +65,7 @@ void calculate_new_infections(
     uint32_t * new_infs_out
 ) {
     // We need number of infected not incubating
-    const float base_inf = 7500.0f; // 0.0001f;
+    const float base_inf = 10000.0f; // 0.0001f;
     float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
@@ -147,7 +147,7 @@ void handle_new_infections(
 }
 
 void migrate( int num_agents, bool * infected, uint32_t * node ) {
-    int fraction = (int)(0.005*1000); // this fraction of infecteds migrate
+    int fraction = (int)(0.05*1000); // this fraction of infecteds migrate
     unsigned int counter = 0;
     for (int i = 0; i < num_agents; ++i) {
         if( infected[ i ] && rand()%1000 < fraction )
@@ -169,6 +169,7 @@ void collect_report(
     uint32_t * node,
     bool * infected,
     bool * immunity,
+    uint32_t * mcw,
     uint32_t * infection_count,
     uint32_t * susceptible_count,
     uint32_t * recovered_count
@@ -177,11 +178,11 @@ void collect_report(
     for (int i = 0; i < num_agents; ++i) {
         uint32_t node_id = node[i];
         if( infected[ i ] ) {
-            infection_count[ node_id ]++;
+            infection_count[ node_id ]+=mcw[ i ];
         } else if( immunity[ i ] ) {
-            recovered_count[ node_id ]++;
+            recovered_count[ node_id ]+=mcw[ i ];
         } else {
-            susceptible_count[ node_id ]++;
+            susceptible_count[ node_id ]+=mcw[ i ];
         }
     }
 }

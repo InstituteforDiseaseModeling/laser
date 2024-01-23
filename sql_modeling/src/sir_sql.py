@@ -111,7 +111,8 @@ def initialize_database( conn=None, from_file=True ):
             incubation_timer INTEGER,
             immunity BOOLEAN,
             immunity_timer INTEGER,
-            expected_lifespan INTEGER
+            expected_lifespan INTEGER,
+            mcw INTEGER
         )
     ''')
     # lots of index experiments going on here
@@ -128,8 +129,8 @@ def initialize_database( conn=None, from_file=True ):
     #agents_data = [(i, random.randint(0, num_nodes-1), random.randint(0, 100), False, 0, 0, False, 0) for i in range(1, pop)]
     node_assignments = get_node_ids()
 
-    agents_data = [(node_assignments[i], random.randint(0, 100)+random.randint(0,365)/365.0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(pop)]
-    cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+    agents_data = [(node_assignments[i], random.randint(0, 100)+random.randint(0,365)/365.0, False, 0, 0, False, 0, get_rand_lifespan(), 1) for i in range(pop)]
+    cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
 
     # Seed exactly 100 people to be infected in the first timestep
     # uniform distribution draws seem a bit clunky in SQLite. Just looking for values from 4 to 14. Ish.
@@ -176,8 +177,8 @@ def update_ages( cursor ):
         wocba = cursor.execute( "SELECT node, COUNT(*)/2 FROM agents WHERE age>15 and age<45 GROUP BY node ORDER BY node").fetchall()
         wocba  = {values[0]: values[1] for idx, values in enumerate(wocba)}
         def add_newborns( node, babies ):
-            agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(babies)]
-            cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+            agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan(), 1) for i in range(babies)]
+            cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
             conn.commit()
 
         for node,count in wocba.items():
