@@ -83,10 +83,22 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         columns['immunity_timer'][condition] = -1
 
     def purge_strategy():
+        # Note this is just for testing; for real work we need to keep track of our total pop
         mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
         for column in df.keys():
             df[column] = df[column][mask]
-    purge_strategy()
+
+    def downsample_strategy():
+        mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
+        number_recovereds = np.count_nonzero(~mask)
+        # We are going to delete number_recovereds agents
+        # Then we're going to add 1 with a huge mcw
+        # TBD: Recycle 1 of the deletes instead of delete and add
+        print( f"WARNING/TBD: We are purging {number_recovereds} recovered agents without accounting for them in our total population." )
+        for column in df.keys():
+            df[column] = df[column][mask]
+    #purge_strategy()
+    downsample_strategy()
     return df
 
 def collect_report( data ):
@@ -191,8 +203,10 @@ def births(data):
         new_immunity_timer = np.zeros(babies)
         new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
 
-        def append():
+        def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
             # Append newborns to arrays
+            # This was first, naive solution; seems memory-bad
+            # Also I hate functions with more than 5 params.
             data['id'] = np.concatenate((data['id'], new_ids))
             data['node'] = np.concatenate((data['node'], new_nodes))
             data['age'] = np.concatenate((data['age'], new_ages))
@@ -202,14 +216,18 @@ def births(data):
             data['immunity'] = np.concatenate((data['immunity'], new_immunity))
             data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
             data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
-        data['node'][indices] = new_nodes
-        data['age'][indices] = new_ages
-        data['infected'][indices] = new_infected
-        data['infection_timer'][indices] = new_infection_timer
-        data['incubation_timer'][indices] = new_incubation_timer
-        data['immunity'][indices] = new_immunity
-        data['immunity_timer'][indices] = new_immunity_timer
-        data['expected_lifespan'][indices] = new_expected_lifespan
+
+        def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
+            # This is memory-smarter option where we recycle agents
+            data['node'][indices] = new_nodes
+            data['age'][indices] = new_ages
+            data['infected'][indices] = new_infected
+            data['infection_timer'][indices] = new_infection_timer
+            data['incubation_timer'][indices] = new_incubation_timer
+            data['immunity'][indices] = new_immunity
+            data['immunity_timer'][indices] = new_immunity_timer
+            data['expected_lifespan'][indices] = new_expected_lifespan
+        reincarnate()
 
     # Iterate over nodes and add newborns
     for node, count in wocba_dict.items():
