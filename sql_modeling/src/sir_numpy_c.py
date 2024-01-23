@@ -121,7 +121,6 @@ def collect_report( data ):
         susceptible_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
         recovered_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
 
-        # tbd: do this with mcw
         update_ages_lib.collect_report(
                 len( data['node'] ),
                 data['node'],
@@ -136,7 +135,7 @@ def collect_report( data ):
         susceptible_counts = dict(zip(settings.nodes, susceptible_counts_raw))
         infected_counts = dict(zip(settings.nodes, infected_counts_raw))
         recovered_counts = dict(zip(settings.nodes, recovered_counts_raw))
-        #print( f"Reporting back SIR counts of {susceptible_counts}, {infected_counts}, and {recovered_counts}." )
+        #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
         return infected_counts, susceptible_counts, recovered_counts
     return collect_report_c()
 

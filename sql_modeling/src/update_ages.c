@@ -65,7 +65,7 @@ void calculate_new_infections(
     uint32_t * new_infs_out
 ) {
     // We need number of infected not incubating
-    const float base_inf = 10000.0f; // 0.0001f;
+    const float base_inf = 100000.0f; // 0.0001f;
     float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
@@ -177,12 +177,17 @@ void collect_report(
 {
     for (int i = 0; i < num_agents; ++i) {
         uint32_t node_id = node[i];
+        uint32_t weight = mcw[i]; // usually 1 honestly
         if( infected[ i ] ) {
-            infection_count[ node_id ]+=mcw[ i ];
+            infection_count[ node_id ]+=weight;
+            //printf( "Adding %d to I count for node %d = %d.\n", mcw[i], node_id, infection_count[ node_id ] );
         } else if( immunity[ i ] ) {
-            recovered_count[ node_id ]+=mcw[ i ];
+            recovered_count[ node_id ]+=weight;
+            //printf( "Adding %d to R count for node %d = %d.\n", mcw[i], node_id, recovered_count[ node_id ] );
         } else {
-            susceptible_count[ node_id ]+=mcw[ i ];
+            // HOW THE HECK AM I GETTING THE EXACT SAME NUMBER OF SUSCEPTIBLES 1 at a time AS RECOVEREDS?!?!?!?!??!??!
+            susceptible_count[ node_id ]+=weight;
+            //printf( "Adding %d to S count for node %d = %d.\n", mcw[i], node_id, susceptible_count[ node_id ] );
         }
     }
 }

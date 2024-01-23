@@ -5,15 +5,21 @@ import pdb
 #import sir_sql_polars as model
 #import sir_numpy as model
 import sir_numpy_c as model
+from copy import deepcopy
 
 import settings
 import report
 
 report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
+fractions = {}
 
-
-def run_simulation(ctx, csvwriter, num_timesteps):
+def collect_and_report(csvwriter, timestep):
     currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
+    counts = {
+            "S": deepcopy( currently_sus ),
+            "I": deepcopy( currently_infectious ),
+            "R": deepcopy( cur_reco ) 
+        }
     def normalize( sus, inf, rec ):
         totals = {}
         for idx in currently_sus.keys():
@@ -23,8 +29,16 @@ def run_simulation(ctx, csvwriter, num_timesteps):
             rec[ idx ]/= totals[ idx ] 
         return totals
     totals = normalize( currently_sus, currently_infectious, cur_reco )
-    report.write_timestep_report( csvwriter, 0, currently_infectious, currently_sus, cur_reco )
+    fractions = {
+            "S": currently_sus,
+            "I": currently_infectious,
+            "R": cur_reco 
+        }
+    report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"] )
+    return counts, fractions, totals
 
+def run_simulation(ctx, csvwriter, num_timesteps):
+    counts, fractions, totals = collect_and_report(csvwriter,0)
     for timestep in range(1, num_timesteps + 1):
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
@@ -39,7 +53,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         ctx = model.progress_immunities( ctx )
 
         # The core transmission part begins
-        new_infections = model.calculate_new_infections( ctx, currently_infectious, currently_sus, totals )
+        new_infections = model.calculate_new_infections( ctx, fractions["I"], fractions["S"], totals )
 
         # TBD: for loop should probably be implementation-specific
         ctx = model.handle_transmission( ctx, new_infections )
@@ -48,13 +62,14 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         ctx = model.distribute_interventions( ctx, timestep )
         # Transmission is done, now migrate some. Only infected?
-        ctx = model.migrate( ctx, timestep, num_infected=sum(currently_infectious.values()) )
+        ctx = model.migrate( ctx, timestep, num_infected=sum(fractions["I"].values()) )
         #conn.commit() # deb-specific
 
         # Report
-        currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
-        totals = normalize( currently_sus, currently_infectious, cur_reco )
-        report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
+        #currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
+        #totals = normalize( currently_sus, currently_infectious, cur_reco )
+        counts, fractions, totals = collect_and_report(csvwriter,timestep)
+        #report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
     print("Simulation completed. Report saved to 'simulation_report.csv'.")
 
@@ -64,7 +79,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    ctx = model.eula( ctx, 15, eula_strategy="discard" )
+    ctx = model.eula( ctx, 74, eula_strategy="discard" )
 
     csv_writer = report.init()
 

@@ -95,12 +95,14 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
         number_recovereds = np.count_nonzero(~mask)
         # need this by node
-        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
+        # BUG! This seems to be returning the number of susceptibles, not recovereds
+        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(~mask) ).astype(np.uint32)
 
         # We are going to delete number_recovereds agents
         # Then we're going to add 1 with a huge mcw
         # TBD: Recycle 1 of the deletes instead of delete and add
-        print( f"WARNING/TBD: We are purging {number_recovereds} recovered agents without accounting for them in our total population." )
+        #print( f"WARNING/TBD: We are purging {number_recovereds} recovered agents without accounting for them in our total population." )
+        print( f"Downsampling eulas {node_counts_recovereds}." )
         for column in df.keys():
             df[column] = df[column][mask]
         # Add 1 perma-immune, mega-agent per node...
