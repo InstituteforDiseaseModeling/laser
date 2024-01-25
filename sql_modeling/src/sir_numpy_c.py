@@ -8,6 +8,7 @@ import pdb
 
 import settings
 import report
+import params
 
 # Globals! (not really)
 #base_infectivity = 0.000002
@@ -102,7 +103,7 @@ def load( pop_file ):
     print( f"Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
     import sir_numpy
-    sir_numpy.add_expansion_slots( columns )
+    sir_numpy.add_expansion_slots( columns, num_slots=params.expansion_slots )
     return columns
 
 def initialize_database():

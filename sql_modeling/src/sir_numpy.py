@@ -8,6 +8,7 @@ import pdb
 
 import settings
 import report
+import params
 
 # Globals! (not really)
 #base_infectivity = 0.000002
@@ -46,18 +47,19 @@ def load( pop_file ):
     # Pad with a bunch of zeros
     return columns
 
-def add_expansion_slots( columns ):
-    print( "Adding 1e4 expansion slots for future babies." )
-    new_ids = [ x for x in range( settings.pop, settings.pop+10000 ) ]
-    new_nodes = np.ones( 10000, dtype=np.uint32 )*-1
-    new_ages = np.ones( 10000 )*-1
-    new_infected = np.zeros( 10000, dtype=bool )
-    new_immunity = np.zeros( 10000, dtype=bool )
-    new_immunity_timer = np.zeros( 10000 ).astype( np.float32 )
-    new_infection_timer = np.zeros( 10000 ).astype( np.float32 )
-    new_incubation_timer = np.zeros( 10000 ).astype( np.float32 )
-    new_expected_lifespan = np.ones( 10000 )*-1
-    new_mcw = np.ones( 10000 ).astype(np.uint32)
+def add_expansion_slots( columns, num_slots=10000 ):
+    num_slots = int(num_slots)
+    print( f"Adding {num_slots} expansion slots for future babies." )
+    new_ids = [ x for x in range( settings.pop, settings.pop+num_slots ) ]
+    new_nodes = np.ones( num_slots, dtype=np.uint32 )*-1
+    new_ages = np.ones( num_slots )*-1
+    new_infected = np.zeros( num_slots, dtype=bool )
+    new_immunity = np.zeros( num_slots, dtype=bool )
+    new_immunity_timer = np.zeros( num_slots ).astype( np.float32 )
+    new_infection_timer = np.zeros( num_slots ).astype( np.float32 )
+    new_incubation_timer = np.zeros( num_slots ).astype( np.float32 )
+    new_expected_lifespan = np.ones( num_slots )*-1
+    new_mcw = np.ones( num_slots ).astype(np.uint32)
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
@@ -240,14 +242,20 @@ def births(data,totals_by_node):
             num_new_babies[node] = np.sum(np.random.rand(count) < 2.7e-4)
         return num_new_babies
 
-    def births_from_cbr( node_pops ):
-        pass
+    def births_from_cbr( node_pops, rate=30 ):
+        # TBD: births = CBR & node_pop / 1000
+        # placeholder: just say 10 per node for now to test rest of code path
+        new_babies = {}
+        for node in node_pops:
+            cbr_node = rate * (node_pops[node]/1000.0)/365.0
+            new_babies[node] = np.random.poisson( cbr_node )
+        return new_babies 
+  
 
     # Function to add newborns
     def add_newborns(node, babies):
         # Generate newborn data
         #last_id = data['id'][-1]
-        #pdb.set_trace()
         # find an entry with age==-1 to use, or find a bunch
         indices = np.where( data['age'] == -1 )[0][:babies]
         #new_ids = np.arange(last_id + 1, last_id + 1 + babies)
@@ -264,6 +272,7 @@ def births(data,totals_by_node):
 
         def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
             # This is memory-smarter option where we recycle agents
+            # TBD: Make c version
             data['node'][indices] = new_nodes
             data['age'][indices] = new_ages
             data['infected'][indices] = new_infected
@@ -273,10 +282,10 @@ def births(data,totals_by_node):
             data['immunity_timer'][indices] = new_immunity_timer
             data['expected_lifespan'][indices] = new_expected_lifespan
             data['mcw'][indices] = new_mcw
-        #reincarnate()
         reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=new_mcw )
 
-    new_babies = births_from_demog()
+    new_babies = births_from_cbr( totals_by_node, rate=params.cbr )
+    #print( f"New babies by node: {new_babies}" )
     # Iterate over nodes and add newborns
     for node, count in new_babies.items():
         if count > 0:
