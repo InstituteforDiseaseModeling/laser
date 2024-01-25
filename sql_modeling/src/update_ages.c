@@ -177,6 +177,9 @@ void collect_report(
 {
     for (int i = 0; i < num_agents; ++i) {
         uint32_t node_id = node[i];
+        if ( node_id == (uint32_t)-1 ) {
+            continue;
+        }
         uint32_t weight = mcw[i]; // usually 1 honestly
         if( infected[ i ] ) {
             infection_count[ node_id ]+=weight;
