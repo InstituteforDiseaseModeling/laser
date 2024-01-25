@@ -42,15 +42,20 @@ def load( pop_file ):
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
 
+    add_expansion_slots( columns )
+    # Pad with a bunch of zeros
+    return columns
+
+def add_expansion_slots( columns ):
     print( "Adding 1e4 expansion slots for future babies." )
     new_ids = [ x for x in range( settings.pop, settings.pop+10000 ) ]
     new_nodes = np.ones( 10000, dtype=np.uint32 )*-1
     new_ages = np.ones( 10000 )*-1
     new_infected = np.zeros( 10000, dtype=bool )
     new_immunity = np.zeros( 10000, dtype=bool )
-    new_immunity_timer = np.zeros( 10000 )
-    new_infection_timer = np.zeros( 10000 )
-    new_incubation_timer = np.zeros( 10000 )
+    new_immunity_timer = np.zeros( 10000 ).astype( np.float32 )
+    new_infection_timer = np.zeros( 10000 ).astype( np.float32 )
+    new_incubation_timer = np.zeros( 10000 ).astype( np.float32 )
     new_expected_lifespan = np.ones( 10000 )*-1
     new_mcw = np.ones( 10000 ).astype(np.uint32)
 
@@ -60,7 +65,7 @@ def load( pop_file ):
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
 
     columns['id'] = np.concatenate((columns['id'], new_ids))
-    columns['node'] = np.concatenate((columns['node'], new_nodes))
+    columns['node'] = np.concatenate((columns['node'], new_nodes)).astype( np.uint32 )
     columns['age'] = np.concatenate((columns['age'], new_ages))
     columns['infected'] = np.concatenate((columns['infected'], new_infected))
     columns['infection_timer'] = np.concatenate((columns['infection_timer'], new_infection_timer))
@@ -69,10 +74,6 @@ def load( pop_file ):
     columns['immunity_timer'] = np.concatenate((columns['immunity_timer'], new_immunity_timer))
     columns['expected_lifespan'] = np.concatenate((columns['expected_lifespan'], new_expected_lifespan))
     columns['mcw'] = np.concatenate((columns['mcw'], new_mcw))
-
-
-    # Pad with a bunch of zeros
-    return columns
 
 def initialize_database():
     return load( settings.pop_file )

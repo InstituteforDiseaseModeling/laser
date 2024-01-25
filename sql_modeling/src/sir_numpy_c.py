@@ -101,6 +101,8 @@ def load( pop_file ):
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
+    import sir_numpy
+    sir_numpy.add_expansion_slots( columns )
     return columns
 
 def initialize_database():
