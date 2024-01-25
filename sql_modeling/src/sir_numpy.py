@@ -211,24 +211,37 @@ def update_ages( data ):
     data = update_births_deaths( data )
     return data
 
-def births(data):
+def births(data,totals_by_node):
     # Births
+    # 1) demographic_dependent_Rate: 
     # Calculate number of women of child-bearing age: constant across nodes
     # Add new babies as percentage of that.
+    # Can't do demographic_dependent_Rate if downsampling recovereds to N, hence:
+    # Or CBR
+    # totals_by_node supports CBR
 
-    # Create a boolean mask for the age condition
-    age_condition_mask = (data['age'] > 15) & (data['age'] < 45)
+    def births_from_demog():
+        # Return actual numbers of new babies by node, not just rates
+        # Create a boolean mask for the age condition
+        age_condition_mask = (data['age'] > 15) & (data['age'] < 45)
 
-    # Filter data based on the age condition
-    filtered_nodes = data['node'][age_condition_mask]
-    filtered_ages  = data['age'][age_condition_mask]
+        # Filter data based on the age condition
+        filtered_nodes = data['node'][age_condition_mask]
+        filtered_ages  = data['age'][age_condition_mask]
 
-    # Calculate the count of data per node and divide by 2
-    unique_nodes, counts = np.unique(filtered_nodes, return_counts=True)
-    wocba = np.column_stack((unique_nodes, counts // 2))
+        # Calculate the count of data per node and divide by 2
+        unique_nodes, counts = np.unique(filtered_nodes, return_counts=True)
+        wocba = np.column_stack((unique_nodes, counts // 2))
 
-    # Create a dictionary from the wocba array
-    wocba_dict = dict(wocba)
+        # Create a dictionary from the wocba array
+        wocba_dict = dict(wocba)
+        num_new_babies = dict()
+        for node, count in wocba_dict.items():
+            num_new_babies[node] = np.sum(np.random.rand(count) < 2.7e-4)
+        return num_new_babies
+
+    def births_from_cbr( node_pops ):
+        pass
 
     # Function to add newborns
     def add_newborns(node, babies):
@@ -260,13 +273,14 @@ def births(data):
             data['immunity_timer'][indices] = new_immunity_timer
             data['expected_lifespan'][indices] = new_expected_lifespan
             data['mcw'][indices] = new_mcw
-        reincarnate()
+        #reincarnate()
+        reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=new_mcw )
 
+    new_babies = births_from_demog()
     # Iterate over nodes and add newborns
-    for node, count in wocba_dict.items():
-        new_babies = np.sum(np.random.rand(count) < 2.7e-4)
-        if new_babies > 0:
-            add_newborns(node, new_babies)
+    for node, count in new_babies.items():
+        if count > 0:
+            add_newborns(node, count)
 
     return data
 

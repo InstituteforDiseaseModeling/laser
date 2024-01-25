@@ -148,8 +148,8 @@ def update_ages( data, totals ):
 
     #data['age'] = update_ages_c( data['age'] )
     import sir_numpy
-    #data = sir_numpy.births( data )
-    #data = sir_numpy.deaths( data )
+    data = sir_numpy.births( data, totals )
+    data = sir_numpy.deaths( data )
     return data
     #return update_births_deaths( data )
 
