@@ -62,10 +62,10 @@ void calculate_new_infections(
     float * infection_counts,
     float * sus,
     float * totals,
-    uint32_t * new_infs_out
+    uint32_t * new_infs_out,
+    float base_inf
 ) {
     // We need number of infected not incubating
-    const float base_inf = 100000.0f; // 0.0001f;
     float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 

@@ -8,12 +8,7 @@ import pdb
 
 import settings
 import report
-import params
 
-# Globals! (not really)
-#base_infectivity = 0.000002
-#settings.base_infectivity = 0.00001
-settings.base_infectivity = 0.0001
 
 def load( pop_file ):
     """
@@ -284,7 +279,7 @@ def births(data,totals_by_node):
             data['mcw'][indices] = new_mcw
         reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=new_mcw )
 
-    new_babies = births_from_cbr( totals_by_node, rate=params.cbr )
+    new_babies = births_from_cbr( totals_by_node, rate=settings.cbr )
     #print( f"New babies by node: {new_babies}" )
     # Iterate over nodes and add newborns
     for node, count in new_babies.items():

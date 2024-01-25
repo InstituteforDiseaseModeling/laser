@@ -4,18 +4,12 @@ import numpy as np
 import concurrent.futures
 from functools import partial
 import numba
+import ctypes
 import pdb
 
 import settings
 import report
-import params
 
-# Globals! (not really)
-#base_infectivity = 0.000002
-#settings.base_infectivity = 0.00001
-settings.base_infectivity = 0.0001
-
-import ctypes
 # Load the shared library
 update_ages_lib = ctypes.CDLL('./update_ages.so')
 # Define the function signature
@@ -45,6 +39,7 @@ update_ages_lib.calculate_new_infections.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # sus_counts
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # tot_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # new_infections
+    ctypes.c_float, # base_inf
 ]
 update_ages_lib.handle_new_infections.argtypes = [
     ctypes.c_uint32, # num_agents
@@ -103,7 +98,7 @@ def load( pop_file ):
     print( f"Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
     import sir_numpy
-    sir_numpy.add_expansion_slots( columns, num_slots=params.expansion_slots )
+    sir_numpy.add_expansion_slots( columns, num_slots=settings.expansion_slots )
     return columns
 
 def initialize_database():
@@ -198,7 +193,8 @@ def calculate_new_infections( data, inf, sus, totals ):
                 inf_np,
                 sus_np,
                 tot_np,
-                new_infections
+                new_infections,
+                settings.base_infectivity
             )
         return new_infections 
     return calculate_new_infections_c( data, inf, sus )
