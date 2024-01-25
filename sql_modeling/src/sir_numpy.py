@@ -92,16 +92,21 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
             df[column] = df[column][mask]
 
     def downsample_strategy():
-        mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
-        number_recovereds = np.count_nonzero(~mask)
+        # mask = (df['age'] <= age_threshold_yrs) | (df['infected'] != 0)
+        filter_arr = df['age']>=0
+        # For permanently recovereds, we want those over threshold age and not infected
+        mask = ((df['age'] >= age_threshold_yrs) & (~df['infected']))[filter_arr]
         # need this by node
         # BUG! This seems to be returning the number of susceptibles, not recovereds
-        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(~mask) ).astype(np.uint32)
+        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
+
+        # For actual removal, we want thsoe not infected and those over threshold age but don't remove those with age == -1
+        # So keep the rest
+        mask = ((df['age'] < age_threshold_yrs) | (df['infected'] ))
 
         # We are going to delete number_recovereds agents
         # Then we're going to add 1 with a huge mcw
         # TBD: Recycle 1 of the deletes instead of delete and add
-        #print( f"WARNING/TBD: We are purging {number_recovereds} recovered agents without accounting for them in our total population." )
         print( f"Downsampling eulas {node_counts_recovereds}." )
         for column in df.keys():
             df[column] = df[column][mask]

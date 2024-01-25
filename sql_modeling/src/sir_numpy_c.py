@@ -139,7 +139,7 @@ def collect_report( data ):
         return infected_counts, susceptible_counts, recovered_counts
     return collect_report_c()
 
-def update_ages( data ):
+def update_ages( data, totals ):
     def update_ages_c( ages ):
         update_ages_lib.update_ages(len(ages), ages)
         return ages
