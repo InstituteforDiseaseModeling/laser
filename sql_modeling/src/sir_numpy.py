@@ -382,11 +382,12 @@ def calculate_new_infections( data, inf, sus, totals ):
         #exposed_fraction[idx] = node_counts_incubators[idx]/totals[idx]
         exposed_fraction = node_counts_incubators[idx]/totals[idx]
         inf[idx] -= exposed_fraction 
-    #pdb.set_trace()
-    new_infections = (np.array(sorted(sus.values())) * np.array(sorted(inf.values())) * settings.base_infectivity).astype( np.uint32 )
-    #print( f"New Infections: {new_infections}" )
-     
-    return new_infections 
+    #new_infections = (np.array(sorted(sus.values())) * np.array(sorted(inf.values())) * settings.base_infectivity).astype( np.uint32 )
+    new_infections = {}
+    for node in sus:
+        new_infections[node] = int(sus[node]*inf[node]*settings.base_infectivity)
+    #print( f"New Infections: {new_infections} = {np.array(sorted(sus.values()))} * {np.array(sorted(inf.values()))} * {settings.base_infectivity}" )
+    return np.array(sorted(new_infections.values())).astype( np.uint32 )
 
 def handle_transmission_by_node( data, new_infections, node=0 ):
     # Step 5: Update the infected flag for NEW infectees
@@ -434,13 +435,12 @@ def add_new_infections( data ):
 
 def migrate( data, timestep, num_infected=None ):
     # Migrate 1% of infecteds "downstream" every week; coz
-    if timestep % 7 == 0: # every week
+    if timestep % settings.migration_interval == 0: # every week
         infected = np.where( data['infected'] )[0]
         fraction = int(len(infected)*0.05)
         selected = np.random.choice( infected, fraction )
         # Update the 'nodes' array based on the specified conditions
         data['node'][selected] = np.where(data['node'][selected] == 0, settings.num_nodes - 1, data['node'][selected] - 1 )
-        
     return data
 
 def distribute_interventions( ctx, timestep ):
@@ -485,7 +485,7 @@ def distribute_interventions( ctx, timestep ):
 
     ria_9mo()
     if timestep == settings.campaign_day:
-        campaign(0.8)
+        campaign(settings.campaign_coverage)
     return ctx
 
 # Function to run the simulation for a given number of timesteps

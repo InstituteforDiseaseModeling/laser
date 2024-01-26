@@ -238,13 +238,11 @@ def add_new_infections( data ):
 
 def migrate( data, timestep, num_infected=None ):
     # Migrate 1% of infecteds "downstream" every week; coz
-    if timestep % 7 == 0: # every week
-        def migrate_c():
-            update_ages_lib.migrate(
-                len(data['age']),
-                data['infected'],
-                data['node'])
-        migrate_c()
+    if timestep % settings.migration_interval == 0: # every week
+        update_ages_lib.migrate(
+            len(data['age']),
+            data['infected'],
+            data['node'])
     return data
 
 def distribute_interventions( ctx, timestep ):

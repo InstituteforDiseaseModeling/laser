@@ -302,7 +302,7 @@ def distribute_interventions( cursor, timestep ):
         cursor.execute( query )
         print( f"Vaccinated {cursor.rowcount} in node 15 at timestep 15." )
     ria_9mo()
-    if timestep == 60:
+    if timestep == settings.campaign_day:
         campaign()
     return cursor
 
