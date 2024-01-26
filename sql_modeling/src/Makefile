@@ -1,3 +1,6 @@
+run:
+	python3 tlc.py
+
 all: tlc.py
 
 #pop_10M_100nodes_seeded.csv:
