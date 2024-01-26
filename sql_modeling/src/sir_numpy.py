@@ -180,7 +180,7 @@ def collect_report( data ):
                 susceptible_counts[node] = 0
 
         # Because we put dead people in "purgatory"...
-        if 4294967295 in susceptible_counts.keys(): # int(-1)
+        if 4294967295 in susceptible_counts.keys(): # uint32(-1)
             susceptible_counts.pop(4294967295)
         if -1 in susceptible_counts.keys(): 
             susceptible_counts.pop(-1)
@@ -195,6 +195,7 @@ def collect_report( data ):
             if node not in infected_counts:
                 infected_counts[node] = 0
         if len(infected_counts) > len(settings.nodes):
+            pdb.set_trace()
             raise ValueError( f"Too many infected nodes." )
 
         unique_nodes, counts = np.unique(data['node'][data['immunity']], return_counts=True)
@@ -211,7 +212,7 @@ def collect_report( data ):
 
     return collect_report_np()
 
-def update_ages( data ):
+def update_ages( data, totals ):
     @numba.jit(parallel=True,nopython=True)
     def update_ages_nb( ages ):
         n = len(ages)
@@ -223,8 +224,8 @@ def update_ages( data ):
         ages[ages>0] += 1/365
         return ages
 
-    data['age'] = update_ages_np( data['age'] )
-    data = update_births_deaths( data )
+    data = births( data, totals )
+    data = deaths( data )
     return data
 
 def births(data,totals_by_node):
@@ -362,7 +363,7 @@ def progress_immunities( data ):
     progress_immunities_np( data )
     return data
 
-def calculate_new_infections( data, inf, sus ):
+def calculate_new_infections( data, inf, sus, totals ):
     def calculate_new_infections_np( data, inf, sus ):
         # We want to count the number of incubators by now all at once not in a for loop.
         node_counts_incubators = np.zeros(len(inf))
@@ -376,9 +377,7 @@ def calculate_new_infections( data, inf, sus ):
         # ignore passed-in inf if we're calculating incubation now, after births & deaths
         inf = np.bincount( data['node'][data['age']>=0], weights=(data['infection_timer']>=1)[data['age']>=0] )
         sus = np.bincount( data['node'][data['age']>=0], weights=(~data['infected'] & ~data['immunity'])[data['age']>=0] )
-        #sorted_items = sorted(inf.items())
-        #inf_np = np.array([value for _, value in sorted_items])
-        #if inf_np.shape != node_counts_incubators.shape:
+
         if inf.shape != node_counts_incubators.shape:
             raise RuntimeError( f"inf_np shape ({inf_np.shape}) has different size from node_counts_incubators ({node_counts_incubators.shape})." )
         inf_np = inf
@@ -443,7 +442,7 @@ def migrate( data, timestep, num_infected=None ):
             fraction = int(len(infected)*0.01)
             selected = np.random.choice( infected, fraction )
             # Update the 'nodes' array based on the specified conditions
-            data['node'][selected] = np.where(data['node'][selected] - 1 < 0, settings.num_nodes - 1, data['node'][selected] - 1 )
+            data['node'][selected] = np.where(data['node'][selected] == 0, settings.num_nodes - 1, data['node'][selected] - 1 )
 
         migrate_np()
     return data
