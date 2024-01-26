@@ -167,50 +167,60 @@ def collect_report( data ):
     Report data to file for a given timestep.
     """
     #print( "Start timestep report." )
-    def collect_report_np():
-        # THIS IS MESSED UP BUT I WASTED AN HOUR ON THE ALTERNATIVE!!!
-        condition_mask = np.logical_and(~data['infected'], ~data['immunity'])
-        unique_nodes, counts = np.unique(data['node'][condition_mask], return_counts=True)
+    # THIS IS MESSED UP BUT I WASTED AN HOUR ON THE ALTERNATIVE!!!
+    condition_mask = np.logical_and(~data['infected'], ~data['immunity'])
+    unique_nodes, counts = np.unique(data['node'][condition_mask], return_counts=True)
+
+    # Display the result
+    susceptible_counts_db = list(zip(unique_nodes, counts))
+    susceptible_counts = {values[0]: values[1] for idx, values in enumerate(susceptible_counts_db)}
+    for node in settings.nodes:
+        if node not in susceptible_counts:
+            susceptible_counts[node] = 0
+
+    # Because we put dead people in "purgatory"...
+    if 4294967295 in susceptible_counts.keys(): # uint32(-1)
+        susceptible_counts.pop(4294967295)
+    if -1 in susceptible_counts.keys(): 
+        susceptible_counts.pop(-1)
+    if len(susceptible_counts) > len(settings.nodes):
+        pdb.set_trace()
+        raise ValueError( f"Too many susceptible nodes." )
+
+    unique_nodes, counts = np.unique(data['node'][data['infected']], return_counts=True)
+    infected_counts_db = list(zip(unique_nodes, counts))
+    infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
+    for node in settings.nodes:
+        if node not in infected_counts:
+            infected_counts[node] = 0
+    if len(infected_counts) > len(settings.nodes):
+        pdb.set_trace()
+        raise ValueError( f"Too many infected nodes." )
+
+    def count_recos( node, immunity, mcw ):
+        # Boolean indexing to filter rows where immunity is 1
+        filtered_rows = immunity == 1
+
+        # Use the filtered rows to get the corresponding node and mcw values
+        filtered_node = node[filtered_rows]
+        filtered_mcw = mcw[filtered_rows]
+
+        # Use numpy.bincount to calculate the sum of mcw for each node
+        sum_mcw = np.bincount(filtered_node, weights=filtered_mcw)
 
         # Display the result
-        susceptible_counts_db = list(zip(unique_nodes, counts))
-        susceptible_counts = {values[0]: values[1] for idx, values in enumerate(susceptible_counts_db)}
-        for node in settings.nodes:
-            if node not in susceptible_counts:
-                susceptible_counts[node] = 0
+        #result = np.column_stack((np.unique(filtered_node), sum_mcw[np.unique(filtered_node)]))
+        result = {}
+        for node in range( len( sum_mcw )):
+            result[node] = sum_mcw[node]
 
-        # Because we put dead people in "purgatory"...
-        if 4294967295 in susceptible_counts.keys(): # uint32(-1)
-            susceptible_counts.pop(4294967295)
-        if -1 in susceptible_counts.keys(): 
-            susceptible_counts.pop(-1)
-        if len(susceptible_counts) > len(settings.nodes):
-            pdb.set_trace()
-            raise ValueError( f"Too many susceptible nodes." )
+        return result
 
-        unique_nodes, counts = np.unique(data['node'][data['infected']], return_counts=True)
-        infected_counts_db = list(zip(unique_nodes, counts))
-        infected_counts = {values[0]: values[1] for idx, values in enumerate(infected_counts_db)}
-        for node in settings.nodes:
-            if node not in infected_counts:
-                infected_counts[node] = 0
-        if len(infected_counts) > len(settings.nodes):
-            pdb.set_trace()
-            raise ValueError( f"Too many infected nodes." )
+    recovered_counts = count_recos( data['node'], data['immunity'], data['mcw'] )
 
-        unique_nodes, counts = np.unique(data['node'][data['immunity']], return_counts=True)
-        recovered_counts_db  = list(zip(unique_nodes, counts))
-        recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
-        for node in settings.nodes:
-            if node not in recovered_counts:
-                recovered_counts[node] = 0
-        if len(recovered_counts) > len(settings.nodes):
-            raise ValueError( f"Too many recovered nodes." )
+    #print( "Stop timestep report." )
+    return infected_counts, susceptible_counts, recovered_counts 
 
-        #print( "Stop timestep report." )
-        return infected_counts, susceptible_counts, recovered_counts 
-
-    return collect_report_np()
 
 def update_ages( data, totals ):
     @numba.jit(parallel=True,nopython=True)
@@ -364,31 +374,19 @@ def progress_immunities( data ):
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):
-    def calculate_new_infections_np( data, inf, sus ):
-        # We want to count the number of incubators by now all at once not in a for loop.
-        node_counts_incubators = np.zeros(len(inf))
-        node_counts_incubators = np.bincount( data['node'][data['age']>=0], weights=(data['incubation_timer']>=1)[data['age']>=0] )
-        if len( node_counts_incubators ) == 0:
-            print( "node_counts_incubators came back size 0." ) # this can be OK at the beginning.
-            node_counts_incubators = np.zeros( settings.num_nodes )
-        elif len( node_counts_incubators ) != len( inf ):
-            #print( "node_counts_incubators came back missing a node." )
-            node_counts_incubators = np.pad( node_counts_incubators, (0, len(inf)-len(node_counts_incubators) ), 'constant', constant_values=0 )
-        # ignore passed-in inf if we're calculating incubation now, after births & deaths
-        inf = np.bincount( data['node'][data['age']>=0], weights=(data['infection_timer']>=1)[data['age']>=0] )
-        sus = np.bincount( data['node'][data['age']>=0], weights=(~data['infected'] & ~data['immunity'])[data['age']>=0] )
-
-        if inf.shape != node_counts_incubators.shape:
-            raise RuntimeError( f"inf_np shape ({inf_np.shape}) has different size from node_counts_incubators ({node_counts_incubators.shape})." )
-        inf_np = inf
-        sus_np = sus
-        foi = (inf_np-node_counts_incubators) * settings.base_infectivity
-        #sus_np = np.array(list(sus.values()))
-        new_infections = (foi * sus_np).astype(int)
-        #print( f"New Infections: {new_infections}" )
-        return new_infections
+    # We want to count the number of incubators by now all at once not in a for loop.
+    node_counts_incubators = np.zeros(len(inf))
+    node_counts_incubators = np.bincount( data['node'][data['age']>=0], weights=(data['incubation_timer']>=1)[data['age']>=0] )
+    #exposed_fraction = {}
+    for idx in range(len(node_counts_incubators)):
+        #exposed_fraction[idx] = node_counts_incubators[idx]/totals[idx]
+        exposed_fraction = node_counts_incubators[idx]/totals[idx]
+        inf[idx] -= exposed_fraction 
+    #pdb.set_trace()
+    new_infections = (np.array(sorted(sus.values())) * np.array(sorted(inf.values())) * settings.base_infectivity).astype( np.uint32 )
+    #print( f"New Infections: {new_infections}" )
      
-    return calculate_new_infections_np( data, inf, sus )
+    return new_infections 
 
 def handle_transmission_by_node( data, new_infections, node=0 ):
     # Step 5: Update the infected flag for NEW infectees
@@ -437,14 +435,12 @@ def add_new_infections( data ):
 def migrate( data, timestep, num_infected=None ):
     # Migrate 1% of infecteds "downstream" every week; coz
     if timestep % 7 == 0: # every week
-        def migrate_np():
-            infected = np.where( data['infected'] )[0]
-            fraction = int(len(infected)*0.01)
-            selected = np.random.choice( infected, fraction )
-            # Update the 'nodes' array based on the specified conditions
-            data['node'][selected] = np.where(data['node'][selected] == 0, settings.num_nodes - 1, data['node'][selected] - 1 )
-
-        migrate_np()
+        infected = np.where( data['infected'] )[0]
+        fraction = int(len(infected)*0.05)
+        selected = np.random.choice( infected, fraction )
+        # Update the 'nodes' array based on the specified conditions
+        data['node'][selected] = np.where(data['node'][selected] == 0, settings.num_nodes - 1, data['node'][selected] - 1 )
+        
     return data
 
 def distribute_interventions( ctx, timestep ):
@@ -488,7 +484,7 @@ def distribute_interventions( ctx, timestep ):
         ctx['immunity_timer'][selected_indices_subset] = -1
 
     ria_9mo()
-    if timestep == 60:
+    if timestep == settings.campaign_day:
         campaign(0.8)
     return ctx
 
