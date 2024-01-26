@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    ctx = model.eula( ctx, 15, eula_strategy="discard" )
+    ctx = model.eula( ctx, 15, eula_strategy="downsample" )
 
     csv_writer = report.init()
 
