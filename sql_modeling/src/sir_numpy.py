@@ -96,7 +96,6 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         mask = ((df['age'] >= age_threshold_yrs) & (~df['infected']))[filter_arr]
         # need this by node
         # BUG! This seems to be returning the number of susceptibles, not recovereds
-        node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
 
         # For actual removal, we want thsoe not infected and those over threshold age but don't remove those with age == -1
         # So keep the rest
@@ -105,27 +104,47 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         # We are going to delete number_recovereds agents
         # Then we're going to add 1 with a huge mcw
         # TBD: Recycle 1 of the deletes instead of delete and add
-        print( f"Downsampling eulas {node_counts_recovereds}." )
+        # Add 1 perma-immune, mega-agent per node...
+        # New plan: Add 1 perma-immune mega-agent per age per node...
+
+        node_counts_recovereds = count_by_node_and_age( df['node'][df['age']>=age_threshold_yrs], df['age'][df['age']>=age_threshold_yrs] )
+
         for column in df.keys():
             df[column] = df[column][mask]
-        # Add 1 perma-immune, mega-agent per node...
-        for idx in range(len(node_counts_recovereds)):
-            # 1 agent, mcw=node_counts_recovereds[i], immune, uninfected, age=1000.
-            settings.pop += 1
-            new_ids = [ settings.pop ]
-            new_nodes = np.full(1, idx).astype( np.uint32 )
-            new_ages = np.ones(1)*1000
-            new_infected = np.full(1,False)
-            new_infection_timer = np.zeros(1).astype(np.float32)
-            new_incubation_timer = np.zeros(1).astype(np.float32)
-            new_immunity = np.full(1,True)
-            new_immunity_timer = np.ones(1).astype(np.float32)*-1
-            new_expected_lifespan = np.ones(1)*999999
-            new_mcw = np.ones(1).astype(np.uint32)*node_counts_recovereds[idx]
-            append( df, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw )
+
+        #node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
+        #print( f"Downsampling eulas {node_counts_recovereds}." )
+        for node_id in node_counts_recovereds:
+            for age in node_counts_recovereds[node_id]:
+                # 1 agent, mcw=node_counts_recovereds[i], immune, uninfected, age=1000.
+                settings.pop += 1 # this is agents, not human pop
+                new_ids = [ settings.pop ]
+                new_nodes = np.full(1, node_id).astype( np.uint32 )
+                #new_ages = np.ones(1)*1000
+                new_ages = np.ones(1)*age
+                new_infected = np.full(1,False)
+                new_infection_timer = np.zeros(1).astype(np.float32)
+                new_incubation_timer = np.zeros(1).astype(np.float32)
+                new_immunity = np.full(1,True)
+                new_immunity_timer = np.ones(1).astype(np.float32)*-1
+                new_expected_lifespan = np.ones(1)*999999
+                new_mcw = np.ones(1).astype(np.uint32)*int(node_counts_recovereds[node_id][age])
+                append( df, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw )
     #purge_strategy()
+    print( "Ignoring requested strategy; using downsample only for now." )
     downsample_strategy()
     return df
+
+# call out to c function for this counting
+def count_by_node_and_age( nodes, ages ):
+    print( "Counting eulas by node and age; This is slow for now." )
+    from collections import defaultdict
+    counts = defaultdict(lambda: defaultdict(int))
+    for node_id, age in zip( nodes, ages ):
+        age_bin = int(age)
+        #age_bin = 44 # you can test out sticking everyone in a single bin
+        counts[node_id][age_bin] += 1
+    return counts
 
 def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
     # Append newborns to arrays
@@ -292,20 +311,21 @@ def deaths(data):
     # Non-disease deaths
     # Create a boolean mask for the deletion condition
     delete_mask = (data['age'] >= data['expected_lifespan']) & (data['age']>=0)
+    if np.count_nonzero( delete_mask ):
 
-    #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
-    #data[col] = np.delete( data[col], np.where( delete_mask ) )
-    #data[col] = data[col][~delete_mask]
-    data['node'][delete_mask]  = -1
-    data['age'][delete_mask] = -1
-    data['infected'][delete_mask] = 0
-    data['immunity'][delete_mask] = 0
-    data['infection_timer'][delete_mask] = 0
-    data['immunity_timer'][delete_mask] = 0
-    data['incubation_timer'][delete_mask] = 0
-    data['expected_lifespan'][delete_mask] = -1
+        #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
+        #data[col] = np.delete( data[col], np.where( delete_mask ) )
+        #data[col] = data[col][~delete_mask]
+        data['node'][delete_mask]  = -1
+        data['age'][delete_mask] = -1
+        data['infected'][delete_mask] = 0
+        data['immunity'][delete_mask] = 0
+        data['infection_timer'][delete_mask] = 0
+        data['immunity_timer'][delete_mask] = 0
+        data['incubation_timer'][delete_mask] = 0
+        data['expected_lifespan'][delete_mask] = -1
 
-    #print( f"{np.count_nonzero(delete_mask)} new deaths." )
+        print( f"{np.count_nonzero(delete_mask)} new deaths." )
     return data
 
 def update_births_deaths( data ):
