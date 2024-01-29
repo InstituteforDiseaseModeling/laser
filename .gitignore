@@ -79,3 +79,7 @@ tests/*.xlsx
 tests/results*/*
 tmp/*
 data/*
+proto/*.xlsx
+proto/*.csv
+proto/*.prof
+proto/*.txt
