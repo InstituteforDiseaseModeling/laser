@@ -20,6 +20,7 @@ def collect_and_report(csvwriter, timestep):
             "I": deepcopy( currently_infectious ),
             "R": deepcopy( cur_reco ) 
         }
+    print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
     def normalize( sus, inf, rec ):
         totals = {}
         for idx in currently_sus.keys():
@@ -52,6 +53,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # The core transmission part begins
         new_infections = model.calculate_new_infections( ctx, fractions["I"], fractions["S"], totals )
+        print( f"new_infections=\n{new_infections}" )
 
         # TBD: for loop should probably be implementation-specific
         ctx = model.handle_transmission( ctx, new_infections )
@@ -81,7 +83,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    ctx = model.eula( ctx, 15, eula_strategy="downsample" )
+    #ctx = model.eula( ctx, 15, eula_strategy="downsample" )
 
     csv_writer = report.init()
 

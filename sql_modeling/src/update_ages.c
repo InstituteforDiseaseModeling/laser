@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 
 const float one_day = 1.0f/365.0f;
 void update_ages(size_t length, float *ages) {
@@ -15,28 +16,40 @@ void update_ages(size_t length, float *ages) {
 }
 
 void progress_infections(int n, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity) {
+    unsigned int activators = 0;
+    unsigned int recovereds = 0;
+
     for (int i = 0; i < n; ++i) {
         if (infected[i] ) {
+        //if (true) { // WHY  ARE SOME PEOPLE WITH NON-ZERE INCUBATION TIMERS NOT INFECTED !?!?!?
+            // Incubation timer: decrement for each person
+            if (incubation_timer[i] >= 1) {
+                incubation_timer[i] --;
+                if( incubation_timer[i] == 0 )
+                {
+                    //printf( "Individual %d activating; incubation_timer= %f.\n", i, incubation_timer[i] );
+                    activators++;
+                }
+            }
+
             // Infection timer: decrement for each infected person
             if (infection_timer[i] >= 1) {
-                infection_timer[i] -= 1;
+                infection_timer[i] --;
 
-                // Incubation timer: decrement for each person
-                if (incubation_timer[i] >= 1) {
-                    incubation_timer[i] -= 1;
-                }
 
                 // Some people clear
                 if ( infection_timer[i] == 0) {
+                    recovereds ++;
                     infected[i] = 0;
 
                     // Recovereds gain immunity
-                    immunity_timer[i] = rand() % (41 - 10 + 1) + 10;  // Random integer between 10 and 40
+                    immunity_timer[i] = rand() % (30) + 10;  // Random integer between 10 and 40
                     immunity[i] = 1;
                 }
             }
         }
     }
+    printf( "%d activators, %d recovereds.\n", activators, recovereds );
 }
 
 void progress_immunities(int n, float* immunity_timer, bool* immunity) {
@@ -72,28 +85,30 @@ void calculate_new_infections(
     for (int i = 0; i < num_agents; ++i) {
         if( incubation_timer[i] >= 1 ) {
             exposed_counts_by_bin[ node[ i ] ] ++;
+            // printf( "DEBUG: incubation_timer[ %d ] = %f.\n", i, incubation_timer[i] );
         }
     }
 
     // new infections = Infecteds * infectivity * susceptibles
     for (int i = 0; i < num_nodes; ++i) {
-    exposed_counts_by_bin[ i ] /= totals[ i ];
-    if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
-    {
-        printf( "Exposed should never be > infection.\n" );
-        printf( "i = %d, exposed = %f, infected = %f.\n", i, exposed_counts_by_bin[ i ], infection_counts[ i ] );
-        abort();
-    }
-    infection_counts[ i ] -= exposed_counts_by_bin[ i ];
-    //printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
-    float foi = infection_counts[ i ] * base_inf;
-    //printf( "foi[%d] = %f\n", i, foi );
-    new_infs_out[ i ] = (int)( foi * sus[ i ] );
-    //printf( "new infs[%d] = foi(%f) * sus(%f) = %d.\n", i, foi, sus[i], new_infs_out[i] );
+        printf( "exposed_counts_by_bin[%d] = %f.\n", i, exposed_counts_by_bin[i] );
+        exposed_counts_by_bin[ i ] /= totals[ i ];
+        if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
+        {
+            printf( "Exposed should never be > infection.\n" );
+            printf( "i = %d, exposed = %f, infected = %f, totals = %f.\n", i, exposed_counts_by_bin[ i ], infection_counts[ i ], totals[i] );
+            abort();
+        }
+        infection_counts[ i ] -= exposed_counts_by_bin[ i ];
+        printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
+        float foi = infection_counts[ i ] * base_inf;
+        printf( "foi[%d] = %f\n", i, foi );
+        new_infs_out[ i ] = (int)( foi * sus[ i ] );
+        printf( "new infs[%d] = foi(%f) * sus(%f) = %d.\n", i, foi, sus[i], new_infs_out[i] );
     }
 }
 
-void handle_new_infections(
+void handle_new_infections2(
     int num_agents,
     int node,
     uint32_t * agent_node,
@@ -107,11 +122,13 @@ void handle_new_infections(
     // Create a boolean mask based on the conditions in the subquery
     // This kind of sucks
     bool* subquery_condition = (bool*)malloc(num_agents * sizeof(bool));
+    //memset( subquery_condition, 0, sizeof(subquery_condition) );
 
     // Would be really nice to avoid looping over all the agents twice, especially since this is
     // being called for each node (that has new infections).
     for (int i = 0; i < num_agents; ++i) {
-        subquery_condition[i] = !infected[i] && !immunity[i] && agent_node[i] == node;
+        // Not infected AND not immune (susceptible) AND in this node
+        subquery_condition[i] = (infected[i]==false) && (immunity[i]==false) && (agent_node[i] == node);
     }
 
     // Get the indices of eligible agents using the boolean mask
@@ -130,19 +147,92 @@ void handle_new_infections(
 
     for (uint32_t i = 0; i < new_infections && i < count; ++i) {
         int random_index = rand() % count;
-    // TBD: This needs to be change to avoid duplicates (with replacement or whatever)
+        // TBD: This needs to be change to avoid duplicates (with replacement or whatever)
         selected_indices[i] = eligible_agents_indices[random_index];
     }
 
     // Update the 'infected' column based on the selected indices
     for (uint32_t i = 0; i < new_infections && i < count; ++i) {
-        infected[selected_indices[i]] = 1;  // Assuming 1 represents True
-        incubation_timer[selected_indices[i]] = 3; 
-        infection_timer[selected_indices[i]] = rand() % (10) + 4; // Random integer between 4 and 14;
+        uint32_t selected_id = selected_indices[i];
+        if( infected[ selected_id ] )
+        {
+            printf( "ERROR: infecting already infected individual: %d. No idea how we got here. Let's try skipping for now and see how it goes.\n", selected_id );
+            //abort();
+        }
+        else {
+            infected[selected_id] = true;  // Assuming 1 represents True
+            unsigned int min_infection_duration = 3;
+            incubation_timer[selected_id] = min_infection_duration; 
+            unsigned int max_infection_dur = min_infection_duration + 10; // 3-13
+            infection_timer[selected_id] = rand() % (max_infection_dur) + min_infection_duration; // Random integer between 3 and 13;ish.
+            //printf( "Infecting individual %d.\n", selected_id );
+        }
     }
 
     // Free allocated memory
     free(eligible_agents_indices);
+    free(selected_indices);
+}
+
+void handle_new_infections(
+    int num_agents,
+    int node,
+    uint32_t * agent_node,
+    bool * infected,
+    bool * immunity,
+    float * incubation_timer,
+    float * infection_timer,
+    int new_infections
+) {
+    printf( "Infect %d new people.\n", new_infections );
+    // Allocate memory for subquery_condition array
+    bool *subquery_condition = malloc(num_agents * sizeof(bool));
+    
+    // Apply conditions to identify eligible agents
+    for (int i = 0; i < num_agents; i++) {
+        subquery_condition[i] = !infected[i] && !immunity[i] && agent_node[i] == node;
+    }
+    
+    // Initialize random number generator
+    srand(time(NULL));
+    
+    // Count the number of eligible agents
+    int num_eligible_agents = 0;
+    for (int i = 0; i < num_agents; i++) {
+        if (subquery_condition[i]) {
+            num_eligible_agents++;
+        }
+    }
+    
+    // Allocate memory for selected_indices array
+    int *selected_indices = malloc(num_eligible_agents * sizeof(int));
+    
+    // Randomly sample from eligible agents
+    int count = 0;
+    for (int i = 0; i < num_agents; i++) {
+        if (subquery_condition[i]) {
+            selected_indices[count++] = i;
+        }
+    }
+    // Shuffle the selected_indices array
+    for (int i = num_eligible_agents - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = selected_indices[i];
+        selected_indices[i] = selected_indices[j];
+        selected_indices[j] = temp;
+    }
+
+    // Update the 'infected' column based on selected indices
+    int num_infections = (new_infections < num_eligible_agents) ? new_infections : num_eligible_agents;
+    for (int i = 0; i < num_infections; i++) {
+        unsigned int selected_id = selected_indices[i];
+        infected[selected_id] = true;
+        incubation_timer[selected_id] = 3; 
+        infection_timer[selected_id] = rand() % (10) + 7; // Random integer between 4 and 14;
+    }
+
+    // Free dynamically allocated memory
+    free(subquery_condition);
     free(selected_indices);
 }
 

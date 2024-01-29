@@ -79,7 +79,7 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
     # Create a boolean mask for elements to keep
     def filter_strategy():
         # test out what happens if we render big chunks of the population epi-borrowing
-        condition = np.logical_and(~columns['infected'], columns['age']>15)
+        condition = np.logical_and(~columns['infected'], columns['age']>age_threshold_yrs )
         columns['immunity'][condition] = 1
         columns['immunity_timer'][condition] = -1
 
@@ -211,9 +211,13 @@ def collect_report( data ):
         # Display the result
         #result = np.column_stack((np.unique(filtered_node), sum_mcw[np.unique(filtered_node)]))
         result = {}
+        # Does this code assume there's an entry for each node even if the total is 0?
         for node in range( len( sum_mcw )):
             result[node] = sum_mcw[node]
 
+        for node in settings.nodes:
+            if node not in result:
+                result[node] = 0
         return result
 
     recovered_counts = count_recos( data['node'], data['immunity'], data['mcw'] )
@@ -347,33 +351,30 @@ def update_births_deaths( data ):
 def progress_infections( data ):
     # Update infected agents
     # infection timer: decrement for each infected person
-    def progress_infections_np( data ):
-        data['infection_timer'][data['infection_timer'] >= 1] -= 1
-        data['incubation_timer'][data['incubation_timer'] >= 1] -= 1
-        # some people clear
-        condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
-        data['infected'][condition] = False
-        # recovereds gain immunity
-        data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
-        data['immunity'][condition] = True
+    data['infection_timer'][data['infection_timer'] >= 1] -= 1
+    data['incubation_timer'][data['incubation_timer'] >= 1] -= 1
+    # some people clear
+    condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
+    data['infected'][condition] = False
+    # recovereds gain immunity
+    data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
+    data['immunity'][condition] = True
 
-    progress_infections_np( data )
     return data
 
 # Update immune agents
 def progress_immunities( data ):
-    def progress_immunities_np( data ):
-        # immunity decays
-        condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
-        data['immunity_timer'][condition] -= 1
-        # Recoverd->Susceptible
-        condition = np.logical_and(data['immunity'], data['immunity_timer'] == 0)
-        data['immunity'][condition] = False
+    # immunity decays
+    condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
+    data['immunity_timer'][condition] -= 1
+    # Recoverd->Susceptible
+    condition = np.logical_and(data['immunity'], data['immunity_timer'] <= 0)
+    data['immunity'][condition] = False
 
-    progress_immunities_np( data )
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):
+    # We are currently only passing in inf and sus fractions and totals. Not passing in incubators.
     # We want to count the number of incubators by now all at once not in a for loop.
     node_counts_incubators = np.zeros(len(inf))
     node_counts_incubators = np.bincount( data['node'][data['age']>=0], weights=(data['incubation_timer']>=1)[data['age']>=0] )
@@ -382,15 +383,19 @@ def calculate_new_infections( data, inf, sus, totals ):
         #exposed_fraction[idx] = node_counts_incubators[idx]/totals[idx]
         exposed_fraction = node_counts_incubators[idx]/totals[idx]
         inf[idx] -= exposed_fraction 
+        print( f"infectious fraction for node {idx} = {inf[idx]} after subtracting {node_counts_incubators[idx]} incubators." )
     #new_infections = (np.array(sorted(sus.values())) * np.array(sorted(inf.values())) * settings.base_infectivity).astype( np.uint32 )
-    new_infections = {}
-    for node in sus:
-        new_infections[node] = int(sus[node]*inf[node]*settings.base_infectivity)
+    #new_infections = {}
+    ret_ni = np.zeros(settings.num_nodes).astype( np.uint32 )
+    for node in range(settings.num_nodes):
+        #new_infections[node] = int(sus[node]*inf[node]*settings.base_infectivity)
+        ret_ni[node] = int(sus[node]*inf[node]*settings.base_infectivity)
+        #print( f"new_infections[{node}] = {sus[node]} * {inf[node]} * {settings.base_infectivity} = {new_infections[node]}" )
     #print( f"New Infections: {new_infections} = {np.array(sorted(sus.values()))} * {np.array(sorted(inf.values()))} * {settings.base_infectivity}" )
-    return np.array(sorted(new_infections.values())).astype( np.uint32 )
+    #return np.array(sorted(new_infections.values())).astype( np.uint32 )
+    return ret_ni
 
 def handle_transmission_by_node( data, new_infections, node=0 ):
-    # Step 5: Update the infected flag for NEW infectees
     def handle_new_infections(new_infections):
         # print( f"We are doing transmission to {new_infections} in node {node}." )
         # Create a boolean mask based on the conditions in the subquery
@@ -404,6 +409,8 @@ def handle_transmission_by_node( data, new_infections, node=0 ):
         selected_indices = np.random.choice(eligible_agents_indices, size=min(new_infections, len(eligible_agents_indices)), replace=False)
 
         # Update the 'infected' column based on the selected indices
+        #if any(data['infected'][selected_indices]):
+            #print( "ERROR: Infecting someone already infected!." )
         data['infected'][selected_indices] = True
         #data['incubation_timer'][selected_indices] = 2
 
@@ -426,8 +433,10 @@ def add_new_infections( data ):
     # New infections themselves are set node-wise
     def add_new_infections_np( data ):
         condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
-        data['infection_timer'][condition] = np.random.randint(4, 15, size=np.sum(condition))
-        data['incubation_timer'][condition] = 2
+        min_infection_dur = 3
+        max_infection_dur = min_infection_dur + 20 # 20 is a bit long to keep
+        data['incubation_timer'][condition] = min_infection_dur 
+        data['infection_timer'][condition] = np.random.randint(min_infection_dur, max_infection_dur, size=np.sum(condition))
         return data
 
     data = add_new_infections_np( data )
@@ -439,6 +448,7 @@ def migrate( data, timestep, num_infected=None ):
         infected = np.where( data['infected'] )[0]
         fraction = int(len(infected)*0.05)
         selected = np.random.choice( infected, fraction )
+        #print( f"Migrating {len(selected)} infecteds on day {timestep}." )
         # Update the 'nodes' array based on the specified conditions
         data['node'][selected] = np.where(data['node'][selected] == 0, settings.num_nodes - 1, data['node'][selected] - 1 )
     return data
@@ -449,7 +459,7 @@ def distribute_interventions( ctx, timestep ):
             (ctx['age'] > 290/365.0) &
             (ctx['age'] < 291/365.0) &
             (ctx['immunity'] == 0) &
-            (ctx['node'] == 15)
+            (ctx['node'] == settings.campaign_node)
         )
 
         # Apply the update using the boolean mask
@@ -461,7 +471,7 @@ def distribute_interventions( ctx, timestep ):
         condition_mask = (
             (ctx['immunity'] == 0) &
             (ctx['age'] < 16) &
-            (ctx['node'] == 15)
+            (ctx['node'] == settings.campaign_node)
         )
 
         # Shuffle the array to simulate ORDER BY RANDOM()

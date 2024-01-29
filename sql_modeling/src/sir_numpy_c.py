@@ -113,29 +113,27 @@ def collect_report( data ):
     """
     Report data to file for a given timestep.
     """
-    #print( "Start timestep report." )
-    def collect_report_c():
-        infected_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-        susceptible_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-        recovered_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
+    infected_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
+    susceptible_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
+    recovered_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
 
-        update_ages_lib.collect_report(
-                len( data['node'] ),
-                data['node'],
-                data['infected'],
-                data['immunity'],
-                data['mcw'],
-                infected_counts_raw,
-                susceptible_counts_raw,
-                recovered_counts_raw
-        )
+    update_ages_lib.collect_report(
+            len( data['node'] ),
+            data['node'],
+            data['infected'],
+            data['immunity'],
+            data['mcw'],
+            infected_counts_raw,
+            susceptible_counts_raw,
+            recovered_counts_raw
+    )
 
-        susceptible_counts = dict(zip(settings.nodes, susceptible_counts_raw))
-        infected_counts = dict(zip(settings.nodes, infected_counts_raw))
-        recovered_counts = dict(zip(settings.nodes, recovered_counts_raw))
-        #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
-        return infected_counts, susceptible_counts, recovered_counts
-    return collect_report_c()
+    susceptible_counts = dict(zip(settings.nodes, susceptible_counts_raw))
+    infected_counts = dict(zip(settings.nodes, infected_counts_raw))
+    recovered_counts = dict(zip(settings.nodes, recovered_counts_raw))
+    #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
+    return infected_counts, susceptible_counts, recovered_counts
+    
 
 def update_ages( data, totals ):
     def update_ages_c( ages ):
@@ -144,7 +142,7 @@ def update_ages( data, totals ):
 
     #data['age'] = update_ages_c( data['age'] )
     import sir_numpy
-    data = sir_numpy.births( data, totals )
+    #data = sir_numpy.births( data, totals )
     data = sir_numpy.deaths( data )
     return data
     #return update_births_deaths( data )
@@ -178,26 +176,25 @@ def progress_immunities( data ):
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):
-    def calculate_new_infections_c( data, inf, sus ):
-        new_infections = np.zeros( len( inf ) ).astype( np.uint32 ) # return variable
-        sorted_items = sorted(inf.items())
-        #inf_np = np.array([value for _, value in sorted_items]).astype(np.uint32)
-        inf_np = np.array([np.float32(value) for _, value in sorted_items])
-        sus_np = np.array([np.float32(value) for value in sus.values()])
-        tot_np = np.array([np.float32(value) for value in totals.values()])
-        update_ages_lib.calculate_new_infections(
-                len(data['age']),
-                len( inf ),
-                data['node'],
-                data['incubation_timer'],
-                inf_np,
-                sus_np,
-                tot_np,
-                new_infections,
-                settings.base_infectivity
-            )
-        return new_infections 
-    return calculate_new_infections_c( data, inf, sus )
+    new_infections = np.zeros( len( inf ) ).astype( np.uint32 ) # return variable
+    sorted_items = sorted(inf.items())
+    inf_np = np.array([np.float32(value) for _, value in sorted_items])
+    #print( f"inf_np = {inf_np}." )
+    sus_np = np.array([np.float32(value) for value in sus.values()])
+    tot_np = np.array([np.float32(value) for value in totals.values()])
+    update_ages_lib.calculate_new_infections(
+            len(data['age']),
+            len( inf ),
+            data['node'],
+            data['incubation_timer'],
+            inf_np,
+            sus_np,
+            tot_np,
+            new_infections,
+            settings.base_infectivity
+        )
+    #print( f"new_infections = {new_infections}." )
+    return new_infections 
 
 def handle_transmission_by_node( data, new_infections, node=0 ):
     # Step 5: Update the infected flag for NEW infectees
