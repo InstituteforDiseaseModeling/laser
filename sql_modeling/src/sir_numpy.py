@@ -380,19 +380,13 @@ def calculate_new_infections( data, inf, sus, totals ):
     node_counts_incubators = np.bincount( data['node'][data['age']>=0], weights=(data['incubation_timer']>=1)[data['age']>=0] )
     #exposed_fraction = {}
     for idx in range(len(node_counts_incubators)):
-        #exposed_fraction[idx] = node_counts_incubators[idx]/totals[idx]
         exposed_fraction = node_counts_incubators[idx]/totals[idx]
         inf[idx] -= exposed_fraction 
-        print( f"infectious fraction for node {idx} = {inf[idx]} after subtracting {node_counts_incubators[idx]} incubators." )
-    #new_infections = (np.array(sorted(sus.values())) * np.array(sorted(inf.values())) * settings.base_infectivity).astype( np.uint32 )
-    #new_infections = {}
+        #print( f"infectious fraction for node {idx} = {inf[idx]} after subtracting {node_counts_incubators[idx]} incubators." )
     ret_ni = np.zeros(settings.num_nodes).astype( np.uint32 )
     for node in range(settings.num_nodes):
-        #new_infections[node] = int(sus[node]*inf[node]*settings.base_infectivity)
         ret_ni[node] = int(sus[node]*inf[node]*settings.base_infectivity)
-        #print( f"new_infections[{node}] = {sus[node]} * {inf[node]} * {settings.base_infectivity} = {new_infections[node]}" )
     #print( f"New Infections: {new_infections} = {np.array(sorted(sus.values()))} * {np.array(sorted(inf.values()))} * {settings.base_infectivity}" )
-    #return np.array(sorted(new_infections.values())).astype( np.uint32 )
     return ret_ni
 
 def handle_transmission_by_node( data, new_infections, node=0 ):

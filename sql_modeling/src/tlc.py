@@ -3,8 +3,8 @@ import pdb
 #import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-import sir_numpy as model
-#import sir_numpy_c as model
+#import sir_numpy as model
+import sir_numpy_c as model
 from copy import deepcopy
 
 import settings
@@ -20,7 +20,7 @@ def collect_and_report(csvwriter, timestep):
             "I": deepcopy( currently_infectious ),
             "R": deepcopy( cur_reco ) 
         }
-    print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
+    #print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
     def normalize( sus, inf, rec ):
         totals = {}
         for idx in currently_sus.keys():
@@ -53,7 +53,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # The core transmission part begins
         new_infections = model.calculate_new_infections( ctx, fractions["I"], fractions["S"], totals )
-        print( f"new_infections=\n{new_infections}" )
+        #print( f"new_infections=\n{new_infections}" )
 
         # TBD: for loop should probably be implementation-specific
         ctx = model.handle_transmission( ctx, new_infections )

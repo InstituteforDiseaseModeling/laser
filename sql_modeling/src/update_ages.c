@@ -49,7 +49,7 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
             }
         }
     }
-    printf( "%d activators, %d recovereds.\n", activators, recovereds );
+    //printf( "%d activators, %d recovereds.\n", activators, recovereds );
 }
 
 void progress_immunities(int n, float* immunity_timer, bool* immunity) {
@@ -91,7 +91,7 @@ void calculate_new_infections(
 
     // new infections = Infecteds * infectivity * susceptibles
     for (int i = 0; i < num_nodes; ++i) {
-        printf( "exposed_counts_by_bin[%d] = %f.\n", i, exposed_counts_by_bin[i] );
+        //printf( "exposed_counts_by_bin[%d] = %f.\n", i, exposed_counts_by_bin[i] );
         exposed_counts_by_bin[ i ] /= totals[ i ];
         if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
         {
@@ -100,11 +100,11 @@ void calculate_new_infections(
             abort();
         }
         infection_counts[ i ] -= exposed_counts_by_bin[ i ];
-        printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
+        //printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
         float foi = infection_counts[ i ] * base_inf;
-        printf( "foi[%d] = %f\n", i, foi );
+        //printf( "foi[%d] = %f\n", i, foi );
         new_infs_out[ i ] = (int)( foi * sus[ i ] );
-        printf( "new infs[%d] = foi(%f) * sus(%f) = %d.\n", i, foi, sus[i], new_infs_out[i] );
+        //printf( "new infs[%d] = foi(%f) * sus(%f) = %d.\n", i, foi, sus[i], new_infs_out[i] );
     }
 }
 
@@ -184,7 +184,7 @@ void handle_new_infections(
     float * infection_timer,
     int new_infections
 ) {
-    printf( "Infect %d new people.\n", new_infections );
+    //printf( "Infect %d new people.\n", new_infections );
     // Allocate memory for subquery_condition array
     bool *subquery_condition = malloc(num_agents * sizeof(bool));
     
