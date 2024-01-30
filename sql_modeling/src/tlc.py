@@ -3,8 +3,8 @@ import pdb
 #import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-#import sir_numpy as model
-import sir_numpy_c as model
+import sir_numpy as model
+#import sir_numpy_c as model
 from copy import deepcopy
 
 import settings
@@ -63,7 +63,6 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         ctx = model.distribute_interventions( ctx, timestep )
         # Transmission is done, now migrate some. Only infected?
         ctx = model.migrate( ctx, timestep, num_infected=sum(fractions["I"].values()) )
-        #conn.commit() # db-specific
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
@@ -83,7 +82,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    #ctx = model.eula( ctx, 15, eula_strategy="downsample" )
+    ctx = model.eula( ctx, 15, eula_strategy="downsample" )
 
     csv_writer = report.init()
 
