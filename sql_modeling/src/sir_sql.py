@@ -13,8 +13,6 @@ import settings
 
 import report
 
-settings.base_infectivity = 0.0005
-
 # Globals! (not really)
 conn = sql.connect(":memory:")  # Use in-memory database for simplicity
 cursor = conn.cursor() # db-specific
@@ -80,7 +78,7 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy=None ):
         cursor.execute( f"DELETE FROM agents WHERE infected=0 AND age > {age_threshold_yrs}" )
         print( f"Leaving {cursor.execute( 'SELECT COUNT(*) FROM agents' ).fetchall()[0][0]} agents." )
     elif eula_strategy=="downsample":
-        print( "TBD: Downsample EULAs." )
+        print( "TBD: Downsample EULAs Not Implemented yet." )
     elif not eula_strategy:
         print( "TBD: Keeping EULAs." )
         cursor.execute( f"UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > {age_threshold_yrs}" )
@@ -169,7 +167,7 @@ def collect_report( cursor ):
     # print( "Stop report." ) # helps with visually sensing how long this takes.
     return infected_counts, susceptible_counts, recovered_counts 
 
-def update_ages( cursor ):
+def update_ages( cursor, totals=None ): # totals are for demographic-based fertility
     cursor.execute("UPDATE agents SET age = age+1/365.0")
     def births():
         # Births: Let's aim for 100 births per 1,000 woman of cba per year. So 
@@ -205,7 +203,7 @@ def progress_infections( cursor ):
     # infected=0, immunity=1, immunity_timer=30-ish
     cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
     cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=CAST( 10+RANDOM()%30 AS INTEGER) WHERE infected=1 AND infection_timer=0" )
+    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=(20+RANDOM()%10) WHERE infected=1 AND infection_timer=0" )
     return cursor # for pattern
 
 # Update immune agents
@@ -216,22 +214,23 @@ def progress_immunities( cursor ):
     cursor.execute("UPDATE agents SET immunity = 0 WHERE immunity = 1 AND immunity_timer=0" )
     return cursor # for pattern
 
-def calculate_new_infections( cursor, inf, sus ):
+def calculate_new_infections( cursor, inf, sus, totals ):
     import numpy as np
     node_counts_incubators = np.zeros( settings.num_nodes )
     results = cursor.execute('SELECT node, COUNT(*) FROM agents WHERE incubation_timer >= 1 GROUP BY node').fetchall()
     node_counts_incubators2 = {node: count for node, count in results}
-    for node in node_counts_incubators:
-        if int(node) in node_counts_incubators2:
-            node_counts_incubators += node_counts_incubators2[int(node)]
+
+    # Maybe doesn't need to be separate?
+    for node in node_counts_incubators2:
+        exposed_fraction = node_counts_incubators2[node]/totals[node]
+        inf[node] -= exposed_fraction 
 
     sorted_items = sorted(inf.items())
     inf_np = np.array([value for _, value in sorted_items])
     foi = (inf_np-node_counts_incubators) * settings.base_infectivity
-    foi = np.array([ min(1,x) for x in foi ])
     sus_np = np.array(list(sus.values()))
     new_infections = list((foi * sus_np).astype(int))
-    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible count of\n{sus}" )
+    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible fraction of\n{sus}" )
     #print( "new infections = " + str(new_infections) )
     return new_infections 
 
