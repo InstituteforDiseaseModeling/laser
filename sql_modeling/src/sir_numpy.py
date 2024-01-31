@@ -11,6 +11,13 @@ import report
 
 from collections import defaultdict
 eula = defaultdict(lambda: defaultdict(int))
+
+# Define Gompertz-Makeham parameters
+makeham_parameter = 0.01
+gompertz_parameter = 0.05
+age_bins = np.arange(15, 102)
+probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
+
 # call out to c function for this counting
 def count_by_node_and_age( nodes, ages ):
     print( "Counting eulas by node and age; This is slow for now." )
@@ -50,7 +57,7 @@ def load( pop_file ):
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
 
-    add_expansion_slots( columns )
+    add_expansion_slots( columns,num_slots=50000 )
     # Pad with a bunch of zeros
     return columns
 
@@ -288,22 +295,51 @@ def births(data,totals_by_node):
 def deaths(data):
     # Non-disease deaths
     # Create a boolean mask for the deletion condition
-    delete_mask = (data['age'] >= data['expected_lifespan']) & (data['age']>=0)
-    if np.count_nonzero( delete_mask ):
+    def old_style():
+        delete_mask = (data['age'] >= data['expected_lifespan']) & (data['age']>=0)
+        if np.count_nonzero( delete_mask ):
 
-        #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
-        #data[col] = np.delete( data[col], np.where( delete_mask ) )
-        #data[col] = data[col][~delete_mask]
-        data['node'][delete_mask]  = -1
-        data['age'][delete_mask] = -1
-        data['infected'][delete_mask] = 0
-        data['immunity'][delete_mask] = 0
-        data['infection_timer'][delete_mask] = 0
-        data['immunity_timer'][delete_mask] = 0
-        data['incubation_timer'][delete_mask] = 0
-        data['expected_lifespan'][delete_mask] = -1
+            #data['infected'] = np.delete( data['infected'], np.where( delete_mask ) )
+            #data[col] = np.delete( data[col], np.where( delete_mask ) )
+            #data[col] = data[col][~delete_mask]
+            data['node'][delete_mask]  = -1
+            data['age'][delete_mask] = -1
+            data['infected'][delete_mask] = 0
+            data['immunity'][delete_mask] = 0
+            data['infection_timer'][delete_mask] = 0
+            data['immunity_timer'][delete_mask] = 0
+            data['incubation_timer'][delete_mask] = 0
+            data['expected_lifespan'][delete_mask] = -1
 
-        print( f"{np.count_nonzero(delete_mask)} new deaths." )
+            print( f"{np.count_nonzero(delete_mask)} new deaths." )
+    
+    def eula_death_by_rate():
+        def get_simple_death_rate( age_bin_in_yrs ):
+            # This obviously needs to be done once and then returned from a lookup table.
+
+            # Calculate the probability of dying using the Gompertz-Makeham distribution
+            # Gompertz-Makeham distribution: hazard = makeham_parameter + exp(gompertz_parameter * age)
+            try:
+                return probability_of_dying[ age_bin_in_yrs-15 ] # hack 15 is eula age for now
+            except Exception as ex:
+                pdb.set_trace()
+
+        global eula
+        # first highly simplistic just to get the plumbing working
+        for node, age_bins_counts in eula.items():
+            for age_bin, count in age_bins_counts.items():
+                # Reduce count by 0.1%
+                if eula[node][age_bin] > 0:
+                    from scipy.stats import poisson, binom
+                    prob = get_simple_death_rate( age_bin )
+                    expected_deaths = np.random.binomial(eula[node][age_bin], prob)
+                    if expected_deaths > 0:
+                        #print( f"Killing off {expected_deaths} in node {node} and age_bin {age_bin} from existing population {eula[node][age_bin]} from prob {prob}." )
+                        eula[node][age_bin] -= expected_deaths # round(count * (1-))
+                        if eula[node][age_bin] == 0:
+                            print( f"EULA bin for node {node} and age {age_bin} is now 0." )
+                            #pdb.set_trace()
+    eula_death_by_rate()
     return data
 
 def update_births_deaths( data ):
@@ -320,7 +356,7 @@ def progress_infections( data ):
     condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
     data['infected'][condition] = False
     # recovereds gain immunity
-    data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
+    data['immunity_timer'][condition] = np.random.randint(10000, 41000, size=np.sum(condition))
     data['immunity'][condition] = True
 
     return data
@@ -390,7 +426,7 @@ def add_new_infections( data ):
     # New infections themselves are set node-wise
     def add_new_infections_np( data ):
         condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
-        min_infection_dur = 3
+        min_infection_dur = 11
         max_infection_dur = min_infection_dur + 20 # 20 is a bit long to keep
         data['incubation_timer'][condition] = min_infection_dur 
         data['infection_timer'][condition] = np.random.randint(min_infection_dur, max_infection_dur, size=np.sum(condition))
