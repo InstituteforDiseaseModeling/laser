@@ -127,21 +127,6 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
     downsample_strategy()
     return df
 
-def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan ):
-    # Append newborns to arrays
-    # This was first, naive solution; seems memory-bad
-    # Also I hate functions with more than 5 params.
-    data['id'] = np.concatenate((data['id'], new_ids))
-    data['node'] = np.concatenate((data['node'], new_nodes))
-    data['age'] = np.concatenate((data['age'], new_ages))
-    data['infected'] = np.concatenate((data['infected'], new_infected))
-    data['infection_timer'] = np.concatenate((data['infection_timer'], new_infection_timer))
-    data['incubation_timer'] = np.concatenate((data['incubation_timer'], new_incubation_timer))
-    data['immunity'] = np.concatenate((data['immunity'], new_immunity))
-    data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
-    data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
-    return data
-
 def collect_report( data ):
     """
     Report data to file for a given timestep.
