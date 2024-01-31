@@ -123,12 +123,13 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
                 #new_ages = np.ones(1)*1000
                 new_ages = np.ones(1)*age
                 new_infected = np.full(1,False)
-                new_infection_timer = np.zeros(1).astype(np.float32)
+                new_infection_timer = np.ones(1).astype(np.float32)*-1
                 new_incubation_timer = np.zeros(1).astype(np.float32)
                 new_immunity = np.full(1,True)
                 new_immunity_timer = np.ones(1).astype(np.float32)*-1
                 new_expected_lifespan = np.ones(1)*999999
                 new_mcw = np.ones(1).astype(np.uint32)*int(node_counts_recovereds[node_id][age])
+                #print( f"Adding new downsampled agent: age={age}, node={node_id}, mcw={int(node_counts_recovereds[node_id][age])}" )
                 append( df, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw )
     #purge_strategy()
     print( "Ignoring requested strategy; using downsample only for now." )
@@ -199,7 +200,7 @@ def collect_report( data ):
 
     def count_recos( node, immunity, mcw ):
         # Boolean indexing to filter rows where immunity is 1
-        filtered_rows = immunity == 1
+        filtered_rows = (immunity==1)
 
         # Use the filtered rows to get the corresponding node and mcw values
         filtered_node = node[filtered_rows]
@@ -368,7 +369,7 @@ def progress_immunities( data ):
     condition = np.logical_and(data['immunity'], data['immunity_timer'] > 0)
     data['immunity_timer'][condition] -= 1
     # Recoverd->Susceptible
-    condition = np.logical_and(data['immunity'], data['immunity_timer'] <= 0)
+    condition = np.logical_and(data['immunity'], data['immunity_timer'] == 0)
     data['immunity'][condition] = False
 
     return data
