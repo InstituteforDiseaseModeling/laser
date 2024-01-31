@@ -57,7 +57,7 @@ if __name__ == "__main__":
     import sys
 
     # Get CSV file and node_id from command line arguments
-    csv_file = 'simulation_report.csv'  # Replace with the actual file path
+    csv_file = 'simulation_output.csv'  # Replace with the actual file path
 
     # Plot curves for the specified node
     load_and_plot(csv_file)
