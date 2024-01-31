@@ -9,6 +9,18 @@ import pdb
 import settings
 import report
 
+from collections import defaultdict
+eula = defaultdict(lambda: defaultdict(int))
+# call out to c function for this counting
+def count_by_node_and_age( nodes, ages ):
+    print( "Counting eulas by node and age; This is slow for now." )
+    counts = defaultdict(lambda: defaultdict(int))
+    for node_id, age in zip( nodes, ages ):
+        age_bin = int(age)
+        #age_bin = 44 # you can test out sticking everyone in a single bin
+        counts[node_id][age_bin] += 1
+    return counts
+
 
 def load( pop_file ):
     """
@@ -33,7 +45,7 @@ def load( pop_file ):
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
     columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.uint32)
-    columns['mcw'] = columns['mcw'].astype(np.uint32)
+    columns.pop( "mcw" )
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
@@ -54,7 +66,6 @@ def add_expansion_slots( columns, num_slots=10000 ):
     new_infection_timer = np.zeros( num_slots ).astype( np.float32 )
     new_incubation_timer = np.zeros( num_slots ).astype( np.float32 )
     new_expected_lifespan = np.ones( num_slots )*-1
-    new_mcw = np.ones( num_slots ).astype(np.uint32)
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
@@ -70,7 +81,6 @@ def add_expansion_slots( columns, num_slots=10000 ):
     columns['immunity'] = np.concatenate((columns['immunity'], new_immunity))
     columns['immunity_timer'] = np.concatenate((columns['immunity_timer'], new_immunity_timer))
     columns['expected_lifespan'] = np.concatenate((columns['expected_lifespan'], new_expected_lifespan))
-    columns['mcw'] = np.concatenate((columns['mcw'], new_mcw))
 
 def initialize_database():
     return load( settings.pop_file )
@@ -102,52 +112,22 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         mask = ((df['age'] < age_threshold_yrs) | (df['infected'] ))
 
         # We are going to delete number_recovereds agents
-        # Then we're going to add 1 with a huge mcw
+        # Then we're going to add 1 with a huge mcw: Not any more
         # TBD: Recycle 1 of the deletes instead of delete and add
         # Add 1 perma-immune, mega-agent per node...
         # New plan: Add 1 perma-immune mega-agent per age per node...
-
-        node_counts_recovereds = count_by_node_and_age( df['node'][df['age']>=age_threshold_yrs], df['age'][df['age']>=age_threshold_yrs] )
+        global eula
+        eula = count_by_node_and_age( df['node'][df['age']>=age_threshold_yrs], df['age'][df['age']>=age_threshold_yrs] )
 
         for column in df.keys():
             df[column] = df[column][mask]
 
-        #node_counts_recovereds = np.bincount( df['node'][df['age']>=0], weights=(mask) ).astype(np.uint32)
-        #print( f"Downsampling eulas {node_counts_recovereds}." )
-        for node_id in node_counts_recovereds:
-            for age in node_counts_recovereds[node_id]:
-                # 1 agent, mcw=node_counts_recovereds[i], immune, uninfected, age=1000.
-                settings.pop += 1 # this is agents, not human pop
-                new_ids = [ settings.pop ]
-                new_nodes = np.full(1, node_id).astype( np.uint32 )
-                #new_ages = np.ones(1)*1000
-                new_ages = np.ones(1)*age
-                new_infected = np.full(1,False)
-                new_infection_timer = np.ones(1).astype(np.float32)*-1
-                new_incubation_timer = np.zeros(1).astype(np.float32)
-                new_immunity = np.full(1,True)
-                new_immunity_timer = np.ones(1).astype(np.float32)*-1
-                new_expected_lifespan = np.ones(1)*999999
-                new_mcw = np.ones(1).astype(np.uint32)*int(node_counts_recovereds[node_id][age])
-                #print( f"Adding new downsampled agent: age={age}, node={node_id}, mcw={int(node_counts_recovereds[node_id][age])}" )
-                append( df, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw )
-    #purge_strategy()
+
     print( "Ignoring requested strategy; using downsample only for now." )
     downsample_strategy()
     return df
 
-# call out to c function for this counting
-def count_by_node_and_age( nodes, ages ):
-    print( "Counting eulas by node and age; This is slow for now." )
-    from collections import defaultdict
-    counts = defaultdict(lambda: defaultdict(int))
-    for node_id, age in zip( nodes, ages ):
-        age_bin = int(age)
-        #age_bin = 44 # you can test out sticking everyone in a single bin
-        counts[node_id][age_bin] += 1
-    return counts
-
-def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
+def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan ):
     # Append newborns to arrays
     # This was first, naive solution; seems memory-bad
     # Also I hate functions with more than 5 params.
@@ -160,7 +140,6 @@ def append( data, new_ids, new_nodes, new_ages, new_infected, new_infection_time
     data['immunity'] = np.concatenate((data['immunity'], new_immunity))
     data['immunity_timer'] = np.concatenate((data['immunity_timer'], new_immunity_timer))
     data['expected_lifespan'] = np.concatenate((data['expected_lifespan'], new_expected_lifespan))
-    data['mcw'] = np.concatenate((data['mcw'], new_mcw))
     return data
 
 def collect_report( data ):
@@ -198,30 +177,30 @@ def collect_report( data ):
         pdb.set_trace()
         raise ValueError( f"Too many infected nodes." )
 
-    def count_recos( node, immunity, mcw ):
+    def count_recos( node, immunity ):
         # Boolean indexing to filter rows where immunity is 1
         filtered_rows = (immunity==1)
 
-        # Use the filtered rows to get the corresponding node and mcw values
+        # Use the filtered rows to get the corresponding node
         filtered_node = node[filtered_rows]
-        filtered_mcw = mcw[filtered_rows]
 
-        # Use numpy.bincount to calculate the sum of mcw for each node
-        sum_mcw = np.bincount(filtered_node, weights=filtered_mcw)
+        # Use numpy.bincount to calculate the sum of Rs for each node
+        unique_nodes, counts = np.unique(filtered_node, return_counts=True)
+        counts_by_node = dict(zip(unique_nodes, counts))
 
         # Display the result
-        #result = np.column_stack((np.unique(filtered_node), sum_mcw[np.unique(filtered_node)]))
         result = {}
+        global eula
         # Does this code assume there's an entry for each node even if the total is 0?
-        for node in range( len( sum_mcw )):
-            result[node] = sum_mcw[node]
-
-        for node in settings.nodes:
+        for node in range( settings.num_nodes ):
+            # Now add in eulas
             if node not in result:
                 result[node] = 0
+            result[node] += sum(eula[node].values())
+
         return result
 
-    recovered_counts = count_recos( data['node'], data['immunity'], data['mcw'] )
+    recovered_counts = count_recos( data['node'], data['immunity'] )
 
     #print( "Stop timestep report." )
     return infected_counts, susceptible_counts, recovered_counts 
@@ -298,9 +277,8 @@ def births(data,totals_by_node):
         new_immunity = np.full(babies,False)
         new_immunity_timer = np.zeros(babies)
         new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
-        new_mcw = np.ones(babies)
 
-        def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=None ):
+        def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan ):
             # This is memory-smarter option where we recycle agents
             # TBD: Make c version
             data['node'][indices] = new_nodes
@@ -311,8 +289,7 @@ def births(data,totals_by_node):
             data['immunity'][indices] = new_immunity
             data['immunity_timer'][indices] = new_immunity_timer
             data['expected_lifespan'][indices] = new_expected_lifespan
-            data['mcw'][indices] = new_mcw
-        reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan, new_mcw=new_mcw )
+        reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan )
 
     new_babies = births_from_cbr( totals_by_node, rate=settings.cbr )
     #print( f"New babies by node: {new_babies}" )
