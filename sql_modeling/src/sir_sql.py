@@ -79,6 +79,26 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy=None ):
         print( f"Leaving {cursor.execute( 'SELECT COUNT(*) FROM agents' ).fetchall()[0][0]} agents." )
     elif eula_strategy=="downsample":
         print( "TBD: Downsample EULAs Not Implemented yet." )
+        # Count up all the individuals > age_threshold_yrs by node and age.
+        from collections import defaultdict
+        results_dict = defaultdict(lambda: defaultdict(int))
+        cursor.execute(
+                f"""
+                SELECT node, CAST(age AS INTEGER) age_int, count(*)
+                    FROM agents
+                    WHERE age_int > {age_threshold_yrs}
+                    GROUP BY node, age_int
+                """
+            )
+        # Sequence here is important
+        result = cursor.fetchall()
+        cursor.execute( f"DELETE FROM agents WHERE age>{age_threshold_yrs}" )
+        for row in result:
+            node, age, count = row
+            results_dict[node][age] = count
+            agents_data = [(node, age, False, 0, 0, True, -1, 999999, count)]
+            #print( f"Adding agent with mcw {count}" )
+            cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
     elif not eula_strategy:
         print( "TBD: Keeping EULAs." )
         cursor.execute( f"UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > {age_threshold_yrs}" )
@@ -157,7 +177,7 @@ def collect_report( cursor ):
         if node not in infected_counts:
             infected_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node')
+    cursor.execute('SELECT node, SUM(mcw) FROM agents WHERE immunity=1 GROUP BY node')
     recovered_counts_db = cursor.fetchall()
     recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
     for node in settings.nodes:
