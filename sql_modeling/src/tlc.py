@@ -1,9 +1,9 @@
 import pdb
 # Import a model
-#import sir_sql as model
+import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-import sir_numpy as model
+#import sir_numpy as model
 #import sir_numpy_c as model
 from copy import deepcopy
 
@@ -25,9 +25,14 @@ def collect_and_report(csvwriter, timestep):
         totals = {}
         for idx in currently_sus.keys():
             totals[ idx ] = sus[ idx ] + inf[ idx ] + rec[ idx ]
-            sus[ idx ] /= totals[ idx ] 
-            inf[ idx ] /= totals[ idx ] 
-            rec[ idx ]/= totals[ idx ] 
+            if totals[ idx ] > 0:
+                sus[ idx ] /= totals[ idx ] 
+                inf[ idx ] /= totals[ idx ] 
+                rec[ idx ]/= totals[ idx ] 
+            else:
+                sus[ idx ] = 0
+                inf[ idx ] = 0
+                rec[ idx ] = 0
         return totals
     totals = normalize( currently_sus, currently_infectious, cur_reco )
     fractions = {
@@ -37,7 +42,10 @@ def collect_and_report(csvwriter, timestep):
         }
     #print( fractions["S"][10] )
     #print( counts["S"][10] )
-    report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"] )
+    try:
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"] )
+    except Exception as ex:
+        raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, fractions, totals
 
 def run_simulation(ctx, csvwriter, num_timesteps):
@@ -62,7 +70,8 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         ctx = model.distribute_interventions( ctx, timestep )
         # Transmission is done, now migrate some. Only infected?
-        ctx = model.migrate( ctx, timestep, num_infected=sum(fractions["I"].values()) )
+        if settings.num_nodes>1:
+            ctx = model.migrate( ctx, timestep, num_infected=sum(fractions["I"].values()) )
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
@@ -82,7 +91,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    ctx = model.eula( ctx, 15, eula_strategy="downsample" )
+    ctx = model.eula( ctx, settings.eula_age )
 
     csv_writer = report.init()
 
