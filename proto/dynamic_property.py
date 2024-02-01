@@ -1,7 +1,13 @@
+# Based on information from https://stackoverflow.com/questions/972/adding-a-method-to-an-existing-object-instance-in-python
+
+"""Experiment with dynamically adding properties to an existing class [instance]."""
+
 import numpy as np
 
 
 class Group:
+    """A class to represent a group of individuals and their properties."""
+
     def __init__(self, indices):
         self.indices = indices
         return
@@ -12,6 +18,8 @@ class Group:
 
 
 def add_property(cls, name, field):
+    """Add a computed property to a class."""
+
     def getter(self):
         first, last = self.indices[:]
         return field[first : last + 1]
@@ -26,11 +34,14 @@ def add_property(cls, name, field):
 
 
 class Community:
+    """A class to represent a community of individuals and their properties."""
+
     def __init__(self):
         self.indices = None
         return
 
     def initialize(self):
+        """Initialize the community with a population of 1000 individuals."""
         # Four groups: S, E, I, and R
         # Initial populations: 990, 0, 10, 0
         self.indices = np.array([[0, 989], [990, 989], [990, 999], [999, 998]], dtype=np.uint32)
@@ -50,4 +61,6 @@ class Community:
 
 c = Community()
 c.initialize()
+c.infectious.itimer[:] = np.clip(np.random.normal(5, 2, len(c.infectious)), a_min=1, a_max=None)
+print(c.infectious.itimer)
 ...
