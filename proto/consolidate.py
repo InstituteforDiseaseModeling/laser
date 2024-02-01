@@ -9,15 +9,17 @@ from pathlib import Path
 
 tzero = datetime.now(timezone.utc)
 
+import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 import polars as pl  # noqa: E402
 from tqdm import tqdm  # noqa: E402
 
 timport = datetime.now(timezone.utc)
 
 
-def set_params():
-    """Set the parameters for the simulation. Start with defaults and override from commandline."""
+def get_params():
+    """Get the parameters for the simulation. Start with defaults and override from commandline."""
     TIMESTEPS = np.uint32(730)
     POP_SIZE = np.uint32(10_000)
     MEAN_EXP = np.float32(4)
@@ -26,7 +28,7 @@ def set_params():
     STD_INF = np.float32(1)
     INIT_INF = np.uint32(10)
     R_NAUGHT = np.float32(2.5)
-    SEED = np.uint32(20231205)
+    SEED = np.uint32(datetime.now(timezone.utc).microsecond)  # np.uint32(20231205)
     BIRTH_RATE = np.float32(0.03)
     NON_DISEASE_MORTALITY = np.float32(1.0 / 80)
 
@@ -41,11 +43,6 @@ def set_params():
     parser.add_argument("--r_naught", type=np.float32, default=R_NAUGHT)
     parser.add_argument("--birth_rate", dest="mu", type=np.float32, default=BIRTH_RATE)
     parser.add_argument("--mortality", dest="nu", type=np.float32, default=NON_DISEASE_MORTALITY)
-    # parser.add_argument(
-    #     "--brute_force", action="store_false", dest="poisson", help="use brute force tx instead of Poisson draw for potential targets"
-    # )
-    # parser.add_argument("-v", "--vaccinate", action="store_true")
-    # parser.add_argument("-m", "--masking", action="store_true")
     parser.add_argument("-s", "--seed", type=np.uint32, default=SEED)
     parser.add_argument("-f", "--filename", type=Path, default=Path(__file__).parent / "groupseir.csv")
 
@@ -59,46 +56,26 @@ _FIRST = 0
 _LAST = 1
 
 
-class Subset:
-    """A subset of agents."""
-
-    def __init__(self, group, item) -> None:
-        self.group = group
-        self.parent = group.parent
-        self.index = group.index
-        self.item = item
-        return
-
-    def __getattr__(self, name):
-        first, last = self.parent.igroups[self.index, :]
-        return getattr(self.parent, f"_{name}")[first : last + 1][self.item]
-
-
 class Group:
     """A (virtual) group of agents."""
 
     def __init__(self, name, parent, index) -> None:
-        self.name = name
-        self.parent = parent
-        self.index = index
+        # self.name = name
+        setattr(self, name, getattr(parent, f"_{name}"))
+        # self.parent = parent
+        # self.index = index
+        self.indices = parent.igroups[index, :]
         return
 
-    def __getitem__(self, index):
-        # first, last = self.parent.igroups[self.index, :]
-        # return getattr(self.parent, f"_{index}")[first : last + 1]
-        return Subset(self, index)
-
-    # def __setitem__(self, index, value):
-    #     first, last = self.parent.igroups[self.index, :]
-    #     getattr(self.parent, f"_{index}")[first : last + 1] = value
-    #     return
-
     def __len__(self):
-        first, last = self.parent.igroups[self.index, :]
+        # first, last = self.parent.igroups[self.index, :]
+        first, last = self.indices[:]
         return last - first + 1 if last >= first else 0
 
     def __getattr__(self, name):
-        first, last = self.parent.igroups[self.index, :]
+        # first, last = self.parent.igroups[self.index, :]
+        # return getattr(self.parent, f"_{name}")[first : last + 1]
+        first, last = self.indices[:]
         return getattr(self.parent, f"_{name}")[first : last + 1]
 
 
@@ -106,7 +83,7 @@ class Community:
     """A community of agents."""
 
     def __init__(self) -> None:
-        self.group_defs = []
+        self.groupdefs = []
         self.attrdefs = []
 
         self._count = 0
@@ -121,8 +98,8 @@ class Community:
 
     def add_group(self, name: str, count: int) -> int:
         """Add a group of agents to the community."""
-        index = len(self.group_defs)
-        self.group_defs.append((name, count))
+        index = len(self.groupdefs)
+        self.groupdefs.append((name, count))
         return index
 
     def add_property(self, name: str, dtype: type, default: int) -> None:
@@ -137,24 +114,22 @@ class Community:
 
     def allocate(self):
         """Allocate memory for the agents."""
-        self.ngroups = len(self.group_defs)
+        self.ngroups = len(self.groupdefs)
         self.igroups = np.zeros((self.ngroups, 2), dtype=np.uint32)
-        # self.gmap = {}
         inext = 0
-        for index, (name, count) in enumerate(self.group_defs):
+        for index, (name, count) in enumerate(self.groupdefs):
             self.gmap[name] = index
+            setattr(self, f"i{name}", index)
             self.igroups[index, _FIRST] = inext
             self.igroups[index, _LAST] = inext + count - 1
             group = Group(name, self, index)
             self.groups[name] = group
             setattr(self, name, group)
-            inext += count + 1
-        self._count = inext - 1
+            inext += count  # + 1
+        self._count = inext
         for name, dtype, default in self.attrdefs:
             array = np.full(self.count, default, dtype=dtype)
             setattr(self, f"_{name}", array)
-            # for group in self.groups.values():
-            #     setattr(group, f"_{name}", array)
             self.attributes.append(array)
         return
 
@@ -164,56 +139,30 @@ class Community:
 
     def move(self, source: Group, index: int, target: Group):
         """Move an agent from one group to another."""
-        isource, iswap = self._indices(source.name)
-        isource += index
-        idest, _ = self._indices(target.name)
-        idest -= 1
-        if isource != iswap:
-            for array in self.attributes:
-                array[idest], array[isource] = array[isource], array[iswap]
-        else:
-            for array in self.attributes:
-                array[idest] = array[isource]
-        self.igroups[self.gmap[source.name], _LAST] -= 1
-        self.igroups[self.gmap[target.name], _FIRST] -= 1
-
+        self.movei(self.gmap[source.name], index, self.gmap[target.name])
         return
 
     def movei(self, source: int, index: int, target: int):
-        """Move an agent from one group to another."""
+        """Move an agent from one group (index) to another."""
         isource, iswap = self.igroups[source, :]
         isource += index
-        idest, _ = self.igroups[target, :]
-        idest -= 1
         if isource != iswap:
             for array in self.attributes:
-                array[idest], array[isource] = array[isource], array[iswap]
-        else:
-            for array in self.attributes:
-                array[idest] = array[isource]
+                # array[iswap], array[isource] = array[isource], array[iswap]
+                t = array[isource]
+                array[isource] = array[iswap]
+                array[iswap] = t
         self.igroups[source, _LAST] -= 1
         self.igroups[target, _FIRST] -= 1
 
         return
 
 
-"""
-c.exposed.etimer[:] = 13
-c.infectious.itimer[:] = 7
-c.recovered.dob[:] = -42 * 365
-c.deceased.dob[:] = -80 * 365
-c._uid[:] = np.arange(len(c._uid)) + 1
-
-c.unborn.dob[:] = -13
-c.infectious.susceptibility[:] = np.arange(len(c.infectious)) + 1
-
-iagent = c.move(c.susceptible, 4, c.exposed)
-c.exposed[0].etimer = 13
-"""
-
-
 def run_sim(params):
     """Run the simulation."""
+
+    np.random.seed(params.seed)
+
     # initialize the community
     c = Community()
     daily_birth_rate = params.mu / 365
@@ -222,10 +171,15 @@ def run_sim(params):
     num_unborn *= 1.05  # fudge factor
     num_unborn = np.uint32(np.round(num_unborn))
     c.add_group("unborn", num_unborn)
-    c.add_group("susceptible", params.pop_size - params.initial_inf)
+
+    S = np.uint32(np.round(params.pop_size / params.r_naught))  # * 1.0625
+    I = params.initial_inf
+    R = params.pop_size - S - I
+
+    c.add_group("susceptible", S)  # c.add_group("susceptible", params.pop_size - params.initial_inf)
     c.add_group("exposed", 0)
-    c.add_group("infectious", params.initial_inf)
-    c.add_group("recovered", 0)
+    c.add_group("infectious", I)  # c.add_group("infectious", params.initial_inf)
+    c.add_group("recovered", R)  # c.add_group("recovered", 0)
     c.add_group("deceased", 0)
 
     c.add_property("dob", np.int16, 0)  # support up to ~90 year olds at start of simulation and ~90 years of simulation
@@ -248,8 +202,6 @@ def run_sim(params):
     start = datetime.now(timezone.utc)
 
     for t in tqdm(range(params.timesteps)):
-        # USEIRD
-
         top = datetime.now(timezone.utc)
 
         # 1 U - deliver babies
@@ -291,10 +243,23 @@ def run_sim(params):
     # the existing Numpy arrays rather than copying them.
     df = pl.DataFrame(
         data=results,
-        schema=["timestep", "elapsed", "unborn", "susceptible", "exposed", "infected", "recovered", "deceased", "births", "deaths"],
+        schema=["timestep", "elapsed", "unborn", "susceptible", "exposed", "infectious", "recovered", "deceased", "births", "deaths"],
     )
     df.write_csv(params.filename)
     print(f"Results written to '{params.filename}'.")
+
+    f = plt.figure(figsize=(16, 12), dpi=300)
+    ax1 = f.add_subplot()
+
+    pandasdf = pd.read_csv(params.filename)
+
+    pandasdf.plot("timestep", ["susceptible", "recovered"], title="GroupedSEIR", ax=ax1, color=["blue", "green"])
+    ax2 = ax1.twinx()
+    pandasdf.plot("timestep", ["exposed", "infectious"], ax=ax2, color=["orange", "red"])
+    f.tight_layout()
+    f.savefig(params.filename.stem + ".png")
+
+    print(f"Plot written to '{params.filename.stem}.png'.")
 
     return
 
@@ -302,16 +267,17 @@ def run_sim(params):
 def deliver_babies(c, daily_birth_rate, t):
     """Deliver babies."""
     N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
-    births = np.random.poisson(daily_birth_rate * N)
+    births = np.uint32(np.round(np.random.poisson(daily_birth_rate * N)))
     index = len(c.unborn)
     iunborn = c.gmap["unborn"]
     isusceptible = c.gmap["susceptible"]
-    for _ in range(births):
+    for _ in range(min(births, len(c.unborn))):
         # We will move the last of the unborn to the first of the susceptibles. It is slightly more efficient.
         index -= 1
         c.unborn.dob[index] = t
         c.unborn.susceptibility[index] = 1
         c.movei(iunborn, index, isusceptible)
+
     N += births
     return N
 
@@ -322,12 +288,12 @@ def update_infections(c):
     iinfectious = c.gmap["infectious"]
     irecovered = c.gmap["recovered"]
     for index in range(len(c.infectious) - 1, -1, -1):
-        # itimers[index] -= 1
-        # if itimers[index] == 0:
         timer = itimers[index] - 1
         itimers[index] = timer
         if timer == 0:
             c.movei(iinfectious, index, irecovered)
+
+    return
 
 
 def update_exposures(c, inf_mean, inf_std):
@@ -337,13 +303,13 @@ def update_exposures(c, inf_mean, inf_std):
     iexposed = c.gmap["exposed"]
     iinfectious = c.gmap["infectious"]
     for index in range(len(c.exposed) - 1, -1, -1):
-        # etimers[index] -= 1
-        # if etimers[index] == 0:
         timer = etimers[index] - 1
         etimers[index] = timer
         if timer == 0:
             itimers[index] = max(1, int(np.round(np.random.normal(inf_mean, inf_std))))
             c.movei(iexposed, index, iinfectious)
+
+    return
 
 
 def do_transmission(c, beta, N, exp_mean, exp_std):
@@ -353,47 +319,75 @@ def do_transmission(c, beta, N, exp_mean, exp_std):
     isusceptible = c.gmap["susceptible"]
     iexposed = c.gmap["exposed"]
     force = beta * len(c.infectious) * len(c.susceptible) / N
-    num_exposures = min(np.random.poisson(force), len(c.susceptible))
-    targets = np.random.choice(len(c.susceptible), num_exposures, replace=True)
-    targets[::-1].sort()
-    for target in targets:
+    num_exposures = np.uint32(np.round(np.random.poisson(force)))
+    # targets = np.random.choice(len(c.susceptible), num_exposures, replace=True)
+    # targets[::-1].sort()
+    # for target in targets:
+    limit = len(c.susceptible)
+    for _ in range(min(num_exposures, limit)):
+        target = np.random.randint(limit)
         if np.random.uniform() < susceptibility[target]:
             susceptibility[target] = 0
             etimers[target] = max(1, int(np.round(np.random.normal(exp_mean, exp_std))))
             c.movei(isusceptible, target, iexposed)
+            limit -= 1
+
+    return
 
 
 def do_interments(c, daily_mortality):
-    """Do the interments."""
-    num_deaths = np.random.poisson(np.array([len(c.susceptible), len(c.exposed), len(c.infectious), len(c.recovered)]) * daily_mortality)
-    targets = np.random.choice(len(c.susceptible), num_deaths[0], replace=False)
-    targets[::-1].sort()
-    for target in targets:
+    """Do the interments (non-disease mortality)."""
+    num_deaths = np.round(
+        np.random.poisson(np.array([len(c.susceptible), len(c.exposed), len(c.infectious), len(c.recovered)]) * daily_mortality)
+    ).astype(np.uint32)
+
+    isusceptible = c.isusceptible
+    iexposed = c.iexposed
+    iinfectious = c.iinfectious
+    irecovered = c.irecovered
+    ideceased = c.ideceased
+
+    # Susceptible -> Deceased
+    limit = len(c.susceptible)
+    for _ in range(min(num_deaths[0], limit)):
+        target = np.random.randint(limit)
         # Need to update move() to do the following with move(c.susceptible, target, c.deceased)
-        c.move(c.susceptible, target, c.exposed)
-        c.move(c.exposed, 0, c.infectious)
-        c.move(c.infectious, 0, c.recovered)
-        c.move(c.recovered, 0, c.deceased)
-    targets = np.random.choice(len(c.exposed), num_deaths[1], replace=False)
-    targets[::-1].sort()
-    for target in targets:
-        c.move(c.exposed, target, c.infectious)
-        c.move(c.infectious, 0, c.recovered)
-        c.move(c.recovered, 0, c.deceased)
-    targets = np.random.choice(len(c.infectious), num_deaths[2], replace=False)
-    targets[::-1].sort()
-    for target in targets:
-        c.move(c.infectious, target, c.recovered)
-        c.move(c.recovered, 0, c.deceased)
-    targets = np.random.choice(len(c.recovered), num_deaths[3], replace=False)
-    targets[::-1].sort()
-    for target in targets:
-        c.move(c.recovered, target, c.deceased)
+        c.movei(isusceptible, target, iexposed)
+        c.movei(iexposed, 0, iinfectious)
+        c.movei(iinfectious, 0, irecovered)
+        c.movei(irecovered, 0, ideceased)
+        limit -= 1
+
+    # Exposed -> Deceased
+    limit = len(c.exposed)
+    for _ in range(min(num_deaths[1], limit)):
+        target = np.random.randint(limit)
+        c.movei(iexposed, target, iinfectious)
+        c.movei(iinfectious, 0, irecovered)
+        c.movei(irecovered, 0, ideceased)
+        limit -= 1
+
+    # Infectious -> Deceased
+    limit = len(c.infectious)
+    for _ in range(min(num_deaths[2], limit)):
+        target = np.random.randint(limit)
+        c.movei(iinfectious, target, irecovered)
+        c.movei(irecovered, 0, ideceased)
+        limit -= 1
+
+    # Recovered -> Deceased
+    limit = len(c.recovered)
+    for _ in range(min(num_deaths[3], limit)):
+        target = np.random.randint(limit)
+        c.movei(irecovered, target, ideceased)
+        limit -= 1
+
+    return
 
 
 if __name__ == "__main__":
-    params = set_params()
-    run_sim(params)
+    parameters = get_params()
+    run_sim(parameters)
 
     tfinish = datetime.now(timezone.utc)
     print(f"import time:    {timport - tzero}")
