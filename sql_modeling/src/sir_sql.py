@@ -70,7 +70,7 @@ def init_db_from_csv():
     print( f"Loaded population file with {settings.pop} agents across {settings.num_nodes} nodes." )
     return cursor
 
-def eula( cursor, age_threshold_yrs = 5, eula_strategy=None ):
+def eula( cursor, age_threshold_yrs = 5, eula_strategy="separate" ):
     print( f"Everyone over the age of {age_threshold_yrs} is permanently immune." )
     # Make everyone over some age perman-immune
     if eula_strategy=="discard":
@@ -99,6 +99,14 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy=None ):
             agents_data = [(node, age, False, 0, 0, True, -1, 999999, count)]
             #print( f"Adding agent with mcw {count}" )
             cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+    elif eula_strategy=="separate":
+        # Create a new table eula with the same schema as the agents table
+        cursor.execute( "CREATE TABLE eula AS SELECT * FROM agents WHERE 1=0" )
+        # Move rows where age > some_age_threshold into the eula table
+        cursor.execute( f"INSERT INTO eula SELECT * FROM agents WHERE age > {age_threshold_yrs}" )
+        cursor.execute( f"CREATE INDEX idx_node ON eula (node)" )
+        # Delete rows from the agents table where age > some_age_threshold
+        cursor.execute( f"DELETE FROM agents WHERE age > {age_threshold_yrs}" )
     elif not eula_strategy:
         print( "TBD: Keeping EULAs." )
         cursor.execute( f"UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > {age_threshold_yrs}" )
@@ -130,7 +138,6 @@ def initialize_database( conn=None, from_file=True ):
             immunity BOOLEAN,
             immunity_timer INTEGER,
             expected_lifespan INTEGER,
-            mcw INTEGER
         )
     ''')
     # lots of index experiments going on here
@@ -177,13 +184,17 @@ def collect_report( cursor ):
         if node not in infected_counts:
             infected_counts[node] = 0
 
-    cursor.execute('SELECT node, SUM(mcw) FROM agents WHERE immunity=1 GROUP BY node')
+    cursor.execute('SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node')
     recovered_counts_db = cursor.fetchall()
     recovered_counts = {values[0]: values[1] for idx, values in enumerate(recovered_counts_db)}
     for node in settings.nodes:
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
+    cursor.execute('SELECT node, COUNT(*) FROM eula GROUP BY node')
+    recovered_counts_db = cursor.fetchall()
+    for key, count in recovered_counts_db:
+        recovered_counts[key] += count
     # print( "Stop report." ) # helps with visually sensing how long this takes.
     return infected_counts, susceptible_counts, recovered_counts 
 
@@ -209,7 +220,7 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
     def deaths():
         # Deaths
         #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
-        cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
+        cursor.execute( "DELETE FROM eula WHERE age>=expected_lifespan" )
         num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
         #print( f"pop after deaths = {num_agents}" )
     births()
@@ -320,7 +331,7 @@ def distribute_interventions( cursor, timestep ):
         """
         cursor.execute( query )
         print( f"Vaccinated {cursor.rowcount} in node 15 at timestep 15." )
-    ria_9mo()
+    #ria_9mo()
     if timestep == settings.campaign_day:
         campaign()
     return cursor
