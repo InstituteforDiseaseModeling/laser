@@ -15,7 +15,10 @@ import report
 
 # Globals! (not really)
 conn = sql.connect(":memory:")  # Use in-memory database for simplicity
+#conn = sql.connect("sir.db")  # Use in-memory database for simplicity
+eula = None # don't create connection yet coz eula-via-db is just one option at this point
 cursor = conn.cursor() # db-specific
+eula_cursor = None
 # use cursor as model data context; cf dataframe for polars/pandas
 #conn = sqlite3.connect("simulation.db")  # Great for inspecting; presumably a bit slower
 
@@ -70,7 +73,7 @@ def init_db_from_csv():
     print( f"Loaded population file with {settings.pop} agents across {settings.num_nodes} nodes." )
     return cursor
 
-def eula( cursor, age_threshold_yrs = 5, eula_strategy="separate" ):
+def eula( cursor, age_threshold_yrs = 5, eula_strategy="from_db" ):
     print( f"Everyone over the age of {age_threshold_yrs} is permanently immune." )
     # Make everyone over some age perman-immune
     if eula_strategy=="discard":
@@ -97,7 +100,6 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy="separate" ):
             node, age, count = row
             results_dict[node][age] = count
             agents_data = [(node, age, False, 0, 0, True, -1, 999999, count)]
-            #print( f"Adding agent with mcw {count}" )
             cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
     elif eula_strategy=="separate":
         # Create a new table eula with the same schema as the agents table
@@ -107,6 +109,19 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy="separate" ):
         cursor.execute( f"CREATE INDEX idx_node ON eula (node)" )
         # Delete rows from the agents table where age > some_age_threshold
         cursor.execute( f"DELETE FROM agents WHERE age > {age_threshold_yrs}" )
+    elif eula_strategy=="from_file":
+        print( "EULAed agents were pre-sorted into separate file which we are loading into a table now" )
+        import pandas as pd
+        df = pd.read_csv( settings.eulad_pop_file )
+        conn=sql.connect(":memory:")
+        df.to_sql("agents",conn,index=False)
+        cursor = conn.cursor()
+        settings.pop = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0]
+        print( f"Loaded population file with {settings.pop} agents across {settings.num_nodes} nodes." )
+    elif eula_strategy=="from_db":
+        global eula, eula_cursor
+        eula=sql.connect( "eula.db" )
+        eula_cursor = eula.cursor()
     elif not eula_strategy:
         print( "TBD: Keeping EULAs." )
         cursor.execute( f"UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > {age_threshold_yrs}" )
@@ -191,15 +206,19 @@ def collect_report( cursor ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
-    cursor.execute('SELECT node, COUNT(*) FROM eula GROUP BY node')
-    recovered_counts_db = cursor.fetchall()
+    #eula_cursor = eula.cursor()
+    global eula_cursor
+    eula_cursor.execute('SELECT node, COUNT(*) FROM agents GROUP BY node')
+    recovered_counts_db = eula_cursor.fetchall()
     for key, count in recovered_counts_db:
         recovered_counts[key] += count
     # print( "Stop report." ) # helps with visually sensing how long this takes.
     return infected_counts, susceptible_counts, recovered_counts 
 
 def update_ages( cursor, totals=None ): # totals are for demographic-based fertility
-    cursor.execute("UPDATE agents SET age = age+1/365.0")
+    global eula_cursor
+    #cursor.execute("UPDATE agents SET age = age+1/365.0")
+    #eula_cursor.execute("UPDATE agents SET age = age+1/365.0")
     def births():
         # Births: Let's aim for 100 births per 1,000 woman of cba per year. So 
         # 0.1/365 per day or 2.7e-4
@@ -215,13 +234,13 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
             #print( f"node,newborns = {node},{newbabies}" )
             if newbabies > 0:
                 add_newborns( node, newbabies )
-        num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+        #num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
         #print( f"pop after births = {num_agents}" )
     def deaths():
         # Deaths
         #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
-        cursor.execute( "DELETE FROM eula WHERE age>=expected_lifespan" )
-        num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+        eula_cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
+        #num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
         #print( f"pop after deaths = {num_agents}" )
     births()
     deaths()
