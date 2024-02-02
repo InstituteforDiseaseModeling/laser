@@ -12,13 +12,12 @@ from settings import * # local file
 import settings
 
 import report
+import eula
 
 # Globals! (not really)
 conn = sql.connect(":memory:")  # Use in-memory database for simplicity
 #conn = sql.connect("sir.db")  # Use in-memory database for simplicity
-eula = None # don't create connection yet coz eula-via-db is just one option at this point
 cursor = conn.cursor() # db-specific
-eula_cursor = None
 # use cursor as model data context; cf dataframe for polars/pandas
 #conn = sqlite3.connect("simulation.db")  # Great for inspecting; presumably a bit slower
 
@@ -73,7 +72,7 @@ def init_db_from_csv():
     print( f"Loaded population file with {settings.pop} agents across {settings.num_nodes} nodes." )
     return cursor
 
-def eula( cursor, age_threshold_yrs = 5, eula_strategy="from_db" ):
+def eula_init( cursor, age_threshold_yrs = 5, eula_strategy="from_db" ):
     print( f"Everyone over the age of {age_threshold_yrs} is permanently immune." )
     # Make everyone over some age perman-immune
     if eula_strategy=="discard":
@@ -119,9 +118,7 @@ def eula( cursor, age_threshold_yrs = 5, eula_strategy="from_db" ):
         settings.pop = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0]
         print( f"Loaded population file with {settings.pop} agents across {settings.num_nodes} nodes." )
     elif eula_strategy=="from_db":
-        global eula, eula_cursor
-        eula=sql.connect( "eula.db" )
-        eula_cursor = eula.cursor()
+        eula.init()
     elif not eula_strategy:
         print( "TBD: Keeping EULAs." )
         cursor.execute( f"UPDATE agents SET immunity = 1, immunity_timer=-1 WHERE infected=0 AND age > {age_threshold_yrs}" )
@@ -206,10 +203,7 @@ def collect_report( cursor ):
         if node not in recovered_counts:
             recovered_counts[node] = 0
 
-    #eula_cursor = eula.cursor()
-    global eula_cursor
-    eula_cursor.execute('SELECT node, COUNT(*) FROM agents GROUP BY node')
-    recovered_counts_db = eula_cursor.fetchall()
+    recovered_counts_db = eula.get_recovereds_by_node()
     for key, count in recovered_counts_db:
         recovered_counts[key] += count
     # print( "Stop report." ) # helps with visually sensing how long this takes.
@@ -239,8 +233,9 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
     def deaths():
         # Deaths
         #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
-        eula_cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
+        #eula_cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
         #num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+        eula.update_natural_mortality()
         #print( f"pop after deaths = {num_agents}" )
     births()
     deaths()
