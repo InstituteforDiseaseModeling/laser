@@ -16,5 +16,5 @@ conn.close()
 
 with open( settings.pop_file_out, "w", newline='' ) as csvfile:
     csv_writer = csv.writer( csvfile )
-    csv_writer.writerow( ['id', 'node', 'age', 'infected', 'infection_timer', 'incubation_timer', 'immunity', 'immunity_timer', 'expected_lifespan', 'mcw' ] )
+    csv_writer.writerow( ['id', 'node', 'age', 'infected', 'infection_timer', 'incubation_timer', 'immunity', 'immunity_timer', 'expected_lifespan' ] )
     csv_writer.writerows( rows )
