@@ -206,8 +206,8 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
         wocba = cursor.execute( "SELECT node, COUNT(*)/2 FROM agents WHERE age>15 and age<45 GROUP BY node ORDER BY node").fetchall()
         wocba  = {values[0]: values[1] for idx, values in enumerate(wocba)}
         def add_newborns( node, babies ):
-            agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan(), 1) for i in range(babies)]
-            cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
+            agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(babies)]
+            cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
             conn.commit()
 
         for node,count in wocba.items():
