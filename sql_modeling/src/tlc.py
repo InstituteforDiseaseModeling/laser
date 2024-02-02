@@ -1,9 +1,9 @@
 import pdb
 # Import a model
-import sir_sql as model
+#import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-#import sir_numpy as model
+import sir_numpy as model
 #import sir_numpy_c as model
 from copy import deepcopy
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # ctx might be db cursor or dataframe or dict of numpy vectors
     ctx = model.initialize_database()
     #ctx = model.init_db_from_csv( settings )
-    ctx = model.eula( ctx, settings.eula_age )
+    ctx = model.eula_init( ctx, settings.eula_age )
 
     csv_writer = report.init()
 

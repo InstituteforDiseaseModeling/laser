@@ -7,25 +7,8 @@ import pdb
 
 import settings
 import report
+from model_numpy import eula
 
-from collections import defaultdict
-eula = defaultdict(lambda: defaultdict(int))
-
-# Define Gompertz-Makeham parameters
-makeham_parameter = 0.01
-gompertz_parameter = 0.05
-age_bins = np.arange(15, 102)
-probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
-
-# call out to c function for this counting
-def count_by_node_and_age( nodes, ages ):
-    print( "Counting eulas by node and age; This is slow for now." )
-    counts = defaultdict(lambda: defaultdict(int))
-    for node_id, age in zip( nodes, ages ):
-        age_bin = int(age)
-        #age_bin = 44 # you can test out sticking everyone in a single bin
-        counts[node_id][age_bin] += 1
-    return counts
 
 
 def load( pop_file ):
@@ -51,7 +34,8 @@ def load( pop_file ):
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
     columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.uint32)
-    columns.pop( "mcw" )
+    if "mcw" in columns:
+        columns.pop( "mcw" )
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
@@ -91,7 +75,7 @@ def add_expansion_slots( columns, num_slots=10000 ):
 def initialize_database():
     return load( settings.pop_file )
     
-def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
+def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
     # Create a boolean mask for elements to keep
     def filter_strategy():
         # test out what happens if we render big chunks of the population epi-borrowing
@@ -123,7 +107,7 @@ def eula( df, age_threshold_yrs = 5, eula_strategy=None ):
         # Add 1 perma-immune, mega-agent per node...
         # New plan: Add 1 perma-immune mega-agent per age per node...
         global eula
-        eula = count_by_node_and_age( df['node'][df['age']>=age_threshold_yrs], df['age'][df['age']>=age_threshold_yrs] )
+        eula.init( df[ 'node' ], df[ 'age' ], settings.eula_age )
 
         for column in df.keys():
             df[column] = df[column][mask]
@@ -180,16 +164,15 @@ def collect_report( data ):
         counts_by_node = dict(zip(unique_nodes, counts))
 
         # Display the result
-        result = {}
-        global eula
         # Does this code assume there's an entry for each node even if the total is 0?
+        #pdb.set_trace()
         for node in range( settings.num_nodes ):
             # Now add in eulas
-            if node not in result:
-                result[node] = 0
-            result[node] += sum(eula[node].values())
+            if node not in counts_by_node:
+                counts_by_node[node] = 0
+            counts_by_node[node] += sum(eula.eula[node].values())
 
-        return result
+        return counts_by_node
 
     recovered_counts = count_recos( data['node'], data['immunity'] )
 
@@ -317,31 +300,8 @@ def deaths(data):
             print( f"{np.count_nonzero(delete_mask)} new deaths." )
     
     def eula_death_by_rate():
-        def get_simple_death_rate( age_bin_in_yrs ):
-            # This obviously needs to be done once and then returned from a lookup table.
+        eula.progress_natural_mortality()
 
-            # Calculate the probability of dying using the Gompertz-Makeham distribution
-            # Gompertz-Makeham distribution: hazard = makeham_parameter + exp(gompertz_parameter * age)
-            try:
-                return probability_of_dying[ age_bin_in_yrs-15 ] # hack 15 is eula age for now
-            except Exception as ex:
-                pdb.set_trace()
-
-        global eula
-        # first highly simplistic just to get the plumbing working
-        for node, age_bins_counts in eula.items():
-            for age_bin, count in age_bins_counts.items():
-                # Reduce count by 0.1%
-                if eula[node][age_bin] > 0:
-                    from scipy.stats import poisson, binom
-                    prob = get_simple_death_rate( age_bin )
-                    expected_deaths = np.random.binomial(eula[node][age_bin], prob)
-                    if expected_deaths > 0:
-                        #print( f"Killing off {expected_deaths} in node {node} and age_bin {age_bin} from existing population {eula[node][age_bin]} from prob {prob}." )
-                        eula[node][age_bin] -= expected_deaths # round(count * (1-))
-                        if eula[node][age_bin] == 0:
-                            print( f"EULA bin for node {node} and age {age_bin} is now 0." )
-                            #pdb.set_trace()
     eula_death_by_rate()
     return data
 
@@ -359,7 +319,7 @@ def progress_infections( data ):
     condition = np.logical_and(data['infected'], data['infection_timer'] == 0)
     data['infected'][condition] = False
     # recovereds gain immunity
-    data['immunity_timer'][condition] = np.random.randint(10000, 41000, size=np.sum(condition))
+    data['immunity_timer'][condition] = np.random.randint(10, 41, size=np.sum(condition))
     data['immunity'][condition] = True
 
     return data
