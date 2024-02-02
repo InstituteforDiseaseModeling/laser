@@ -1,14 +1,21 @@
-cat pop_1M_25nodes_seeded.csv |
-    awk -F, '{
-        age=; node=;
-        if( age>15 ) {
-            int_age=int(age); mcw[node_int_age] ++
-        } else {
-            print -bash
-        }
-    } END {
-        for ( bin in mcw ) {
-            split( bin, parts, _ );
-            print ?,parts[1],parts[2],mcw[bin]
-        }
-    }'
+#!/bin/bash
+
+# Check if a filename and threshold are provided as arguments
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <filename> <threshold>"
+    exit 1
+fi
+
+# Assign the filename and threshold to variables
+filename=$1
+threshold=$2
+
+# Run awk to split the file based on the age column and the provided threshold
+awk -v threshold="$threshold" -F ',' '{
+    if ($3 > threshold) {
+        print > "age_gt_" threshold ".csv"
+    } else if ($3 < threshold) {
+        print > "age_lt_" threshold ".csv"
+    }
+}' "$filename"
+
