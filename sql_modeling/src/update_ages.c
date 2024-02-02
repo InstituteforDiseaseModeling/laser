@@ -259,7 +259,6 @@ void collect_report(
     uint32_t * node,
     bool * infected,
     bool * immunity,
-    uint32_t * mcw,
     uint32_t * infection_count,
     uint32_t * susceptible_count,
     uint32_t * recovered_count
@@ -270,16 +269,15 @@ void collect_report(
         if ( node_id == (uint32_t)-1 ) {
             continue;
         }
-        uint32_t weight = mcw[i]; // usually 1 honestly
         if( infected[ i ] ) {
-            infection_count[ node_id ]+=weight;
+            infection_count[ node_id ]+=1;
             //printf( "Adding %d to I count for node %d = %d.\n", mcw[i], node_id, infection_count[ node_id ] );
         } else if( immunity[ i ] ) {
-            recovered_count[ node_id ]+=weight;
+            recovered_count[ node_id ]+=1;
             //printf( "Adding %d to R count for node %d = %d.\n", mcw[i], node_id, recovered_count[ node_id ] );
         } else {
             // HOW THE HECK AM I GETTING THE EXACT SAME NUMBER OF SUSCEPTIBLES 1 at a time AS RECOVEREDS?!?!?!?!??!??!
-            susceptible_count[ node_id ]+=weight;
+            susceptible_count[ node_id ]+=1;
             //printf( "Adding %d to S count for node %d = %d.\n", mcw[i], node_id, susceptible_count[ node_id ] );
         }
     }
