@@ -3,7 +3,6 @@ import csv
 import numpy as np
 import concurrent.futures
 from functools import partial
-import numba
 import pdb
 
 import settings
@@ -199,6 +198,8 @@ def collect_report( data ):
 
 
 def update_ages( data, totals ):
+    """
+    import numba
     @numba.jit(parallel=True,nopython=True)
     def update_ages_nb( ages ):
         n = len(ages)
@@ -206,10 +207,12 @@ def update_ages( data, totals ):
             ages[i] += 1/365
         return ages
         #data['age'] += 1/365
+    """
     def update_ages_np( ages ):
         ages[ages>0] += 1/365
         return ages
 
+    data['age'] = update_ages_np( data['age'] )
     data = births( data, totals )
     data = deaths( data )
     return data
