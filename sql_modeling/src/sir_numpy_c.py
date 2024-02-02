@@ -61,7 +61,6 @@ update_ages_lib.collect_report.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # mcw
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # infection_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # susceptible_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # recovered_count_out
@@ -89,7 +88,6 @@ def load( pop_file ):
     columns['incubation_timer'] = columns['incubation_timer'].astype(np.float32) # int better?
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
-    columns['mcw'] = columns['mcw'].astype(np.uint32)
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
@@ -122,7 +120,6 @@ def collect_report( data ):
             data['node'],
             data['infected'],
             data['immunity'],
-            data['mcw'],
             infected_counts_raw,
             susceptible_counts_raw,
             recovered_counts_raw
