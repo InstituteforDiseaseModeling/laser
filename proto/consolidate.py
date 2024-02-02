@@ -140,29 +140,26 @@ class Community:
             __add_property__(Group, name, array)
         return
 
-    # def _indices(self, name: str) -> tuple[int, int]:
-    #     """Return the first and last indices of the group."""
-    #     return self.igroups[self.gmap[name], :]
-
-    # def moveg(self, source: Group, index: int, target: Group):
-    #     """Move an agent from one group to another."""
-    #     self.move(self.gmap[source.name], index, self.gmap[target.name])
-    #     return
-
     def move(self, source: int, index: int, target: int):
-        """Move an agent from one group (index) to another."""
-        for src in range(source, target):
-            dst = src + 1
-            isource, iswap = self.igroups[src, :]
+        """Move an agent from one group (index) to another group."""
+        if target == source + 1:
+            isource, iswap = self.igroups[source, :]
             isource += index
             if isource != iswap:
                 for array in self.attributes:
-                    # array[iswap], array[isource] = array[isource], array[iswap]
-                    t = array[isource]
-                    array[isource] = array[iswap]
-                    array[iswap] = t
-            self.igroups[src, _LAST] -= 1
-            self.igroups[dst, _FIRST] -= 1
+                    array[iswap], array[isource] = array[isource], array[iswap]
+            self.igroups[source, _LAST] -= 1
+            self.igroups[target, _FIRST] -= 1
+        else:
+            for src in range(source, target):
+                dst = src + 1
+                isource, iswap = self.igroups[src, :]
+                isource += index
+                if isource != iswap:
+                    for array in self.attributes:
+                        array[iswap], array[isource] = array[isource], array[iswap]
+                self.igroups[src, _LAST] -= 1
+                self.igroups[dst, _FIRST] -= 1
 
         return
 
@@ -170,6 +167,7 @@ class Community:
 def run_sim(params):
     """Run the simulation."""
 
+    print(f"Running simulation with parameters: {params}")
     np.random.seed(params.seed)
 
     # initialize the community
@@ -277,10 +275,9 @@ def deliver_babies(c, daily_birth_rate, t):
     """Deliver babies."""
     N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
     births = np.uint32(np.round(np.random.poisson(daily_birth_rate * N)))
-    index = len(c.unborn)
     iunborn = c.gmap["unborn"]
     isusceptible = c.gmap["susceptible"]
-    for _ in range(min(births, len(c.unborn))):
+    for _ in range(min(births, index := len(c.unborn))):
         # We will move the last of the unborn to the first of the susceptibles. It is slightly more efficient.
         index -= 1
         c.unborn.dob[index] = t
@@ -329,11 +326,7 @@ def do_transmission(c, beta, N, exp_mean, exp_std):
     iexposed = c.gmap["exposed"]
     force = beta * len(c.infectious) * len(c.susceptible) / N
     num_exposures = np.uint32(np.round(np.random.poisson(force)))
-    # targets = np.random.choice(len(c.susceptible), num_exposures, replace=True)
-    # targets[::-1].sort()
-    # for target in targets:
-    limit = len(c.susceptible)
-    for _ in range(min(num_exposures, limit)):
+    for _ in range(min(num_exposures, limit := len(c.susceptible))):
         target = np.random.randint(limit)
         if np.random.uniform() < susceptibility[target]:
             susceptibility[target] = 0
@@ -357,39 +350,25 @@ def do_interments(c, daily_mortality):
     ideceased = c.ideceased
 
     # Susceptible -> Deceased
-    limit = len(c.susceptible)
-    for _ in range(min(num_deaths[0], limit)):
+    for _ in range(min(num_deaths[0], limit := len(c.susceptible))):
         target = np.random.randint(limit)
-        # Need to update move() to do the following with move(c.susceptible, target, c.deceased)
-        # c.move(isusceptible, target, iexposed)
-        # c.move(iexposed, 0, iinfectious)
-        # c.move(iinfectious, 0, irecovered)
-        # c.move(irecovered, 0, ideceased)
         c.move(isusceptible, target, ideceased)
         limit -= 1
 
     # Exposed -> Deceased
-    limit = len(c.exposed)
-    for _ in range(min(num_deaths[1], limit)):
+    for _ in range(min(num_deaths[1], limit := len(c.exposed))):
         target = np.random.randint(limit)
-        # c.move(iexposed, target, iinfectious)
-        # c.move(iinfectious, 0, irecovered)
-        # c.move(irecovered, 0, ideceased)
         c.move(iexposed, target, ideceased)
         limit -= 1
 
     # Infectious -> Deceased
-    limit = len(c.infectious)
-    for _ in range(min(num_deaths[2], limit)):
+    for _ in range(min(num_deaths[2], limit := len(c.infectious))):
         target = np.random.randint(limit)
-        # c.move(iinfectious, target, irecovered)
-        # c.move(irecovered, 0, ideceased)
         c.move(iinfectious, target, ideceased)
         limit -= 1
 
     # Recovered -> Deceased
-    limit = len(c.recovered)
-    for _ in range(min(num_deaths[3], limit)):
+    for _ in range(min(num_deaths[3], limit := len(c.recovered))):
         target = np.random.randint(limit)
         c.move(irecovered, target, ideceased)
         limit -= 1
