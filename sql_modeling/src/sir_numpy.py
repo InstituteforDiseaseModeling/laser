@@ -106,8 +106,7 @@ def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
         # TBD: Recycle 1 of the deletes instead of delete and add
         # Add 1 perma-immune, mega-agent per node...
         # New plan: Add 1 perma-immune mega-agent per age per node...
-        global eula
-        eula.init( df[ 'node' ], df[ 'age' ], settings.eula_age )
+        eula.init()
 
         for column in df.keys():
             df[column] = df[column][mask]

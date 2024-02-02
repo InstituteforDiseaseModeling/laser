@@ -1,5 +1,6 @@
 import numpy as np
 from collections import defaultdict
+import settings
 
 eula = defaultdict(lambda: defaultdict(int))
 
@@ -19,9 +20,24 @@ def count_by_node_and_age( nodes, ages ):
         counts[node_id][age_bin] += 1
     return counts
 
-def init( nodes, ages, age_threshold_yrs ):
+def init():
     global eula
-    eula = count_by_node_and_age( nodes[ages>=age_threshold_yrs], ages[ages>=age_threshold_yrs] )
+    header_row = np.genfromtxt(settings.eula_file, delimiter=',', dtype=str, max_rows=1)
+
+    # Load the remaining data as numerical values, skipping the header row
+    data = np.genfromtxt(settings.eula_file, delimiter=',', dtype=float, skip_header=1)
+
+    # Extract headers from the header row
+    headers = header_row
+
+    # Load each column into a separate NumPy array
+    columns = {header: data[:, i] for i, header in enumerate(headers)}
+    columns['node'] = columns['node'].astype(np.uint32)
+    columns['age'] = columns['age'].astype(np.float32)
+    nodes = columns['node']
+    ages = columns['age']
+
+    eula = count_by_node_and_age( nodes, ages )
 
 def progress_natural_mortality():
     def get_simple_death_rate( age_bin_in_yrs ):
@@ -34,7 +50,6 @@ def progress_natural_mortality():
         except Exception as ex:
             pdb.set_trace()
 
-    # first highly simplistic just to get the plumbing working
     for node, age_bins_counts in eula.items():
         for age_bin, count in age_bins_counts.items():
             # Reduce count by 0.1%
@@ -48,3 +63,9 @@ def progress_natural_mortality():
                     if eula[node][age_bin] == 0:
                         print( f"EULA bin for node {node} and age {age_bin} is now 0." )
                         #pdb.set_trace()
+
+def get_recovereds_by_node():   
+    summary = {}
+    for node in eula:
+        summary[ node ] = sum( eula[node].values() )
+    return summary

@@ -12,7 +12,7 @@ from settings import * # local file
 import settings
 
 import report
-import eula
+from model_sql import eula
 
 # Globals! (not really)
 conn = sql.connect(":memory:")  # Use in-memory database for simplicity

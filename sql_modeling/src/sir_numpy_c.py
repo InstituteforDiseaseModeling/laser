@@ -8,6 +8,8 @@ import pdb
 
 import settings
 import report
+#from model_sql import eula
+from model_numpy import eula
 
 # Load the shared library
 update_ages_lib = ctypes.CDLL('./update_ages.so')
@@ -101,10 +103,13 @@ def load( pop_file ):
 def initialize_database():
     return load( settings.pop_file )
 
-def eula( ctx, age_threshold_yrs = 5, eula_strategy=None ):
+def eula_init( ctx, age_threshold_yrs = 5, eula_strategy=None ):
     # For now just use numpy version
-    import sir_numpy
-    return sir_numpy.eula( ctx, age_threshold_yrs, eula_strategy )
+    #import sir_numpy
+    #return sir_numpy.eula( ctx, age_threshold_yrs, eula_strategy )
+
+    eula.init()
+    return ctx
 
 def collect_report( data ):
     """
@@ -128,6 +133,9 @@ def collect_report( data ):
     infected_counts = dict(zip(settings.nodes, infected_counts_raw))
     recovered_counts = dict(zip(settings.nodes, recovered_counts_raw))
     #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
+    recovered_counts_eula = eula.get_recovereds_by_node()
+    for key, count in recovered_counts_eula.items():
+        recovered_counts[key] += count
     return infected_counts, susceptible_counts, recovered_counts
     
 
@@ -139,7 +147,7 @@ def update_ages( data, totals ):
     #data['age'] = update_ages_c( data['age'] )
     import sir_numpy
     #data = sir_numpy.births( data, totals )
-    data = sir_numpy.deaths( data )
+    #data = sir_numpy.deaths( data )
     return data
     #return update_births_deaths( data )
 
@@ -150,6 +158,7 @@ def update_births_deaths( data ):
     # TBD NOT IMPLEMENTED YET
     update_ages_lib.update_ages(len(ages), ages)
     # Non-disease deaths
+    eula.update_natural_mortality()
     return data
 
 def progress_infections( data ):
