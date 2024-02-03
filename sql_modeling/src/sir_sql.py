@@ -172,6 +172,8 @@ def initialize_database( conn=None, from_file=True ):
     # Seed exactly 100 people to be infected in the first timestep
     # uniform distribution draws seem a bit clunky in SQLite. Just looking for values from 4 to 14. Ish.
     cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=9+RANDOM()%6, incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': num_nodes-1 } )
+    #for node in range( settings.num_nodes ):
+        #cursor.execute( 'UPDATE agents SET infected = 1, infection_timer=9+RANDOM()%6, incubation_timer=3 WHERE id IN (SELECT id FROM agents WHERE node=:big_node ORDER BY RANDOM() LIMIT 100)', { 'big_node': node } )
 
     conn.commit()
 
@@ -204,7 +206,7 @@ def collect_report( cursor ):
             recovered_counts[node] = 0
 
     recovered_counts_db = eula.get_recovereds_by_node()
-    for key, count in recovered_counts_db:
+    for key, count in recovered_counts_db.items():
         recovered_counts[key] += count
     # print( "Stop report." ) # helps with visually sensing how long this takes.
     return infected_counts, susceptible_counts, recovered_counts 
@@ -214,31 +216,49 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
     #cursor.execute("UPDATE agents SET age = age+1/365.0")
     #eula_cursor.execute("UPDATE agents SET age = age+1/365.0")
     def births():
-        # Births: Let's aim for 100 births per 1,000 woman of cba per year. So 
-        # 0.1/365 per day or 2.7e-4
-        wocba = cursor.execute( "SELECT node, COUNT(*)/2 FROM agents WHERE age>15 and age<45 GROUP BY node ORDER BY node").fetchall()
-        wocba  = {values[0]: values[1] for idx, values in enumerate(wocba)}
         def add_newborns( node, babies ):
             agents_data = [(node, 0, False, 0, 0, False, 0, get_rand_lifespan()) for i in range(babies)]
             cursor.executemany('INSERT INTO agents VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?)', agents_data)
-            conn.commit()
 
-        for node,count in wocba.items():
-            newbabies = np.sum( np.random.rand(count) <  2.7e-4)
-            #print( f"node,newborns = {node},{newbabies}" )
-            if newbabies > 0:
-                add_newborns( node, newbabies )
-        #num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
+        # I want to move this code into seperate dedicate mini submodule
+        def demographic_dependent():
+            # Births: Let's aim for 100 births per 1,000 woman of cba per year. So 
+            # 0.1/365 per day or 2.7e-4
+            wocba = cursor.execute( "SELECT node, COUNT(*)/2 FROM agents WHERE age>15 and age<45 GROUP BY node ORDER BY node").fetchall()
+            wocba  = {values[0]: values[1] for idx, values in enumerate(wocba)}
+            for node,count in wocba.items():
+                newbabies = np.sum( np.random.rand(count) <  2.7e-4)
+                #print( f"node,newborns = {node},{newbabies}" )
+                if newbabies > 0:
+                    add_newborns( node, newbabies )
+
+        def births_from_cbr( node_pops, rate=30 ):
+            # TBD: births = CBR & node_pop / 1000
+            # placeholder: just say 10 per node for now to test rest of code path
+            new_babies = {}
+            for node in node_pops:
+                cbr_node = rate * (node_pops[node]/1000.0)/365.0
+                new_babies[node] = np.random.poisson( cbr_node )
+            return new_babies
+
         #print( f"pop after births = {num_agents}" )
+        new_babies = births_from_cbr( totals, rate=settings.cbr )
+        #print( f"New babies by node: {new_babies}" )
+        # Iterate over nodes and add newborns
+        for node, count in new_babies.items():
+            if count > 0:
+                add_newborns(node, count)
+
     def deaths():
         # Deaths
         #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=-1 WHERE age>expected_lifespan" )
         #eula_cursor.execute( "DELETE FROM agents WHERE age>=expected_lifespan" )
         #num_agents = cursor.execute( "SELECT COUNT(*) FROM agents" ).fetchall()[0][0] 
-        eula.update_natural_mortality()
+        # NOTE: Only doing R->D for now
+        new_deaths = eula.update_natural_mortality()
         #print( f"pop after deaths = {num_agents}" )
-    births()
-    deaths()
+    #births()
+    #deaths()
     return cursor # for pattern
 
 def progress_infections( cursor ):
@@ -248,7 +268,8 @@ def progress_infections( cursor ):
     # infected=0, immunity=1, immunity_timer=30-ish
     cursor.execute( "UPDATE agents SET infection_timer = (infection_timer-1) WHERE infection_timer>=1" )
     cursor.execute( "UPDATE agents SET incubation_timer = (incubation_timer-1) WHERE incubation_timer>=1" )
-    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=(20+RANDOM()%10) WHERE infected=1 AND infection_timer=0" )
+    cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=(20+RANDOM()%10) WHERE infected=1 AND infection_timer<=0" )
+    #cursor.execute( "UPDATE agents SET infected=0, immunity=1, immunity_timer=(11+RANDOM()%10) WHERE infected=1 AND infection_timer=0" )
     return cursor # for pattern
 
 # Update immune agents
@@ -256,7 +277,7 @@ def progress_immunities( cursor ):
     # immunity timer: decrement for each immune person
     # immunity flag: clear for each new sus person
     cursor.execute("UPDATE agents SET immunity_timer = (immunity_timer-1) WHERE immunity=1 AND immunity_timer>0" )
-    cursor.execute("UPDATE agents SET immunity = 0 WHERE immunity = 1 AND immunity_timer=0" )
+    cursor.execute("UPDATE agents SET immunity = 0 WHERE immunity = 1 AND immunity_timer<=0" )
     return cursor # for pattern
 
 def calculate_new_infections( cursor, inf, sus, totals ):
@@ -265,19 +286,21 @@ def calculate_new_infections( cursor, inf, sus, totals ):
     results = cursor.execute('SELECT node, COUNT(*) FROM agents WHERE incubation_timer >= 1 GROUP BY node').fetchall()
     node_counts_incubators2 = {node: count for node, count in results}
 
+    # ni is an array; inf and sus are dicts
+    new_infections = np.ones(len(inf))*settings.base_infectivity
     # Maybe doesn't need to be separate?
-    for node in node_counts_incubators2:
-        exposed_fraction = node_counts_incubators2[node]/totals[node]
+    #pdb.set_trace()
+    for node in range(len(new_infections)):
+        exposed_fraction = 0
+        if node in node_counts_incubators2:
+            exposed_fraction = node_counts_incubators2[node]/totals[node]
+            print( f"Node {node} has {node_counts_incubators2[node]} incubators." )
         inf[node] -= exposed_fraction 
+        new_infections[node] = round(inf[node]*sus[node]*new_infections[node])
 
-    sorted_items = sorted(inf.items())
-    inf_np = np.array([value for _, value in sorted_items])
-    foi = (inf_np-node_counts_incubators) * settings.base_infectivity
-    sus_np = np.array(list(sus.values()))
-    new_infections = list((foi * sus_np).astype(int))
-    #print( f"{new_infections} new infections based on foi of\n{foi} and susceptible fraction of\n{sus}" )
-    #print( "new infections = " + str(new_infections) )
-    return new_infections 
+    #ni.reverse()
+    print( f"{new_infections} new infections based on inf of\n{[inf[x] for x in sorted(inf)]} and susceptible fraction of\n{[sus[x] for x in sorted(sus)]}" )
+    return new_infections
 
 def _handle_transmission_inner( cursor, new_infections, node=0 ):
     # Step 5: Update the infected flag for NEW infectees
@@ -308,7 +331,10 @@ def handle_transmission( df, new_infections ):
     return df
 
 def add_new_infections( cursor ):
-    cursor.execute( "UPDATE agents SET infection_timer=9+RANDOM()%6 WHERE infected=1 AND infection_timer=0" )
+    # 11-30 is what numpy is doing
+    cursor.execute( "UPDATE agents SET incubation_timer=3, infection_timer=8+RANDOM()%5 WHERE infected=1 AND infection_timer=0" )
+    #cursor.execute( "UPDATE agents SET incubation_timer=11, infection_timer=20+RANDOM()%10 WHERE infected=1 AND infection_timer=0" )
+    #print( f"Set infection timer for {cursor.rowcount} agents." )
     return cursor # for pattern
 
 def distribute_interventions( cursor, timestep ):
@@ -352,10 +378,10 @@ def distribute_interventions( cursor, timestep ):
 
 def migrate( cursor, timestep, **kwargs ): # ignore kwargs
     # 1% weekly migration ought to cause infecteds from seed node to move to next node
-    if timestep % 7 == 0: # every week (or day, depending on what I've set it to)
+    if timestep % settings.migration_interval == 0: # every week (or day, depending on what I've set it to)
         cursor.execute( '''
             UPDATE agents SET node = CASE
-                WHEN node-1 < 0 THEN :max_node
+                WHEN node = 0 THEN :max_node
                 ELSE node - 1
             END
             WHERE id IN (
