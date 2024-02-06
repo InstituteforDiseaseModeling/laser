@@ -282,3 +282,62 @@ void collect_report(
         }
     }
 }
+
+void campaign(
+    int num_agents,
+    float coverage,
+    int campaign_node,
+    int *immunity,
+    float *immunity_timer,
+    int *age,
+    int *node
+)
+{
+    // We have in mind a vaccination campaign to a subset of the population based on age, in a particular node, at
+    // a particular coverage level.
+    // The intervention effect will be to make them permanently immune.
+    // Create a boolean mask for the conditions specified in the WHERE clause
+    for (int i = 0; i < num_agents; ++i) {
+        if( age[i] < 16 && age[i] > 0 && node[i] == campaign_node && immunity[i] == false && rand()%100 < 100*coverage )
+        {
+            immunity[i] = 1;
+            immunity_timer[i] = -1;
+        }
+    }
+}
+
+void reconstitute(
+    int num_agents,
+    int num_new_babies,
+    int* new_nodes,
+    int *node,
+    int *age,
+    bool *infected,
+    float *incubation_timer,
+    bool *immunity,
+    float *immunity_timer,
+    float *expected_lifespan
+) {
+    //printf( "%s: num_new_babies = %d\n", __FUNCTION__, num_new_babies );
+    int counter = 0;
+    //for (int i = 0; i < num_agents; ++i) {
+    for (int i = num_agents; i > 0; --i) {
+        if( age[i] < 0 ) {
+            //printf( "Found unborn baby at idx = %d.\n", i );
+            node[i] = new_nodes[ counter ];
+            age[i] = 0;
+            infected[i] = false;
+            incubation_timer[i] = 0;
+            immunity[i] = 0;
+            immunity_timer[i] = 0;
+            expected_lifespan[i] = 75;
+
+            counter ++;
+            if( counter == num_new_babies ) {
+                return;
+            }
+        }
+    }
+    printf( "ERROR: We ran out of open slots for new babies!" );
+    abort();
+}
