@@ -283,13 +283,13 @@ void collect_report(
     }
 }
 
-void campaign(
+unsigned int campaign(
     int num_agents,
     float coverage,
     int campaign_node,
-    int *immunity,
+    bool *immunity,
     float *immunity_timer,
-    int *age,
+    float *age,
     int *node
 )
 {
@@ -297,13 +297,23 @@ void campaign(
     // a particular coverage level.
     // The intervention effect will be to make them permanently immune.
     // Create a boolean mask for the conditions specified in the WHERE clause
+    unsigned int report_counter = 0;
+    // printf( "DEBUG: Looking through %d susceptible agents in node %d under age %f with coverage %f to give immunity.\n", num_agents, campaign_node, 16.0f, coverage );
     for (int i = 0; i < num_agents; ++i) {
-        if( age[i] < 16 && age[i] > 0 && node[i] == campaign_node && immunity[i] == false && rand()%100 < 100*coverage )
+        if( age[i] < 16 &&
+            age[i] > 0 &&
+            node[i] == campaign_node &&
+            immunity[i] == false &&
+            rand()%100 < 100*coverage
+        )
         {
-            immunity[i] = 1;
+            //printf( "Changing value of immunity at index %d.\n", i );
+            immunity[i] = true;
             immunity_timer[i] = -1;
+            report_counter ++;
         }
     }
+    return report_counter;
 }
 
 void reconstitute(
