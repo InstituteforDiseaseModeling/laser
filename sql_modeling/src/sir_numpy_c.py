@@ -66,6 +66,27 @@ update_ages_lib.collect_report.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # susceptible_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # recovered_count_out
 ]
+update_ages_lib.campaign.argtypes = [
+    ctypes.c_int32, # num_agents
+    ctypes.c_float, # coverage
+    ctypes.c_int32, # campaign_node
+    np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # immunity_timer
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node
+]
+update_ages_lib.reconstitute.argtypes = [
+    ctypes.c_uint32, # num_agents
+    ctypes.c_int32, # num_new_babies
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_nodes
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node array
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
+    np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # incubation_timer
+    np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # immunity_timer
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # expected_lifespan
+]
 
 def load( pop_file ):
     """
@@ -103,13 +124,9 @@ def load( pop_file ):
 def initialize_database():
     return load( settings.pop_file )
 
-def eula_init( ctx, age_threshold_yrs = 5, eula_strategy=None ):
-    # For now just use numpy version
-    #import sir_numpy
-    #return sir_numpy.eula( ctx, age_threshold_yrs, eula_strategy )
-
+def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
     eula.init()
-    return ctx
+    return df
 
 def collect_report( data ):
     """
@@ -144,21 +161,38 @@ def update_ages( data, totals ):
         update_ages_lib.update_ages(len(ages), ages)
         return ages
 
-    #data['age'] = update_ages_c( data['age'] )
-    import sir_numpy
-    #data = sir_numpy.births( data, totals )
-    #data = sir_numpy.deaths( data )
-    return data
-    #return update_births_deaths( data )
+    if not data:
+        raise ValueError( "update_ages called with null data variable." )
 
-def update_births_deaths( data ):
-    # Births
-    # Calculate number of women of child-bearing age: constant across nodes
-    # Add new babies as percentage of that.
-    # TBD NOT IMPLEMENTED YET
-    update_ages_lib.update_ages(len(ages), ages)
-    # Non-disease deaths
-    eula.update_natural_mortality()
+    #update_ages_c( data['age'].astype(np.float32) ) # not necessary
+
+    def births( data ):
+        #data['age'] = 
+        import sir_numpy
+        num_new_babies_by_node = sir_numpy.births_from_cbr( totals, rate=settings.cbr )
+        keys = np.array(list(num_new_babies_by_node.keys()))
+        values = np.array(list(num_new_babies_by_node.values()))
+        result_array = np.repeat(keys, values)
+        update_ages_lib.reconstitute(
+            len(data['age'] ),
+            len(result_array),
+            result_array,
+            data['node'],
+            data['age'].astype( np.float32 ),
+            data['infected'],
+            data['incubation_timer'],
+            data['immunity'],
+            data['immunity_timer'],
+            data['expected_lifespan'].astype( np.float32 )
+        )
+        #sir_numpy.births( data, totals ) # TBD: Port to C
+    def deaths( data ):
+        #data = sir_numpy.deaths( data )
+        eula.progress_natural_mortality() # TBD: Do non-EULA mortality too
+
+    births( data )
+    deaths( data )
+
     return data
 
 def progress_infections( data ):
@@ -247,9 +281,23 @@ def migrate( data, timestep, num_infected=None ):
             data['node'])
     return data
 
-def distribute_interventions( ctx, timestep ):
-    import sir_numpy
-    return sir_numpy.distribute_interventions( ctx, timestep )
+def distribute_interventions( data, timestep ):
+    #import sir_numpy
+    #return sir_numpy.distribute_interventions( ctx, timestep )
+    def campaign( coverage ):
+        vaxxed = update_ages_lib.campaign(
+                len(data['age']),
+                settings.campaign_coverage,
+                settings.campaign_node,
+                data['immunity'],
+                data['immunity_timer'],
+                data['age'].astype(np.float32),
+                data['node']
+            )
+        print( f"{vaxxed} individuals vaccinated in node {settings.campaign_node}." )
+    if timestep == settings.campaign_day:
+        campaign(settings.campaign_coverage)
+    return data
 
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):
