@@ -168,7 +168,7 @@ def update_ages( data, totals ):
     if not data:
         raise ValueError( "update_ages called with null data variable." )
 
-    #update_ages_c( data['age'].astype(np.float32) ) # not necessary
+    #update_ages_c( data['age'] ) # not necessary
 
     def births( data ):
         #data['age'] = 
