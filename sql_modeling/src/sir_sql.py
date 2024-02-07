@@ -257,8 +257,8 @@ def update_ages( cursor, totals=None ): # totals are for demographic-based ferti
         # NOTE: Only doing R->D for now
         new_deaths = eula.update_natural_mortality()
         #print( f"pop after deaths = {num_agents}" )
-    #births()
-    #deaths()
+    births()
+    deaths()
     return cursor # for pattern
 
 def progress_infections( cursor ):
@@ -294,12 +294,11 @@ def calculate_new_infections( cursor, inf, sus, totals ):
         exposed_fraction = 0
         if node in node_counts_incubators2:
             exposed_fraction = node_counts_incubators2[node]/totals[node]
-            print( f"Node {node} has {node_counts_incubators2[node]} incubators." )
+            #print( f"Node {node} has {node_counts_incubators2[node]} incubators." )
         inf[node] -= exposed_fraction 
         new_infections[node] = round(inf[node]*sus[node]*new_infections[node])
 
-    #ni.reverse()
-    print( f"{new_infections} new infections based on inf of\n{[inf[x] for x in sorted(inf)]} and susceptible fraction of\n{[sus[x] for x in sorted(sus)]}" )
+    #print( f"{new_infections} new infections based on inf of\n{[inf[x] for x in sorted(inf)]} and susceptible fraction of\n{[sus[x] for x in sorted(sus)]}" )
     return new_infections
 
 def _handle_transmission_inner( cursor, new_infections, node=0 ):
