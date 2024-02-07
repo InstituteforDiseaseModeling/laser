@@ -21,7 +21,6 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
 
     for (int i = 0; i < n; ++i) {
         if (infected[i] ) {
-        //if (true) { // WHY  ARE SOME PEOPLE WITH NON-ZERE INCUBATION TIMERS NOT INFECTED !?!?!?
             // Incubation timer: decrement for each person
             if (incubation_timer[i] >= 1) {
                 incubation_timer[i] --;
@@ -43,7 +42,8 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
                     infected[i] = 0;
 
                     // Recovereds gain immunity
-                    immunity_timer[i] = rand() % (30) + 10;  // Random integer between 10 and 40
+                    //immunity_timer[i] = rand() % (30) + 10;  // Random integer between 10 and 40
+                    immunity_timer[i] = -1;
                     immunity[i] = 1;
                 }
             }
@@ -237,7 +237,10 @@ void handle_new_infections(
 }
 
 void migrate( int num_agents, bool * infected, uint32_t * node ) {
-    int fraction = (int)(0.05*1000); // this fraction of infecteds migrate
+    // This is just a very simplistic one-way linear type of infection migration
+    // I prefer to hard code a few values for this function rather than add parameters
+    // since it's most a test function.
+    int fraction = (int)(0.02*1000); // this fraction of infecteds migrate
     unsigned int counter = 0;
     for (int i = 0; i < num_agents; ++i) {
         if( infected[ i ] && rand()%1000 < fraction )
@@ -248,7 +251,7 @@ void migrate( int num_agents, bool * infected, uint32_t * node ) {
             }
             else
             {
-                node[ i ] = 24; // this should be param
+                node[ i ] = 59; // this should be param
             }
         }
     }
@@ -321,7 +324,7 @@ void reconstitute(
     int num_new_babies,
     int* new_nodes,
     int *node,
-    int *age,
+    float *age,
     bool *infected,
     float *incubation_timer,
     bool *immunity,
@@ -333,7 +336,6 @@ void reconstitute(
     //for (int i = 0; i < num_agents; ++i) {
     for (int i = num_agents; i > 0; --i) {
         if( age[i] < 0 ) {
-            //printf( "Found unborn baby at idx = %d.\n", i );
             node[i] = new_nodes[ counter ];
             age[i] = 0;
             infected[i] = false;
