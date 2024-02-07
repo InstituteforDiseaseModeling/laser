@@ -33,7 +33,7 @@ def load( pop_file ):
     columns['incubation_timer'] = columns['incubation_timer'].astype(np.float32) # int better?
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
-    columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.uint32)
+    columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.float32)
     if "mcw" in columns:
         columns.pop( "mcw" )
 
@@ -49,13 +49,13 @@ def add_expansion_slots( columns, num_slots=10000 ):
     print( f"Adding {num_slots} expansion slots for future babies." )
     new_ids = [ x for x in range( settings.pop, settings.pop+num_slots ) ]
     new_nodes = np.ones( num_slots, dtype=np.uint32 )*-1
-    new_ages = np.ones( num_slots )*-1
+    new_ages = np.ones( num_slots, dtype=np.float32 )*-1
     new_infected = np.zeros( num_slots, dtype=bool )
     new_immunity = np.zeros( num_slots, dtype=bool )
     new_immunity_timer = np.zeros( num_slots ).astype( np.float32 )
     new_infection_timer = np.zeros( num_slots ).astype( np.float32 )
     new_incubation_timer = np.zeros( num_slots ).astype( np.float32 )
-    new_expected_lifespan = np.ones( num_slots )*-1
+    new_expected_lifespan = np.ones( num_slots, dtype=np.float32 )*-1
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
@@ -165,12 +165,13 @@ def collect_report( data ):
         # Display the result
         # Does this code assume there's an entry for each node even if the total is 0?
         #pdb.set_trace()
+        recovered_counts_eula = eula.get_recovereds_by_node()
         for node in range( settings.num_nodes ):
             # Now add in eulas
             if node not in counts_by_node:
                 counts_by_node[node] = 0
-            counts_by_node[node] += sum(eula.eula[node].values())
-
+            #counts_by_node[node] += sum(recovered_counts_eula[node].values())
+            counts_by_node[node] += recovered_counts_eula[node]
         return counts_by_node
 
     recovered_counts = count_recos( data['node'], data['immunity'] )
@@ -195,10 +196,21 @@ def update_ages( data, totals ):
         return ages
 
     data['age'] = update_ages_np( data['age'] )
-    data = births( data, totals )
-    data = deaths( data )
+    # data = 
+    births( data, totals )
+    #data = 
+    deaths( data )
     return data
 
+def births_from_cbr( node_pops, rate=30 ):
+    # TBD: births = CBR & node_pop / 1000
+    # placeholder: just say 10 per node for now to test rest of code path
+    new_babies = {}
+    for node in node_pops:
+        cbr_node = rate * (node_pops[node]/1000.0)/365.0
+        new_babies[node] = np.random.poisson( cbr_node )
+    return new_babies 
+  
 def births(data,totals_by_node):
     # Births
     # 1) demographic_dependent_Rate: 
@@ -228,32 +240,24 @@ def births(data,totals_by_node):
             num_new_babies[node] = np.sum(np.random.rand(count) < 2.7e-4)
         return num_new_babies
 
-    def births_from_cbr( node_pops, rate=30 ):
-        # TBD: births = CBR & node_pop / 1000
-        # placeholder: just say 10 per node for now to test rest of code path
-        new_babies = {}
-        for node in node_pops:
-            cbr_node = rate * (node_pops[node]/1000.0)/365.0
-            new_babies[node] = np.random.poisson( cbr_node )
-        return new_babies 
-  
 
     # Function to add newborns
-    def add_newborns(node, babies):
+    def add_newborns( nodes ):
+        babies = len(nodes)
         # Generate newborn data
         #last_id = data['id'][-1]
         # find an entry with age==-1 to use, or find a bunch
         indices = np.where( data['age'] == -1 )[0][:babies]
         #new_ids = np.arange(last_id + 1, last_id + 1 + babies)
         #new_ids = data['id'][indices][:babies]
-        new_nodes = np.full(babies, node)
+        new_nodes = np.full(babies, nodes)
         new_ages = np.zeros(babies)
         new_infected = np.full(babies,False)
         new_infection_timer = np.zeros(babies)
         new_incubation_timer = np.zeros(babies)
         new_immunity = np.full(babies,False)
         new_immunity_timer = np.zeros(babies)
-        new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies)
+        new_expected_lifespan = np.random.normal(loc=75, scale=7, size=babies).astype(np.float32)
 
         def reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan ):
             # This is memory-smarter option where we recycle agents
@@ -266,14 +270,21 @@ def births(data,totals_by_node):
             data['immunity'][indices] = new_immunity
             data['immunity_timer'][indices] = new_immunity_timer
             data['expected_lifespan'][indices] = new_expected_lifespan
+        # We have selected all the indices of unborn babies (age=-1) to birth.
         reincarnate( data, indices, new_nodes, new_ages, new_infected, new_infection_timer, new_incubation_timer, new_immunity, new_immunity_timer, new_expected_lifespan )
 
     new_babies = births_from_cbr( totals_by_node, rate=settings.cbr )
     #print( f"New babies by node: {new_babies}" )
     # Iterate over nodes and add newborns
-    for node, count in new_babies.items():
-        if count > 0:
-            add_newborns(node, count)
+    #for node, count in new_babies.items():
+    #    if count > 0:
+    #        add_newborns(node, count)
+    keys = np.array(list(new_babies.keys()))
+    values = np.array(list(new_babies.values()))
+
+    # Create the numpy array by repeating each key according to its corresponding value
+    result_array = np.repeat(keys, values)
+    add_newborns( result_array )
 
     return data
 
