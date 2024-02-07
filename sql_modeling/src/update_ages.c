@@ -11,6 +11,10 @@
 const float one_day = 1.0f/365.0f;
 void update_ages(size_t length, float *ages) {
     for (size_t i = 0; i < length; i++) {
+        if( ages[i] < 0 )
+        {
+            continue;
+        }
         ages[i] += one_day;
     }
 }
@@ -83,6 +87,9 @@ void calculate_new_infections(
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
     for (int i = 0; i < num_agents; ++i) {
+        if( node[i] < 0 ) {
+            continue;
+        }
         if( incubation_timer[i] >= 1 ) {
             exposed_counts_by_bin[ node[ i ] ] ++;
             // printf( "DEBUG: incubation_timer[ %d ] = %f.\n", i, incubation_timer[i] );
@@ -127,6 +134,9 @@ void handle_new_infections2(
     // Would be really nice to avoid looping over all the agents twice, especially since this is
     // being called for each node (that has new infections).
     for (int i = 0; i < num_agents; ++i) {
+        if( agent_node[i] < 0 ) {
+            continue;
+        }
         // Not infected AND not immune (susceptible) AND in this node
         subquery_condition[i] = (infected[i]==false) && (immunity[i]==false) && (agent_node[i] == node);
     }
@@ -136,6 +146,9 @@ void handle_new_infections2(
     int count = 0;
 
     for (int i = 0; i < num_agents; ++i) {
+        if( agent_node[i] < 0 ) {
+            continue;
+        }
         if (subquery_condition[i]) {
             eligible_agents_indices[count++] = i;
         }
@@ -190,6 +203,9 @@ void handle_new_infections(
     
     // Apply conditions to identify eligible agents
     for (int i = 0; i < num_agents; i++) {
+        if( agent_node[i] < 0 ) {
+            continue;
+        }
         subquery_condition[i] = !infected[i] && !immunity[i] && agent_node[i] == node;
     }
     
@@ -199,6 +215,9 @@ void handle_new_infections(
     // Count the number of eligible agents
     int num_eligible_agents = 0;
     for (int i = 0; i < num_agents; i++) {
+        if( agent_node[i] < 0 ) {
+            continue;
+        }
         if (subquery_condition[i]) {
             num_eligible_agents++;
         }
@@ -210,6 +229,9 @@ void handle_new_infections(
     // Randomly sample from eligible agents
     int count = 0;
     for (int i = 0; i < num_agents; i++) {
+        if( agent_node[i] < 0 ) {
+            continue;
+        }
         if (subquery_condition[i]) {
             selected_indices[count++] = i;
         }
@@ -243,6 +265,9 @@ void migrate( int num_agents, bool * infected, uint32_t * node ) {
     int fraction = (int)(0.02*1000); // this fraction of infecteds migrate
     unsigned int counter = 0;
     for (int i = 0; i < num_agents; ++i) {
+        if( node[i] < 0 ) {
+            continue;
+        }
         if( infected[ i ] && rand()%1000 < fraction )
         {
             if( node[ i ] > 0 )
@@ -268,6 +293,9 @@ void collect_report(
 )
 {
     for (int i = 0; i < num_agents; ++i) {
+        if( node[i] < 0 ) {
+            continue;
+        }
         uint32_t node_id = node[i];
         if ( node_id == (uint32_t)-1 ) {
             continue;
@@ -333,8 +361,8 @@ void reconstitute(
 ) {
     //printf( "%s: num_new_babies = %d\n", __FUNCTION__, num_new_babies );
     int counter = 0;
-    //for (int i = 0; i < num_agents; ++i) {
-    for (int i = num_agents; i > 0; --i) {
+    for (int i = 0; i < num_agents; ++i) {
+    //for (int i = num_agents; i > 0; --i) {
         if( age[i] < 0 ) {
             node[i] = new_nodes[ counter ];
             age[i] = 0;
