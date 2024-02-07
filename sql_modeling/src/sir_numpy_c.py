@@ -11,6 +11,9 @@ import report
 #from model_sql import eula
 from model_numpy import eula
 
+from collections import defaultdict 
+births_report = defaultdict(int)
+
 # Load the shared library
 update_ages_lib = ctypes.CDLL('./update_ages.so')
 # Define the function signature
@@ -76,7 +79,7 @@ update_ages_lib.campaign.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node
 ]
 update_ages_lib.reconstitute.argtypes = [
-    ctypes.c_uint32, # num_agents
+    ctypes.c_int32, # num_agents
     ctypes.c_int32, # num_new_babies
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_nodes
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node array
@@ -110,6 +113,7 @@ def load( pop_file ):
     columns['incubation_timer'] = columns['incubation_timer'].astype(np.float32) # int better?
     columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
     columns['age'] = columns['age'].astype(np.float32)
+    columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.float32)
 
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
@@ -178,19 +182,24 @@ def update_ages( data, totals ):
             len(result_array),
             result_array,
             data['node'],
-            data['age'].astype( np.float32 ),
+            data['age'],
             data['infected'],
             data['incubation_timer'],
             data['immunity'],
             data['immunity_timer'],
-            data['expected_lifespan'].astype( np.float32 )
+            data['expected_lifespan']
         )
-        #sir_numpy.births( data, totals ) # TBD: Port to C
+        global births_report
+        for node, babies in num_new_babies_by_node.items():
+            births_report[node] += babies
+        return births_report
+
     def deaths( data ):
         #data = sir_numpy.deaths( data )
         eula.progress_natural_mortality() # TBD: Do non-EULA mortality too
 
-    births( data )
+    report = births( data )
+    #print( f"births: {report}" )
     deaths( data )
 
     return data
