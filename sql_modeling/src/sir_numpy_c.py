@@ -207,20 +207,12 @@ def update_ages( data, totals ):
 def progress_infections( data ):
     # Update infected agents
     # infection timer: decrement for each infected person
-    def progress_infections_c( data ):
-        update_ages_lib.progress_infections(len(data['age']), data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'])
-        return
-
-    progress_infections_c( data )
+    update_ages_lib.progress_infections(len(data['age']), data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'])
     return data
 
 # Update immune agents
 def progress_immunities( data ):
-    def progress_immunities_c( data ):
-        update_ages_lib.progress_immunities(len(data['age']), data['immunity_timer'], data['immunity'])
-        return
-
-    progress_immunities_c( data )
+    update_ages_lib.progress_immunities(len(data['age']), data['immunity_timer'], data['immunity'])
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):
@@ -274,11 +266,6 @@ def handle_transmission( data_in, new_infections_in ):
     return data_in
 
 def add_new_infections( data ):
-    # Actually this just sets the new infection timers (globally) for all the new infections
-    # New infections themselves are set node-wise
-    def add_new_infections_c( data ):
-        return data # already done
-    data = add_new_infections_c( data )
     return data
 
 def migrate( data, timestep, num_infected=None ):
