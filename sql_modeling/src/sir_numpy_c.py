@@ -160,7 +160,7 @@ def collect_report( data ):
     return infected_counts, susceptible_counts, recovered_counts
     
 
-def update_ages( data, totals ):
+def update_ages( data, totals, timestep ):
     def update_ages_c( ages ):
         update_ages_lib.update_ages(len(ages), ages)
         return ages
@@ -194,13 +194,13 @@ def update_ages( data, totals ):
             births_report[node] += babies
         return births_report
 
-    def deaths( data ):
-        #data = sir_numpy.deaths( data )
-        eula.progress_natural_mortality() # TBD: Do non-EULA mortality too
+    def deaths( data, timestep_delta ):
+        eula.progress_natural_mortality(timestep_delta) # TBD: Do non-EULA mortality too
 
     report = births( data )
     #print( f"births: {report}" )
-    deaths( data )
+    if timestep % settings.mortality_interval == 0:
+        deaths( data, settings.mortality_interval )
 
     return data
 

@@ -39,7 +39,7 @@ def init():
 
     eula = count_by_node_and_age( nodes, ages )
 
-def progress_natural_mortality():
+def progress_natural_mortality( timesteps ):
     def get_simple_death_rate( age_bin_in_yrs ):
         # This obviously needs to be done once and then returned from a lookup table.
 
@@ -55,8 +55,8 @@ def progress_natural_mortality():
             # Reduce count by 0.1%
             if eula[node][age_bin] > 0:
                 from scipy.stats import poisson, binom
-                prob = get_simple_death_rate( age_bin )
-                expected_deaths = np.random.binomial(eula[node][age_bin], prob)
+                prob = get_simple_death_rate( age_bin ) 
+                expected_deaths = sum(np.random.binomial(eula[node][age_bin], prob) for _ in range(timesteps))
                 if expected_deaths > 0:
                     #print( f"Killing off {expected_deaths} in node {node} and age_bin {age_bin} from existing population {eula[node][age_bin]} from prob {prob}." )
                     eula[node][age_bin] -= expected_deaths # round(count * (1-))

@@ -3,8 +3,8 @@ import pdb
 #import sir_sql as model
 #import sir_mysql as model
 #import sir_sql_polars as model
-import sir_numpy as model
-#import sir_numpy_c as model
+#import sir_numpy as model
+import sir_numpy_c as model
 from copy import deepcopy
 
 import settings
@@ -75,7 +75,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
-        ctx = model.update_ages( ctx, totals )
+        ctx = model.update_ages( ctx, totals, timestep )
 
         # Report
         #currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
