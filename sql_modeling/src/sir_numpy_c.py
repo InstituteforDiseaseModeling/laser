@@ -28,11 +28,13 @@ update_ages_lib.progress_infections.argtypes = [
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
 ]
 update_ages_lib.progress_immunities.argtypes = [
     ctypes.c_size_t,  # n
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
 ]
 update_ages_lib.calculate_new_infections.argtypes = [
     ctypes.c_size_t,  # n
@@ -211,12 +213,12 @@ def update_ages( data, totals, timestep ):
 def progress_infections( data ):
     # Update infected agents
     # infection timer: decrement for each infected person
-    update_ages_lib.progress_infections(len(data['age']), data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'])
+    update_ages_lib.progress_infections(len(data['age']), data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], data['node'])
     return data
 
 # Update immune agents
 def progress_immunities( data ):
-    update_ages_lib.progress_immunities(len(data['age']), data['immunity_timer'], data['immunity'])
+    update_ages_lib.progress_immunities(len(data['age']), data['immunity_timer'], data['immunity'], data['node'])
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):

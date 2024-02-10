@@ -19,11 +19,14 @@ void update_ages(size_t length, float *ages) {
     }
 }
 
-void progress_infections(int n, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity) {
+void progress_infections(int n, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity, int* node ) {
     unsigned int activators = 0;
     unsigned int recovereds = 0;
 
     for (int i = 0; i < n; ++i) {
+        if (node[i]<0) {
+            continue;
+        }
         if (infected[i] ) {
             // Incubation timer: decrement for each person
             if (incubation_timer[i] >= 1) {
@@ -56,8 +59,11 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
     //printf( "%d activators, %d recovereds.\n", activators, recovereds );
 }
 
-void progress_immunities(int n, float* immunity_timer, bool* immunity) {
+void progress_immunities(int n, float* immunity_timer, bool* immunity, int* node) {
     for (int i = 0; i < n; ++i) {
+        if (node[i]<0) {
+            continue;
+        }
         if( immunity[i] && immunity_timer[i] > 0 )
         {
             immunity_timer[i]--;
