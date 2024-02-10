@@ -9,10 +9,10 @@ def init():
     # Create a CSV file for reporting
     csvfile = open( settings.report_filename, 'w', newline='') 
     csvwriter = csv.writer(csvfile)
-    csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'Recovered'])
+    csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'Recovered', 'Births', 'Deaths'])
     return csvwriter
 
-def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_counts, recovered_counts ):
+def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_counts, recovered_counts, new_births, new_deaths ):
     # This function is model agnostic
     infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
     total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
@@ -29,6 +29,8 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
                 susceptible_counts[node] if node in susceptible_counts else 0,
                 infected_counts[node] if node in infected_counts else 0,
                 recovered_counts[node] if node in recovered_counts else 0,
+                new_births[node] if node in new_births else 0,
+                new_deaths[node] if node in new_deaths else 0,
                 ]
             )
 

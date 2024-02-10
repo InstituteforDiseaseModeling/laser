@@ -50,6 +50,7 @@ def progress_natural_mortality( timesteps ):
         except Exception as ex:
             pdb.set_trace()
 
+    return_deaths = defaultdict(int)
     for node, age_bins_counts in eula.items():
         for age_bin, count in age_bins_counts.items():
             # Reduce count by 0.1%
@@ -63,6 +64,8 @@ def progress_natural_mortality( timesteps ):
                     if eula[node][age_bin] == 0:
                         print( f"EULA bin for node {node} and age {age_bin} is now 0." )
                         #pdb.set_trace()
+                return_deaths[node] += expected_deaths 
+    return return_deaths
 
 def get_recovereds_by_node():   
     summary = {}

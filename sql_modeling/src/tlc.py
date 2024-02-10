@@ -12,6 +12,8 @@ import report
 
 report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 fractions = {}
+report_births = {}
+report_deaths = {}
 
 def collect_and_report(csvwriter, timestep):
     currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
@@ -43,7 +45,7 @@ def collect_and_report(csvwriter, timestep):
     #print( fractions["S"][10] )
     #print( counts["S"][10] )
     try:
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"] )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], report_births, report_deaths )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, fractions, totals
@@ -75,7 +77,8 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
-        ctx = model.update_ages( ctx, totals, timestep )
+        global report_births, report_deaths 
+        ( report_births, report_deaths ) = model.update_ages( ctx, totals, timestep )
 
         # Report
         #currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )

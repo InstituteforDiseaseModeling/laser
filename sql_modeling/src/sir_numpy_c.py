@@ -170,7 +170,7 @@ def update_ages( data, totals, timestep ):
 
     #update_ages_c( data['age'] ) # not necessary
 
-    def births( data ):
+    def births( data, interval ):
         #data['age'] = 
         import sir_numpy
         num_new_babies_by_node = sir_numpy.births_from_cbr( totals, rate=settings.cbr )
@@ -195,14 +195,18 @@ def update_ages( data, totals, timestep ):
         return births_report
 
     def deaths( data, timestep_delta ):
-        eula.progress_natural_mortality(timestep_delta) # TBD: Do non-EULA mortality too
+        return eula.progress_natural_mortality(timestep_delta) # TBD: Do non-EULA mortality too
 
-    report = births( data )
+    birth_report = {}
+    death_report = {}
+    if timestep % settings.fertility_interval == 0:
+        birth_report = births( data, settings.fertility_interval )
     #print( f"births: {report}" )
     if timestep % settings.mortality_interval == 0:
-        deaths( data, settings.mortality_interval )
+        death_report = deaths( data, settings.mortality_interval )
 
-    return data
+    #print( f"Returning {birth_report}, and {death_report}" )
+    return ( birth_report, death_report )
 
 def progress_infections( data ):
     # Update infected agents

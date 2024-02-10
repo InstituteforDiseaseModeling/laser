@@ -207,7 +207,7 @@ def births_from_cbr( node_pops, rate=30 ):
     # placeholder: just say 10 per node for now to test rest of code path
     new_babies = {}
     for node in node_pops:
-        cbr_node = rate * (node_pops[node]/1000.0)/365.0
+        cbr_node = settings.fertility_interval * rate * (node_pops[node]/1000.0)/365.0
         new_babies[node] = np.random.poisson( cbr_node )
     return new_babies 
   
