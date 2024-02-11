@@ -75,6 +75,10 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         if settings.num_nodes>1:
             ctx = model.migrate( ctx, timestep, num_infected=sum(fractions["I"].values()) )
 
+        # if we have had total fade-out, inject imports
+        if sum(counts["I"].values()) == 0:
+            model.inject_cases( ctx, import_cases=100, import_node=settings.num_nodes-1 )
+
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
         global report_births, report_deaths 

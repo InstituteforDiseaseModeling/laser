@@ -301,6 +301,11 @@ def distribute_interventions( data, timestep ):
         campaign(settings.campaign_coverage)
     return data
 
+def inject_cases( ctx, import_cases=100, import_node=settings.num_nodes-1 ):
+    import_dict = { import_node: import_cases }
+    htbn = partial( handle_transmission_by_node, ctx, import_dict, node=59 )
+    htbn()
+
 # Function to run the simulation for a given number of timesteps
 def run_simulation(data, csvwriter, num_timesteps):
     currently_infectious, currently_sus, cur_reco  = collect_report( data )
