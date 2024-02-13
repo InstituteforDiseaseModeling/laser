@@ -10,9 +10,11 @@ import settings
 import report
 #from model_sql import eula
 from model_numpy import eula
+import sir_numpy
 
 from collections import defaultdict 
 births_report = defaultdict(int)
+unborn_end_idx = 0
 
 # Load the shared library
 update_ages_lib = ctypes.CDLL('./update_ages.so')
@@ -23,6 +25,7 @@ update_ages_lib.update_ages.argtypes = [
 ]
 update_ages_lib.progress_infections.argtypes = [
     ctypes.c_size_t,  # n
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # infection_timer
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # infected
@@ -32,6 +35,7 @@ update_ages_lib.progress_infections.argtypes = [
 ]
 update_ages_lib.progress_immunities.argtypes = [
     ctypes.c_size_t,  # n
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
@@ -39,6 +43,7 @@ update_ages_lib.progress_immunities.argtypes = [
 update_ages_lib.calculate_new_infections.argtypes = [
     ctypes.c_size_t,  # n
     ctypes.c_size_t,  # n
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # nodes
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # inf_counts
@@ -50,6 +55,7 @@ update_ages_lib.calculate_new_infections.argtypes = [
 update_ages_lib.handle_new_infections.argtypes = [
     ctypes.c_uint32, # num_agents
     ctypes.c_uint32, # node
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
@@ -59,11 +65,13 @@ update_ages_lib.handle_new_infections.argtypes = [
 ]
 update_ages_lib.migrate.argtypes = [
     ctypes.c_uint32, # num_agents
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
 ]
 update_ages_lib.collect_report.argtypes = [
     ctypes.c_uint32, # num_agents
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
@@ -73,6 +81,7 @@ update_ages_lib.collect_report.argtypes = [
 ]
 update_ages_lib.campaign.argtypes = [
     ctypes.c_int32, # num_agents
+    ctypes.c_size_t,  # starting index
     ctypes.c_float, # coverage
     ctypes.c_int32, # campaign_node
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
@@ -83,6 +92,7 @@ update_ages_lib.campaign.argtypes = [
 update_ages_lib.reconstitute.argtypes = [
     ctypes.c_int32, # num_agents
     ctypes.c_int32, # num_new_babies
+    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_nodes
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node array
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
@@ -91,7 +101,11 @@ update_ages_lib.reconstitute.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # immunity_timer
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # expected_lifespan
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_ids returned
 ]
+
+def do_due_tasks( ctx, timestep ):
+    return sir_numpy.do_due_tasks( ctx, timestep )
 
 def load( pop_file ):
     """
@@ -106,26 +120,35 @@ def load( pop_file ):
     # Extract headers from the header row
     headers = header_row
 
-    # Load each column into a separate NumPy array
-    columns = {header: data[:, i] for i, header in enumerate(headers)}
-    columns['infected'] = columns['infected'].astype(bool)
-    columns['immunity'] = columns['immunity'].astype(bool)
-    columns['node'] = columns['node'].astype(np.uint32)
-    columns['infection_timer'] = columns['infection_timer'].astype(np.float32) # int better?
-    columns['incubation_timer'] = columns['incubation_timer'].astype(np.float32) # int better?
-    columns['immunity_timer'] = columns['immunity_timer'].astype(np.float32) # int better?
-    columns['age'] = columns['age'].astype(np.float32)
-    columns['expected_lifespan'] = columns['expected_lifespan'].astype(np.float32)
-
-    settings.pop = len(columns['infected'])
+    settings.pop = len(data) # -unborn_end_idx 
     print( f"Population={settings.pop}" )
-    settings.nodes = [ node for node in np.unique(columns['node']) ]
+
+    unborn = {header: [] for i, header in enumerate(headers)}
+    global unborn_end_idx 
+    sir_numpy.add_expansion_slots( unborn, num_slots=settings.expansion_slots )
+    unborn_end_idx = int(settings.expansion_slots)
+
+    data = {header: data[:, i] for i, header in enumerate(headers)}
+    # Load each column into a separate NumPy array
+    #columns = {header: data[:, i] for i, header in enumerate(headers)}
+    # TBD: data['id'] has to be handled and started from unborn_end_idx 
+    data['id'] = np.concatenate( ( unborn['id'], data['id'] + len(unborn['id'])-1) )
+    data['infected'] = np.concatenate( ( unborn['infected'], data['infected'] ) ).astype(bool)
+    data['immunity'] = np.concatenate( ( unborn['immunity'], data['immunity'] ) ).astype(bool)
+    data['node'] = np.concatenate( [ unborn['node'], data['node'] ] ).astype(np.uint32)
+    data['infection_timer'] = np.concatenate( [ unborn['infection_timer'], data['infection_timer'] ] ).astype(np.float32)
+    data['incubation_timer'] = np.concatenate( [ unborn['incubation_timer'], data['incubation_timer'] ] ).astype(np.float32)
+    data['immunity_timer'] = np.concatenate( [ unborn['immunity_timer'], data['immunity_timer'] ] ).astype(np.float32)
+    data['age'] = np.concatenate( [ unborn['age'], data['age'] ] ).astype(np.float32)
+    data['expected_lifespan'] = np.concatenate( [ unborn['expected_lifespan'], data['expected_lifespan'] ] ).astype(np.float32)
+
+    settings.nodes = [ node for node in np.unique(data['node']) ]
+    settings.nodes.pop(-1)
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
+
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
-    import sir_numpy
-    sir_numpy.add_expansion_slots( columns, num_slots=settings.expansion_slots )
-    return columns
+    return data
 
 def initialize_database():
     return load( settings.pop_file )
@@ -144,6 +167,7 @@ def collect_report( data ):
 
     update_ages_lib.collect_report(
             len( data['node'] ),
+            unborn_end_idx,
             data['node'],
             data['infected'],
             data['immunity'],
@@ -172,6 +196,7 @@ def update_ages( data, totals, timestep ):
 
     #update_ages_c( data['age'] ) # not necessary
 
+    global unborn_end_idx
     def births( data, interval ):
         #data['age'] = 
         import sir_numpy
@@ -179,8 +204,12 @@ def update_ages( data, totals, timestep ):
         keys = np.array(list(num_new_babies_by_node.keys()))
         values = np.array(list(num_new_babies_by_node.values()))
         result_array = np.repeat(keys, values)
+        tot_new_babies = sum(num_new_babies_by_node.values())
+        new_ids_out = np.zeros(tot_new_babies).astype( np.uint32 )
+        global unborn_end_idx
         update_ages_lib.reconstitute(
             len(data['age'] ),
+            unborn_end_idx, 
             len(result_array),
             result_array,
             data['node'],
@@ -189,11 +218,18 @@ def update_ages( data, totals, timestep ):
             data['incubation_timer'],
             data['immunity'],
             data['immunity_timer'],
-            data['expected_lifespan']
+            data['expected_lifespan'],
+            new_ids_out 
         )
+        # TBD: Schedule 9mo RIA for newborns; Need their ids.
+        import sir_numpy
+        for new_id in new_ids_out:
+            sir_numpy.schedule_9mo_ria( new_id, 0, timestep=timestep )
         global births_report
         for node, babies in num_new_babies_by_node.items():
             births_report[node] += babies
+
+        unborn_end_idx -= len( new_ids_out )
         return births_report
 
     def deaths( data, timestep_delta ):
@@ -213,12 +249,12 @@ def update_ages( data, totals, timestep ):
 def progress_infections( data ):
     # Update infected agents
     # infection timer: decrement for each infected person
-    update_ages_lib.progress_infections(len(data['age']), data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], data['node'])
+    update_ages_lib.progress_infections(len(data['age']), unborn_end_idx, data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], data['node'])
     return data
 
 # Update immune agents
 def progress_immunities( data ):
-    update_ages_lib.progress_immunities(len(data['age']), data['immunity_timer'], data['immunity'], data['node'])
+    update_ages_lib.progress_immunities(len(data['age']), unborn_end_idx, data['immunity_timer'], data['immunity'], data['node'])
     return data
 
 def calculate_new_infections( data, inf, sus, totals ):
@@ -230,6 +266,7 @@ def calculate_new_infections( data, inf, sus, totals ):
     tot_np = np.array([np.float32(value) for value in totals.values()])
     update_ages_lib.calculate_new_infections(
             len(data['age']),
+            unborn_end_idx,
             len( inf ),
             data['node'],
             data['incubation_timer'],
@@ -247,6 +284,7 @@ def handle_transmission_by_node( data, new_infections, node=0 ):
     def handle_new_infections_c(new_infections):
         update_ages_lib.handle_new_infections(
                 len(data['age']),
+                unborn_end_idx,
                 node,
                 data['node'],
                 data['infected'],
@@ -279,6 +317,7 @@ def migrate( data, timestep, num_infected=None ):
     if timestep % settings.migration_interval == 0: # every week
         update_ages_lib.migrate(
             len(data['age']),
+            unborn_end_idx,
             data['infected'],
             data['node'])
     return data
@@ -289,6 +328,7 @@ def distribute_interventions( data, timestep ):
     def campaign( coverage ):
         vaxxed = update_ages_lib.campaign(
                 len(data['age']),
+                unborn_end_idx,
                 settings.campaign_coverage,
                 settings.campaign_node,
                 data['immunity'],

@@ -19,14 +19,11 @@ void update_ages(size_t length, float *ages) {
     }
 }
 
-void progress_infections(int n, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity, int* node ) {
+void progress_infections(int n, int start_idx, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity, int* node ) {
     unsigned int activators = 0;
     unsigned int recovereds = 0;
 
-    for (int i = 0; i < n; ++i) {
-        if (node[i]<0) {
-            continue;
-        }
+    for (int i = start_idx; i < n; ++i) {
         if (infected[i] ) {
             // Incubation timer: decrement for each person
             if (incubation_timer[i] >= 1) {
@@ -59,11 +56,8 @@ void progress_infections(int n, float* infection_timer, float* incubation_timer,
     //printf( "%d activators, %d recovereds.\n", activators, recovereds );
 }
 
-void progress_immunities(int n, float* immunity_timer, bool* immunity, int* node) {
-    for (int i = 0; i < n; ++i) {
-        if (node[i]<0) {
-            continue;
-        }
+void progress_immunities(int n, int start_idx, float* immunity_timer, bool* immunity, int* node) {
+    for (int i = start_idx; i < n; ++i) {
         if( immunity[i] && immunity_timer[i] > 0 )
         {
             immunity_timer[i]--;
@@ -79,6 +73,7 @@ void progress_immunities(int n, float* immunity_timer, bool* immunity, int* node
 // maybe I need to just use the 64-bit ints and avoid the casting
 void calculate_new_infections(
     int num_agents,
+    int start_idx, 
     int num_nodes,
     uint32_t * node,
     float * incubation_timer,
@@ -92,10 +87,7 @@ void calculate_new_infections(
     float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
-    for (int i = 0; i < num_agents; ++i) {
-        if( node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; ++i) {
         if( incubation_timer[i] >= 1 ) {
             exposed_counts_by_bin[ node[ i ] ] ++;
             // printf( "DEBUG: incubation_timer[ %d ] = %f.\n", i, incubation_timer[i] );
@@ -123,6 +115,7 @@ void calculate_new_infections(
 
 void handle_new_infections2(
     int num_agents,
+    int start_idx,
     int node,
     uint32_t * agent_node,
     bool * infected,
@@ -139,10 +132,7 @@ void handle_new_infections2(
 
     // Would be really nice to avoid looping over all the agents twice, especially since this is
     // being called for each node (that has new infections).
-    for (int i = 0; i < num_agents; ++i) {
-        if( agent_node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; ++i) {
         // Not infected AND not immune (susceptible) AND in this node
         subquery_condition[i] = (infected[i]==false) && (immunity[i]==false) && (agent_node[i] == node);
     }
@@ -151,10 +141,7 @@ void handle_new_infections2(
     uint32_t* eligible_agents_indices = (uint32_t*)malloc(num_agents * sizeof(uint32_t));
     int count = 0;
 
-    for (int i = 0; i < num_agents; ++i) {
-        if( agent_node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; ++i) {
         if (subquery_condition[i]) {
             eligible_agents_indices[count++] = i;
         }
@@ -195,6 +182,7 @@ void handle_new_infections2(
 
 void handle_new_infections(
     int num_agents,
+    int start_idx,
     int node,
     uint32_t * agent_node,
     bool * infected,
@@ -208,10 +196,7 @@ void handle_new_infections(
     bool *subquery_condition = malloc(num_agents * sizeof(bool));
     
     // Apply conditions to identify eligible agents
-    for (int i = 0; i < num_agents; i++) {
-        if( agent_node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; i++) {
         subquery_condition[i] = !infected[i] && !immunity[i] && agent_node[i] == node;
     }
     
@@ -220,10 +205,7 @@ void handle_new_infections(
     
     // Count the number of eligible agents
     int num_eligible_agents = 0;
-    for (int i = 0; i < num_agents; i++) {
-        if( agent_node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; i++) {
         if (subquery_condition[i]) {
             num_eligible_agents++;
         }
@@ -234,10 +216,7 @@ void handle_new_infections(
     
     // Randomly sample from eligible agents
     int count = 0;
-    for (int i = 0; i < num_agents; i++) {
-        if( agent_node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; i++) {
         if (subquery_condition[i]) {
             selected_indices[count++] = i;
         }
@@ -264,16 +243,13 @@ void handle_new_infections(
     free(selected_indices);
 }
 
-void migrate( int num_agents, bool * infected, uint32_t * node ) {
+void migrate( int num_agents, int start_idx, bool * infected, uint32_t * node ) {
     // This is just a very simplistic one-way linear type of infection migration
     // I prefer to hard code a few values for this function rather than add parameters
     // since it's most a test function.
     int fraction = (int)(0.02*1000); // this fraction of infecteds migrate
     unsigned int counter = 0;
-    for (int i = 0; i < num_agents; ++i) {
-        if( node[i] < 0 ) {
-            continue;
-        }
+    for (int i = start_idx; i < num_agents; ++i) {
         if( infected[ i ] && rand()%1000 < fraction )
         {
             if( node[ i ] > 0 )
@@ -290,6 +266,7 @@ void migrate( int num_agents, bool * infected, uint32_t * node ) {
 
 void collect_report( 
     int num_agents,
+    int start_idx,
     uint32_t * node,
     bool * infected,
     bool * immunity,
@@ -298,13 +275,23 @@ void collect_report(
     uint32_t * recovered_count
 )
 {
-    for (int i = 0; i < num_agents; ++i) {
+    //printf( "%s called w/ num_agents = %d and start_idx = %d.\n", __FUNCTION__, num_agents, start_idx );
+    for (int i = start_idx; i < num_agents; ++i) {
+        //printf( "i=%d\n", i );
         if( node[i] < 0 ) {
             continue;
         }
-        uint32_t node_id = node[i];
+        int node_id = node[i];
+        //printf( "node_id=%d\n", node_id );
         if ( node_id == (uint32_t)-1 ) {
-            continue;
+            printf( "node_id is (uint32_t)-1\n" );
+            break;
+        } else if ( node_id < 0 ) {
+            printf( "node_id is negative\n" );
+            break;
+        } else if ( node_id == 1091567616 ) {
+            printf( "node_id is 1091567616\n" );
+            break;
         }
         if( infected[ i ] ) {
             infection_count[ node_id ]+=1;
@@ -322,6 +309,7 @@ void collect_report(
 
 unsigned int campaign(
     int num_agents,
+    int start_idx,
     float coverage,
     int campaign_node,
     bool *immunity,
@@ -336,7 +324,7 @@ unsigned int campaign(
     // Create a boolean mask for the conditions specified in the WHERE clause
     unsigned int report_counter = 0;
     // printf( "DEBUG: Looking through %d susceptible agents in node %d under age %f with coverage %f to give immunity.\n", num_agents, campaign_node, 16.0f, coverage );
-    for (int i = 0; i < num_agents; ++i) {
+    for (int i = start_idx; i < num_agents; ++i) {
         if( age[i] < 16 &&
             age[i] > 0 &&
             node[i] == campaign_node &&
@@ -355,6 +343,7 @@ unsigned int campaign(
 
 void reconstitute(
     int num_agents,
+    int start_idx,
     int num_new_babies,
     int* new_nodes,
     int *node,
@@ -363,11 +352,12 @@ void reconstitute(
     float *incubation_timer,
     bool *immunity,
     float *immunity_timer,
-    float *expected_lifespan
+    float *expected_lifespan,
+    int* new_ids_out
 ) {
     //printf( "%s: num_new_babies = %d\n", __FUNCTION__, num_new_babies );
     int counter = 0;
-    for (int i = 0; i < num_agents; ++i) {
+    for (int i = start_idx; i > 0; --i) {
     //for (int i = num_agents; i > 0; --i) {
         if( age[i] < 0 ) {
             node[i] = new_nodes[ counter ];
@@ -378,6 +368,7 @@ void reconstitute(
             immunity_timer[i] = 0;
             expected_lifespan[i] = 75;
 
+            new_ids_out[counter] = i;
             counter ++;
             if( counter == num_new_babies ) {
                 return;
