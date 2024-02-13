@@ -221,10 +221,12 @@ def update_ages( data, totals, timestep ):
             data['expected_lifespan'],
             new_ids_out 
         )
+        """
         # TBD: Schedule 9mo RIA for newborns; Need their ids.
         import sir_numpy
         for new_id in new_ids_out:
             sir_numpy.schedule_9mo_ria( new_id, 0, timestep=timestep )
+        """
         global births_report
         for node, babies in num_new_babies_by_node.items():
             births_report[node] += babies
