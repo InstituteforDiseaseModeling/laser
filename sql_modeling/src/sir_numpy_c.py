@@ -15,6 +15,8 @@ import sir_numpy
 from collections import defaultdict 
 births_report = defaultdict(int)
 unborn_end_idx = 0
+dynamic_eula_idx = None
+ninemo_tracker_idx = None
 
 # Load the shared library
 update_ages_lib = ctypes.CDLL('./update_ages.so')
@@ -89,6 +91,16 @@ update_ages_lib.campaign.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node
 ]
+update_ages_lib.ria.argtypes = [
+    ctypes.c_int32, # num_agents
+    ctypes.c_size_t,  # starting index
+    ctypes.c_float, # coverage
+    ctypes.c_int32, # campaign_node
+    np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # immunity_timer
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node
+]
 update_ages_lib.reconstitute.argtypes = [
     ctypes.c_int32, # num_agents
     ctypes.c_int32, # num_new_babies
@@ -146,7 +158,9 @@ def load( pop_file ):
     settings.nodes.pop(-1)
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
-
+    global dynamic_eula_idx, ninemo_tracker_idx 
+    dynamic_eula_idx = len(data['id'])-1
+    ninemo_tracker_idx = dynamic_eula_idx 
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
     return data
 
@@ -156,6 +170,18 @@ def initialize_database():
 def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
     eula.init()
     return df
+
+def swap_to_dynamic_eula( data, individual_id ):
+    global dynamic_eula_idx 
+    individual_idx = np.where( data['id'] == individual_id  )
+    for col in data.keys():
+        # Store eula-1 values in temp
+        elem = data[ col ][ dynamic_eula_idx ]
+        # Write newly recovered values to eula-1
+        data[ col ][ dynamic_eula_idx ] = data[ col ][ individual_idx ]
+        # Write temp values to current
+        data[ col ][ dynamic_eula_idx ] = elem
+    dynamic_eula_idx -= 1
 
 def collect_report( data ):
     """
@@ -194,7 +220,7 @@ def update_ages( data, totals, timestep ):
     if not data:
         raise ValueError( "update_ages called with null data variable." )
 
-    #update_ages_c( data['age'] ) # not necessary
+    update_ages_c( data['age'] ) # not necessary
 
     global unborn_end_idx
     def births( data, interval ):
@@ -327,6 +353,21 @@ def migrate( data, timestep, num_infected=None ):
 def distribute_interventions( data, timestep ):
     #import sir_numpy
     #return sir_numpy.distribute_interventions( ctx, timestep )
+    def ria_9mo( coverage ):
+        global ninemo_tracker_idx 
+        new_idx = update_ages_lib.ria(
+                #len(data['age']),
+                unborn_end_idx,
+                ninemo_tracker_idx,
+                coverage,
+                settings.campaign_node,
+                data['immunity'],
+                data['immunity_timer'],
+                data['age'],
+                data['node']
+            )
+        ninemo_tracker_idx = int(new_idx)
+
     def campaign( coverage ):
         vaxxed = update_ages_lib.campaign(
                 len(data['age']),
@@ -341,6 +382,8 @@ def distribute_interventions( data, timestep ):
         print( f"{vaxxed} individuals vaccinated in node {settings.campaign_node}." )
     if timestep == settings.campaign_day:
         campaign(settings.campaign_coverage)
+    if timestep & settings.ria_interval == 0:
+        ria_9mo( settings.campaign_coverage )
     return data
 
 def inject_cases( ctx, import_cases=100, import_node=settings.num_nodes-1 ):

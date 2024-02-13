@@ -300,7 +300,6 @@ void collect_report(
             recovered_count[ node_id ]+=1;
             //printf( "Adding %d to R count for node %d = %d.\n", mcw[i], node_id, recovered_count[ node_id ] );
         } else {
-            // HOW THE HECK AM I GETTING THE EXACT SAME NUMBER OF SUSCEPTIBLES 1 at a time AS RECOVEREDS?!?!?!?!??!??!
             susceptible_count[ node_id ]+=1;
             //printf( "Adding %d to S count for node %d = %d.\n", mcw[i], node_id, susceptible_count[ node_id ] );
         }
@@ -339,6 +338,57 @@ unsigned int campaign(
         }
     }
     return report_counter;
+}
+
+unsigned int ria(
+    int num_agents,
+    int start_idx, // to count backwards
+    float coverage,
+    int campaign_node,
+    bool *immunity,
+    float *immunity_timer,
+    float *age,
+    int *node
+)
+{
+    // We have in mind a vaccination campaign to a fraction of the population turning 9mo, in a particular node, at
+    // a particular coverage level.
+    // The intervention effect will be to make them permanently immune.
+    // Create a boolean mask for the conditions specified in the WHERE clause
+    unsigned int report_counter = 0; // not returned for now
+    // printf( "DEBUG: Looking through %d susceptible agents in node %d under age %f with coverage %f to give immunity.\n", num_agents, campaign_node, 16.0f, coverage );
+    unsigned int new_idx = start_idx;
+    //printf( "%s called with start_idx=%d, counting down to %d.\n", __FUNCTION__, start_idx, num_agents );
+    for (int i = start_idx; i > num_agents; --i) {
+        // keep decrementing until we get kids younger than 0.75
+        if( age[i] < 0.75 ) {
+            //printf( "age of individual at idx %d = %f. Cutting out of loop.\n", i, age[i] );
+            new_idx = i;
+            break;
+        }
+
+        float upper_bound = 0.75+30/365.; // We want to be able to hunt from oldest in pop down to "9 month old" 
+                                          // without vaxxing them all. But then later we want to be able to grab
+                                          // everyone who aged into 9months while we were away and vax them. Tricky.
+        if( age[i] > upper_bound ) {
+            continue; // keep counting down
+        }
+
+        if( node[i] == campaign_node &&
+            immunity[i] == false &&
+            rand()%100 < 100*coverage
+        )
+        {
+            //printf( "Changing value of immunity at index %d.\n", i );
+            immunity[i] = true;
+            immunity_timer[i] = -1;
+            report_counter ++;
+        }
+    }
+    /*if( report_counter > 0 ) {
+        printf( "Vaccinated %d 9-month-olds starting at idx %d and ending up at %d.\n", report_counter, start_idx, new_idx );
+    }*/
+    return new_idx;
 }
 
 void reconstitute(
