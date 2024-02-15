@@ -16,13 +16,13 @@ header=$(head -n 1 "$filename")
 awk -v threshold="$threshold" -v header="$header" -F ',' '{
     if (NR == 1) {
         # Print the header to both output files
-        print header > "age_gt_" threshold ".csv"
-        print header > "age_lt_" threshold ".csv"
+        print header > "eula_pop.csv"
+        print header > "modeled_pop.csv"
     } else {
         if ($3 > threshold) {
-            print > "age_gt_" threshold ".csv"
+            print > "eula_pop.csv"
         } else if ($3 < threshold) {
-            print > "age_lt_" threshold ".csv"
+            print > "modeled_pop.csv"
         }
     }
 }' "$filename"

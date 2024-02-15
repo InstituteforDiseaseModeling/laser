@@ -8,7 +8,7 @@ initialize_database( conn, from_file=False )
 
 print( f"Writing population file out out to csv: {settings.pop_file_out}." )
 cursor = conn.cursor()
-get_all_query = "SELECT * FROM agents"
+get_all_query = "SELECT * FROM agents ORDER BY age"
 cursor.execute( get_all_query )
 rows = cursor.fetchall()
 

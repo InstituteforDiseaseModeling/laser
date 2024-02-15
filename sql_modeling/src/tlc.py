@@ -77,6 +77,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # if we have had total fade-out, inject imports
         if sum(counts["I"].values()) == 0:
+            print( f"Injecting 100 new cases into node {settings.num_nodes-1}." )
             model.inject_cases( ctx, import_cases=100, import_node=settings.num_nodes-1 )
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
@@ -90,7 +91,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         counts, fractions, totals = collect_and_report(csvwriter,timestep)
         #report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
 
-    print("Simulation completed. Report saved to 'simulation_report.csv'.")
+    print(f"Simulation completed. Report saved to '{settings.report_filename}'.")
 
 # Main simulation
 if __name__ == "__main__":
