@@ -2,7 +2,11 @@
 
 ## Purpose
 The primary purpose of these models is to rapidly prototype design ideas and to measure and compare their performance impacts. All the models assume a 'dataframe' approach to thinking about agents.
-## Approach Each model consists of some number of agents -- we're trying to use no less than 100k and up to 10M for now. Each agent has a set of pre-defined attributes. The best way to think of this is as a big dataframe where the attributes are the column headers. The population can be fully represented in a csv file. The set of attributes we have in the code right now are (along with a sample row):
+
+## Approach
+
+Each model consists of some number of agents -- we're trying to use no less than 100k and up to 10M for now. Each agent has a set of pre-defined attributes. The best way to think of this is as a big dataframe where the attributes are the column headers. The population can be fully represented in a csv file. The set of attributes we have in the code right now are (along with a sample row):
+
 | ID | Node | Age | Infected | Immune | Incubation_Timer | Infection_Timer | Immune_Timer |
 |----|------|-----|----------|--------|------------------|-----------------|--------------|
 | 0  |  4   | 23.4|  false   |  true  |        0         |        0        |    1800      |
