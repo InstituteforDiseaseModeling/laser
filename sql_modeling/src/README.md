@@ -2,9 +2,7 @@
 
 ## Purpose
 The primary purpose of these models is to rapidly prototype design ideas and to measure and compare their performance impacts. All the models assume a 'dataframe' approach to thinking about agents.
-
-## Approach
-Each model consists of some number of agents -- we're trying to use no less than 100k and up to 10M for now. Each agent has a set of pre-defined attributes. The best way to think of this is as a big dataframe where the attributes are the column headers. The population can be fully represented in a csv file. The set of attributes we have in the code right now are (along with a sample row):
+## Approach Each model consists of some number of agents -- we're trying to use no less than 100k and up to 10M for now. Each agent has a set of pre-defined attributes. The best way to think of this is as a big dataframe where the attributes are the column headers. The population can be fully represented in a csv file. The set of attributes we have in the code right now are (along with a sample row):
 | ID | Node | Age | Infected | Immune | Incubation_Timer | Infection_Timer | Immune_Timer |
 |----|------|-----|----------|--------|------------------|-----------------|--------------|
 | 0  |  4   | 23.4|  false   |  true  |        0         |        0        |    1800      |
@@ -60,10 +58,11 @@ Finally we have a version of the numpy model where most of the vectorized math i
     ```
     make run
     ```
+    The simulation duration is controlled by the value of 'duration' in settings.py. It defaults to 20 years.
 
 ### Intrahost
 
-Note that the code is hardcoded to run an SEIR model. The settings.py controls base infectivity, birth rate, and some tuning parameters for how often births, deaths, migration, and RIA are calculated. 
+Note that the code is hardcoded to run an SEIR model. The settings.py controls base base_infectivity, birth rate, and some tuning parameters for how often births, deaths, migration, and RIA are calculated. 
 
 Incubation duration, infectious duration are hardcoded in the code right now. Incubation is typically a constant value of 3. Infection is a uniform distribution draw.
 
@@ -86,6 +85,10 @@ Set Crude Birth Rate in settings.py. Births are calculated every 'fertility_inte
 ### Mortality
 
 Non-Disease Mortality is calculated as an increasing function of age using a Gompertz-Makeham distribution applied to the EULA age-binned population (only right now). This obviously gets increasingly inaccurate as the simulation gets older. Deaths are calculated every 'mortality_interval' in settings.py. 
+
+### Interventions
+
+At this time you can distribute acquisition-blocking interventions to the adult population one time specified by 'campaign_day' in settings.py, with coverage 'campaign_coverage' (also settings.py) to a particular node ('campaign_node'). The values of campaign_coverage and campaign_node will also be used for RIA (at 9months). You can effectively disable the campaign and ria by setting campaign_day to a value greater than 'duration' or setting ria_interval to a value greater than 'duration'.
 
 ### Visualization
 
