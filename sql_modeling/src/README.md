@@ -1,31 +1,62 @@
 # Proof-of-Concept Models Using SQL, Numpy, and Numpy with C-accelerations
 
 ## Purpose
-The primary purpose of these model is to rapidly prototype design ideas and compare their performance impacts. All the models assume a 'dataframe' approach to thinking about agents.
+The primary purpose of these models is to rapidly prototype design ideas and to measure and compare their performance impacts. All the models assume a 'dataframe' approach to thinking about agents.
+
+## Approach
+Each model consists of some number of agents -- we're trying to use no less than 100k and up to 10M for now. Each agent has a set of pre-defined attributes. The best way to think of this is as a big dataframe where the attributes are the column headers. The population can be fully represented in a csv file. The set of attributes we have in the code right now are (along with a sample row):
+| ID | Node | Age | Infected | Immune | Incubation_Timer | Infection_Timer | Immune_Timer |
+|----|------|-----|----------|--------|------------------|-----------------|--------------|
+| 0  |  4   | 23.4|  false   |  true  |        0         |        0        |    1800      |
+
+The user can attributes and code to operate on those attributes, but that's not demonstrated here yet.
+
+It should be essentially trivial to write the entire model state to disk and reload that as one's initial population.
+
+## Input Files
+The SQL model can be bootstrap entirely from parameters in settings.py, but we are trying to standardize on a common input population csv file across all models, at least as an experiment. We imposes a startup cost but provides a simple startup story.
 
 ## SQL
 
-TBD.
+The SQL model stores the entire model state in SQL table. We've been primarily been using SQLite, and in-memory db. We have a MySQL version we did to compare performance, but that is not be actively maintained. All model state updates are done as SQL statements. We are interested in how large we can make the population while still getting adequate performance and also exporting the usability of long-standing declarative modes of interaction. It's worth noting that the model state and any and every timestep is stored in the database (table) and available for query and inspection. If one uses an on-disk db instead of in-memory, the model state can be inspected externally with whatever csv/dataframe/SQL analysis tools one prefers.
 
 ## Numpy
 
-TBD.
+The Numpy model represents all the model data as a set of numpy arrays. One can still think about the model the same way but one has to be able to code in numpy. This implementation is faster than the SQL version but we want to quantify how much faster, across a realistic range of model features and capabilities, and what are the end-user impacts on usability, model development, and debugging.
 
 ## Numpy with C Accelerations
 
+Finally we have a version of the numpy model where most of the vectorized math is done in compiled C extensions. This is a big win on performance, but with a cost to end-user scrutibility. The installation process will include a c compilation step.
+
 ## How To Run
 
-0. Install the required package:
+0. Make sure your pip is configured to check 
     ```
-    pip3 install sparklines
+    https://packages.idmod.org/api/pypi/pypi-production/simple
     ```
 
-1. Build input files based on population size, node count, and EULA age specified in `settings.py`:
+1. The SQL model can be run by installing the latest dev package:
+
+    ```
+    pip3 install laser_sql_model
+    ```
+
+   The numpy model can be obtained by:
+    ```
+    pip3 install laser_numpy_model
+    ```
+
+   The C-Accelerated Numpy model is not yet available for pip installation. You should clone this repo, checkout the 'better_math' branch, and:
+    ```
+    pip3 install -r requirements.txt
+    ```
+
+2. For the numpy models, build input files based on population size, node count, and EULA age specified in the 'pop', 'num_nodes', and 'eula_age' params at the top of `settings.py`:
     ```
     make
     ```
 
-2. Run the program:
+3. Run the program:
     ```
     make run
     ```
@@ -46,7 +77,7 @@ Migration is linear and one-directional. 1% of infected individuals are migrated
 
 ### Seeding
 
-We seed 100 infections in the largest node, and with our simplified migration model, it "bleeds to the right". It should function as a loop in fact with infection circulating back to the largest node from the smallest. If we encounter total fade-out (eradication), we re-seed w/ 100 infections in the largest node.
+We seed 100 infections in the largest node, and with our simplified migration model, it "bleeds to the right". It should function as a loop in fact with infection circulating back to the largest node from the smallest. If we encounter total fade-out (eradication), we re-seed w/ 10 infections in a random node; this may fade out immediately or 'take' depending on epi factors in that and neighboring nodes at the time.
 
 ### Fertilty
 
@@ -60,3 +91,4 @@ Non-Disease Mortality is calculated as an increasing function of age using a Gom
 
 We use sparklines on each timestep to visualize the prevalence in each node. This provides a very cheap and simple way of getting real-time spatial visualzation.
 
+The sims produce an output file called 'simulation_output.csv' with the values of Susceptibles, Infecteds, Recovereds, New Births, and New Deaths for each node and timestep. Visualizing that data is left as an exercise to the reader, though there are some pyplot-based utilities in the viz folder.
