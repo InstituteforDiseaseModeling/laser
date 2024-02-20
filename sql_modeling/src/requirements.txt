@@ -1,5 +1,5 @@
 numpy
 matplotlib
-polars
 sparklines
-
+pandas
+scipy

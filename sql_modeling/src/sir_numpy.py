@@ -40,11 +40,11 @@ def load( pop_file ):
     settings.pop = len(columns['infected'])
     print( f"Population={settings.pop}" )
 
-    add_expansion_slots( columns,num_slots=50000 )
+    add_expansion_slots( columns )
     # Pad with a bunch of zeros
     return columns
 
-def add_expansion_slots( columns, num_slots=10000 ):
+def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
     num_slots = int(num_slots)
     print( f"Adding {num_slots} expansion slots for future babies." )
     new_ids = [ x for x in range( num_slots ) ]
@@ -180,7 +180,7 @@ def collect_report( data ):
     return infected_counts, susceptible_counts, recovered_counts 
 
 
-def update_ages( data, totals ):
+def update_ages( data, totals, timestep ):
     """
     import numba
     @numba.jit(parallel=True,nopython=True)
@@ -197,10 +197,15 @@ def update_ages( data, totals ):
 
     data['age'] = update_ages_np( data['age'] )
     # data = 
-    births( data, totals )
+    new_births = 0
+    if timestep % settings.fertility_interval == 0:
+        new_births = births( data, totals )
     #data = 
-    deaths( data )
-    return data
+    new_deaths = 0
+    if timestep % settings.mortality_interval == 0:
+        new_deaths = deaths( data )
+    return ( new_births, new_deaths )
+    #return data
 
 def births_from_cbr( node_pops, rate=30 ):
     # TBD: births = CBR & node_pop / 1000
@@ -310,7 +315,7 @@ def deaths(data):
             print( f"{np.count_nonzero(delete_mask)} new deaths." )
     
     def eula_death_by_rate():
-        eula.progress_natural_mortality()
+        eula.progress_natural_mortality( settings.mortality_interval )
 
     eula_death_by_rate()
     return data
