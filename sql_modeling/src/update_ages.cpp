@@ -7,10 +7,32 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
-#include <map>
+#include <unordered_map>
+#include <deque>
+#include <mutex>
 
 const float one_day = 1.0f/365.0f;
+static std::unordered_map<int,std::deque<int>> infection_queue_map;
+static std::unordered_map<int,std::deque<int>> incubation_queue_map;
+std::mutex map_mtx;
+
 extern "C" {
+
+void init_maps(
+    size_t n,
+    int start_idx,
+    const bool * infected,
+    const float * infection_timer
+) {
+    for (int i = start_idx; i < n; ++i) {
+        if( infected[ i ] ) {
+            infection_queue_map[ int(infection_timer[ i ]) ].push_back( i );
+            //printf( "%d: infection_queue_map[ %d ].size() = %lu.\n", __LINE__, int(infection_timer[ i ] ), infection_queue_map[ int(infection_timer[ i ]) ].size() );
+            incubation_queue_map[ 3 ].push_back( i );
+            //printf( "%d: incubation_queue_map[ 3 ].size() = %lu.\n", __LINE__, incubation_queue_map[ 3 ].size() );
+        }
+    }
+}
 
 void update_ages(size_t length, float *ages) {
     for (size_t i = 0; i < length; i++) {
@@ -20,6 +42,41 @@ void update_ages(size_t length, float *ages) {
         }
         ages[i] += one_day;
     }
+}
+
+void progress_infections2(
+    int n,
+    int start_idx,
+    float* infection_timer,
+    float* incubation_timer,
+    bool* infected,
+    float* immunity_timer,
+    bool* immunity,
+    int timestep
+)
+{
+    if (incubation_queue_map.find(timestep) != incubation_queue_map.end()) {
+        std::deque<int>& activators = incubation_queue_map[timestep];
+        for (int idx : activators) {
+            incubation_timer[idx] = 0;
+        }
+        incubation_queue_map.erase(timestep);
+        //incubation_queue_map[timestep].clear();
+    }
+ 
+    if (infection_queue_map.find(timestep) != infection_queue_map.end()) {
+        std::deque<int>& recovereds = infection_queue_map[timestep];
+        for (int idx : recovereds) {
+            infection_timer[idx] = 0;
+            infected[idx] = false;
+            immunity_timer[idx] = -1;
+            immunity[idx] = true;
+        }
+        infection_queue_map.erase(timestep);
+        //infection_queue_map[timestep].clear();
+    }
+    //printf( "%d: infection_queue_map[ %d ].size() = %lu.\n", __LINE__, timestep, infection_queue_map[ timestep ].size() );
+    //printf( "%d: incubation_queue_map[ %d ].size() = %lu.\n", __LINE__, timestep, incubation_queue_map[ timestep ].size() );
 }
 
 void progress_infections(int n, int start_idx, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity, int* node ) {
@@ -116,73 +173,6 @@ void calculate_new_infections(
     }
 }
 
-void handle_new_infections2(
-    int num_agents,
-    int start_idx,
-    int node,
-    uint32_t * agent_node,
-    bool * infected,
-    bool * immunity,
-    float * incubation_timer,
-    float * infection_timer,
-    int new_infections
-)
-{
-    // Create a boolean mask based on the conditions in the subquery
-    // This kind of sucks
-    bool* subquery_condition = (bool*)malloc(num_agents * sizeof(bool));
-    //memset( subquery_condition, 0, sizeof(subquery_condition) );
-
-    // Would be really nice to avoid looping over all the agents twice, especially since this is
-    // being called for each node (that has new infections).
-    for (int i = start_idx; i < num_agents; ++i) {
-        // Not infected AND not immune (susceptible) AND in this node
-        subquery_condition[i] = (infected[i]==false) && (immunity[i]==false) && (agent_node[i] == node);
-    }
-
-    // Get the indices of eligible agents using the boolean mask
-    uint32_t* eligible_agents_indices = (uint32_t*)malloc(num_agents * sizeof(uint32_t));
-    int count = 0;
-
-    for (int i = start_idx; i < num_agents; ++i) {
-        if (subquery_condition[i]) {
-            eligible_agents_indices[count++] = i;
-        }
-    }
-    free(subquery_condition);
-
-    // Randomly sample 'new_infections' number of indices
-    uint32_t* selected_indices = (uint32_t*)malloc(new_infections * sizeof(uint32_t));
-
-    for (uint32_t i = 0; i < new_infections && i < count; ++i) {
-        int random_index = rand() % count;
-        // TBD: This needs to be change to avoid duplicates (with replacement or whatever)
-        selected_indices[i] = eligible_agents_indices[random_index];
-    }
-
-    // Update the 'infected' column based on the selected indices
-    for (uint32_t i = 0; i < new_infections && i < count; ++i) {
-        uint32_t selected_id = selected_indices[i];
-        if( infected[ selected_id ] )
-        {
-            printf( "ERROR: infecting already infected individual: %d. No idea how we got here. Let's try skipping for now and see how it goes.\n", selected_id );
-            //abort();
-        }
-        else {
-            infected[selected_id] = true;
-            unsigned int min_infection_duration = 3;
-            incubation_timer[selected_id] = min_infection_duration; 
-            unsigned int max_infection_dur = min_infection_duration + 10; // 3-13
-            infection_timer[selected_id] = rand() % (max_infection_dur) + min_infection_duration; // Random integer between 3 and 13;ish.
-            //printf( "Infecting individual %d.\n", selected_id );
-        }
-    }
-
-    // Free allocated memory
-    free(eligible_agents_indices);
-    free(selected_indices);
-}
-
 void handle_new_infections(
     int num_agents,
     int start_idx,
@@ -193,7 +183,8 @@ void handle_new_infections(
     float * incubation_timer,
     float * infection_timer,
     int new_infections,
-    int * new_infection_idxs_out
+    int * new_infection_idxs_out,
+    int timestep
 ) {
     //printf( "Infect %d new people.\n", new_infections );
     //std::map< int, int > id2idxMap;
@@ -214,6 +205,10 @@ void handle_new_infections(
         if (subquery_condition[i]) {
             num_eligible_agents++;
         }
+    }
+    if( num_eligible_agents == 0 ) {
+        printf( "num_eligible_agents=0. Returning early.\n" );
+        return;
     }
     
     // Allocate memory for selected_indices array
@@ -236,12 +231,29 @@ void handle_new_infections(
 
     // Update the 'infected' column based on selected indices
     int num_infections = (new_infections < num_eligible_agents) ? new_infections : num_eligible_agents;
+    std::deque<int> new_incubators;
+    unsigned int inc_time_idx = int(timestep + 3);
     for (int i = 0; i < num_infections; i++) {
         unsigned int selected_id = selected_indices[i];
         infected[selected_id] = true;
         incubation_timer[selected_id] = 3; 
         infection_timer[selected_id] = rand() % (10) + 7; // Random integer between 4 and 14;
         new_infection_idxs_out[ i ] = selected_id;
+
+        /*
+        // maps code
+        unsigned int recovery_time = int(timestep+infection_timer[selected_id]);
+        {
+        std::lock_guard<std::mutex> lock(map_mtx);
+        infection_queue_map[ recovery_time ].push_back( selected_id );
+        }
+        {
+        std::lock_guard<std::mutex> lock(map_mtx);
+        incubation_queue_map[ inc_time_idx ].push_back( selected_id );
+        }
+        //printf( "%d: infection_queue_map[ %d ].size() = %lu.\n", __LINE__, recovery_time, infection_queue_map[recovery_time].size() );
+        //printf( "%d: incubation_queue_map[ %d ].size() = %lu.\n", __LINE__, inc_time_idx, incubation_queue_map[inc_time_idx].size() );
+        */
     }
 
     // Free dynamically allocated memory
