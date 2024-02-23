@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <deque>
 #include <mutex>
+#include <algorithm>
 
 const float one_day = 1.0f/365.0f;
 static std::unordered_map<int,std::deque<int>> infection_queue_map;
@@ -79,20 +80,34 @@ void progress_infections2(
     //printf( "%d: incubation_queue_map[ %d ].size() = %lu.\n", __LINE__, timestep, incubation_queue_map[ timestep ].size() );
 }
 
-void progress_infections(int n, int start_idx, float* infection_timer, float* incubation_timer, bool* infected, float* immunity_timer, bool* immunity, int* node ) {
+/*
+ * Progress all infections. Collect the indexes of those who recover. 
+ * Assume recovered_idxs is pre-allocated to same size as infecteds.
+ */
+size_t progress_infections(
+    int n,
+    int start_idx,
+    float* infection_timer,
+    float* incubation_timer,
+    bool* infected,
+    float* immunity_timer,
+    bool* immunity,
+    int* node,
+    int* recovered_idxs
+) {
     unsigned int activators = 0;
-    unsigned int recovereds = 0;
 
+    std::deque<int> recovereds;
     for (int i = start_idx; i < n; ++i) {
         if (infected[i] ) {
             // Incubation timer: decrement for each person
             if (incubation_timer[i] >= 1) {
                 incubation_timer[i] --;
-                if( incubation_timer[i] == 0 )
+                /*if( incubation_timer[i] == 0 )
                 {
                     //printf( "Individual %d activating; incubation_timer= %f.\n", i, incubation_timer[i] );
                     activators++;
-                }
+                }*/
             }
 
             // Infection timer: decrement for each infected person
@@ -102,18 +117,24 @@ void progress_infections(int n, int start_idx, float* infection_timer, float* in
 
                 // Some people clear
                 if ( infection_timer[i] == 0) {
-                    recovereds ++;
                     infected[i] = 0;
 
                     // Recovereds gain immunity
                     //immunity_timer[i] = rand() % (30) + 10;  // Random integer between 10 and 40
+                    // Make immunity permanent for now; we'll want this configurable at some point
                     immunity_timer[i] = -1;
                     immunity[i] = 1;
+                    recovereds.push_back( i );
                 }
             }
         }
     }
     //printf( "%d activators, %d recovereds.\n", activators, recovereds );
+    if( recovereds.size() > 0 ) {
+        //printf( "Returning %lu recovered indexes; first one is %d.\n", recovereds.size(), recovereds[0] );
+        std::copy(recovereds.begin(), recovereds.end(), recovered_idxs);
+    }
+    return recovereds.size();
 }
 
 void progress_immunities(int n, int start_idx, float* immunity_timer, bool* immunity, int* node) {
