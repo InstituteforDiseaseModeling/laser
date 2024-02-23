@@ -33,6 +33,7 @@ update_ages_lib.init_maps.argtypes = [
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'), # infected
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # infection_timer
 ]
+update_ages_lib.progress_infections.restype = ctypes.c_int
 update_ages_lib.progress_infections.argtypes = [
     ctypes.c_size_t,  # n
     ctypes.c_size_t,  # starting index
@@ -42,6 +43,7 @@ update_ages_lib.progress_infections.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # recovered idxs out
 ]
 update_ages_lib.progress_infections2.argtypes = [
     ctypes.c_size_t,  # n
@@ -198,7 +200,7 @@ def load( pop_file ):
             data['infected'],
             data['infection_timer']
         )
-    init_maps_np()
+    #init_maps_np()
     #init_maps_c()
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
     return data
@@ -323,11 +325,19 @@ def progress_infections( data, timestep ):
     # Update infected agents
     # infection timer: decrement for each infected person
     def vector_math():
-        update_ages_lib.progress_infections(len(data['age']), unborn_end_idx, data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], data['node'])
+        # Call the function with a null pointer
+        #integers_ptr = ctypes.POINTER(ctypes.c_int)()
+        # Would be nice to get indices (not ids) of newly recovereds...
+        recovered_idxs = np.zeros( np.count_nonzero( data['infected'] ) ).astype( np.uint32 )
+        num_recovereds = update_ages_lib.progress_infections(len(data['age']), unborn_end_idx, data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], data['node'], recovered_idxs ) # ctypes.byref(integers_ptr))
+        if num_recovereds:
+            for rec_idx in range( num_recovereds ):
+                recovered = recovered_idxs[rec_idx]
+                if recovered < dynamic_eula_idx: # only swap if dynamic eula idx is greater than recovered idx. This was a bug I took a while to find. eula idx can cross the index while in queue
+                    swap_to_dynamic_eula( data, recovered )
 
     def queues():
-        def np( timestep ):
-            #print( f"Progressing infections at timestep {timestep} using queue-maps, all python." )
+        def np():
             global infection_queue_map, incubation_queue_map
 
             if timestep in incubation_queue_map:
@@ -361,10 +371,10 @@ def progress_infections( data, timestep ):
                 """
         def c():
             update_ages_lib.progress_infections2(len(data['age']), unborn_end_idx, data['infection_timer'], data['incubation_timer'], data['infected'], data['immunity_timer'], data['immunity'], timestep)
-        np( timestep )
+        c()
 
-    queues()
-    #vector_math()
+    #queues()
+    vector_math()
     return data
 
 # Update immune agents
@@ -426,7 +436,7 @@ def handle_transmission_by_node( data, new_infections, timestep, node=0 ):
                 infection_queue_map[ reco_time ].append( idx )
             incubation_queue_map[ timestep+3 ].extend( new_infection_idxs )
 
-        queues_np()
+        #queues_np()
 
     #print( f"new_infections at node {node} = {new_infections[node]}" )
     if new_infections[node]>0:
