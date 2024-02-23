@@ -24,7 +24,8 @@ incubation_queue_map = defaultdict(list)
 update_ages_lib = ctypes.CDLL('./update_ages.so')
 # Define the function signature
 update_ages_lib.update_ages.argtypes = [
-    ctypes.c_size_t,  # n
+    ctypes.c_size_t,  # start_idx
+    ctypes.c_size_t,  # stop_idx
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS')
 ]
 update_ages_lib.init_maps.argtypes = [
@@ -261,7 +262,11 @@ def collect_report( data ):
 
 def update_ages( data, totals, timestep ):
     def update_ages_c( ages ):
-        update_ages_lib.update_ages(len(ages), ages)
+        update_ages_lib.update_ages(
+            unborn_end_idx,
+            dynamic_eula_idx,
+            ages
+        )
         return ages
 
     if not data:
@@ -394,8 +399,8 @@ def calculate_new_infections( data, inf, sus, totals ):
         df = pd.DataFrame(data)
         df.to_csv('temp.csv', index=False)
     update_ages_lib.calculate_new_infections(
-            len(data['age']),
             unborn_end_idx,
+            dynamic_eula_idx,
             len( inf ),
             data['node'],
             data['incubation_timer'],
@@ -413,8 +418,8 @@ def handle_transmission_by_node( data, new_infections, timestep, node=0 ):
     def handle_new_infections_c(new_infections):
         new_infection_idxs = np.zeros(new_infections).astype( np.uint32 )
         update_ages_lib.handle_new_infections(
-                len(data['age']),
                 unborn_end_idx,
+                dynamic_eula_idx,
                 node,
                 data['node'],
                 data['infected'],
@@ -505,7 +510,7 @@ def distribute_interventions( data, timestep ):
 
 def inject_cases( ctx, timestep, import_cases=100, import_node=settings.num_nodes-1 ):
     import_dict = { import_node: import_cases }
-    htbn = partial( handle_transmission_by_node, ctx, import_dict, timestep=timestep, node=9 )
+    htbn = partial( handle_transmission_by_node, ctx, import_dict, timestep=timestep, node=59 )
     htbn()
 
 # Function to run the simulation for a given number of timesteps

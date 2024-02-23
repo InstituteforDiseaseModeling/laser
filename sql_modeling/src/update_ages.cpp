@@ -11,6 +11,7 @@
 #include <deque>
 #include <mutex>
 #include <algorithm>
+#include <cassert>
 
 const float one_day = 1.0f/365.0f;
 static std::unordered_map<int,std::deque<int>> infection_queue_map;
@@ -35,8 +36,9 @@ void init_maps(
     }
 }
 
-void update_ages(size_t length, float *ages) {
-    for (size_t i = 0; i < length; i++) {
+void update_ages(unsigned int start_idx, unsigned int stop_idx, float *ages) {
+    //printf( "%s: from %d to %d.\n", __FUNCTION__, start_idx, stop_idx );
+    for (size_t i = start_idx; i <= stop_idx; i++) {
         if( ages[i] < 0 )
         {
             continue;
@@ -153,8 +155,8 @@ void progress_immunities(int n, int start_idx, float* immunity_timer, bool* immu
 // Dang, this one is slower than the numpy version!?!?
 // maybe I need to just use the 64-bit ints and avoid the casting
 void calculate_new_infections(
-    int num_agents,
     int start_idx, 
+    int end_idx,
     int num_nodes,
     uint32_t * node,
     float * incubation_timer,
@@ -168,7 +170,7 @@ void calculate_new_infections(
     float exposed_counts_by_bin[ num_nodes ];
     memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
 
-    for (int i = start_idx; i < num_agents; ++i) {
+    for (int i = start_idx; i <= end_idx; ++i) {
         if( incubation_timer[i] >= 1 ) {
             exposed_counts_by_bin[ node[ i ] ] ++;
             // printf( "DEBUG: incubation_timer[ %d ] = %f.\n", i, incubation_timer[i] );
@@ -195,8 +197,8 @@ void calculate_new_infections(
 }
 
 void handle_new_infections(
-    int num_agents,
     int start_idx,
+    int end_idx,
     int node,
     uint32_t * agent_node,
     bool * infected,
@@ -210,11 +212,13 @@ void handle_new_infections(
     //printf( "Infect %d new people.\n", new_infections );
     //std::map< int, int > id2idxMap;
     // Allocate memory for subquery_condition array
+    //printf( "start_idx=%d, end_idx=%d.\n", start_idx, end_idx );
+    unsigned int num_agents = end_idx-start_idx+1;
     bool *subquery_condition = (bool*)malloc(num_agents * sizeof(bool));
-    
+
     // Apply conditions to identify eligible agents
-    for (int i = start_idx; i < num_agents; i++) {
-        subquery_condition[i] = !infected[i] && !immunity[i] && agent_node[i] == node;
+    for (int i = start_idx; i <= end_idx; i++) {
+        subquery_condition[i-start_idx] = !infected[i] && !immunity[i] && agent_node[i] == node;
     }
     
     // Initialize random number generator
@@ -222,64 +226,70 @@ void handle_new_infections(
     
     // Count the number of eligible agents
     int num_eligible_agents = 0;
-    for (int i = start_idx; i < num_agents; i++) {
+    for (int i = 0; i <= end_idx-start_idx; i++) {
         if (subquery_condition[i]) {
             num_eligible_agents++;
         }
     }
-    if( num_eligible_agents == 0 ) {
-        printf( "num_eligible_agents=0. Returning early.\n" );
-        return;
-    }
-    
-    // Allocate memory for selected_indices array
-    int *selected_indices = (int*) malloc(num_eligible_agents * sizeof(int));
-    
-    // Randomly sample from eligible agents
-    int count = 0;
-    for (int i = start_idx; i < num_agents; i++) {
-        if (subquery_condition[i]) {
-            selected_indices[count++] = i;
-        }
-    }
-    // Shuffle the selected_indices array
-    for (int i = num_eligible_agents - 1; i > 0; i--) {
-        int j = rand() % (i + 1);
-        int temp = selected_indices[i];
-        selected_indices[i] = selected_indices[j];
-        selected_indices[j] = temp;
-    }
+    //printf( "num_eligible_agents=%d.\n", num_eligible_agents );
+    if( num_eligible_agents > 0 ) {
 
-    // Update the 'infected' column based on selected indices
-    int num_infections = (new_infections < num_eligible_agents) ? new_infections : num_eligible_agents;
-    std::deque<int> new_incubators;
-    unsigned int inc_time_idx = int(timestep + 3);
-    for (int i = 0; i < num_infections; i++) {
-        unsigned int selected_id = selected_indices[i];
-        infected[selected_id] = true;
-        incubation_timer[selected_id] = 3; 
-        infection_timer[selected_id] = rand() % (10) + 7; // Random integer between 4 and 14;
-        new_infection_idxs_out[ i ] = selected_id;
+        // Allocate memory for selected_indices array
+        int *selected_indices = (int*) malloc(num_eligible_agents * sizeof(int));
 
-        /*
-        // maps code
-        unsigned int recovery_time = int(timestep+infection_timer[selected_id]);
-        {
-        std::lock_guard<std::mutex> lock(map_mtx);
-        infection_queue_map[ recovery_time ].push_back( selected_id );
+        // Randomly sample from eligible agents
+        int count = 0;
+        for (int i = 0; i <= end_idx-start_idx; i++) {
+            if (subquery_condition[i]) {
+                unsigned int selected_idx = i+start_idx;
+                //assert( selected_idx >= start_idx );
+                //assert( selected_idx <= end_idx );
+                selected_indices[count++] = selected_idx;
+            }
         }
-        {
-        std::lock_guard<std::mutex> lock(map_mtx);
-        incubation_queue_map[ inc_time_idx ].push_back( selected_id );
+        // Shuffle the selected_indices array
+        for (int i = num_eligible_agents - 1; i > 0; i--) {
+            int j = rand() % (i + 1);
+            int temp = selected_indices[i];
+            selected_indices[i] = selected_indices[j];
+            selected_indices[j] = temp;
         }
-        //printf( "%d: infection_queue_map[ %d ].size() = %lu.\n", __LINE__, recovery_time, infection_queue_map[recovery_time].size() );
-        //printf( "%d: incubation_queue_map[ %d ].size() = %lu.\n", __LINE__, inc_time_idx, incubation_queue_map[inc_time_idx].size() );
-        */
+
+        // Update the 'infected' column based on selected indices
+        int num_infections = (new_infections < num_eligible_agents) ? new_infections : num_eligible_agents;
+        //printf( "num_infections = %d.\n", num_infections  );
+        std::deque<int> new_incubators;
+        unsigned int inc_time_idx = int(timestep + 3);
+        for (int i = 0; i < num_infections; i++) {
+            unsigned int selected_id = selected_indices[i];
+            //printf( "Infecting index=%d.\n", selected_indices[i] );
+            //assert( selected_id >= start_idx );
+            //assert( selected_id <= end_idx );
+            infected[selected_id] = true;
+            incubation_timer[selected_id] = 3; 
+            infection_timer[selected_id] = rand() % (10) + 7; // Random integer between 4 and 14;
+            new_infection_idxs_out[ i ] = selected_id;
+
+            /*
+            // maps code
+            unsigned int recovery_time = int(timestep+infection_timer[selected_id]);
+            {
+            std::lock_guard<std::mutex> lock(map_mtx);
+            infection_queue_map[ recovery_time ].push_back( selected_id );
+            }
+            {
+            std::lock_guard<std::mutex> lock(map_mtx);
+            incubation_queue_map[ inc_time_idx ].push_back( selected_id );
+            }
+            //printf( "%d: infection_queue_map[ %d ].size() = %lu.\n", __LINE__, recovery_time, infection_queue_map[recovery_time].size() );
+            //printf( "%d: incubation_queue_map[ %d ].size() = %lu.\n", __LINE__, inc_time_idx, incubation_queue_map[inc_time_idx].size() );
+            */
+        }
+        free(selected_indices);
     }
 
     // Free dynamically allocated memory
     free(subquery_condition);
-    free(selected_indices);
 }
 
 void migrate( int num_agents, int start_idx, int end_idx, bool * infected, uint32_t * node ) {
@@ -319,8 +329,8 @@ void collect_report(
 )
 {
     //printf( "%s called w/ num_agents = %d, start_idx = %d, eula_idx = %d.\n", __FUNCTION__, num_agents, start_idx, eula_idx );
-    //for (int i = start_idx; i < eula_idx; ++i) {
-    for (int i = start_idx; i < num_agents; ++i) {
+    for (int i = start_idx; i < eula_idx; ++i) {
+    //for (int i = start_idx; i < num_agents; ++i) {
         //printf( "i=%d\n", i );
         if( node[i] < 0 ) {
             continue;
@@ -348,10 +358,10 @@ void collect_report(
             //printf( "Incrementing S count for node %d = %d from idx %d.\n", node_id, susceptible_count[ node_id ], i );
         }
     }
-    /*for (int i = eula_idx; i < num_agents; ++i) {
+    for (int i = eula_idx; i < num_agents; ++i) {
         int node_id = node[i];
         recovered_count[ node_id ]++;
-    }*/
+    }
 }
 
 unsigned int campaign(
