@@ -1,14 +1,11 @@
 import pdb
 # Import a model
-#import sir_sql as model
-#import sir_mysql as model
-#import sir_sql_polars as model
-#import sir_numpy as model
+#import laser_numpy_mode.sir_numpy as model
 import sir_numpy_c as model
 from copy import deepcopy
 
 import settings
-import report
+from laser_numpy_model import report
 
 report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 fractions = {}
@@ -30,7 +27,7 @@ def collect_and_report(csvwriter, timestep):
             if totals[ idx ] > 0:
                 sus[ idx ] /= totals[ idx ] 
                 inf[ idx ] /= totals[ idx ] 
-                rec[ idx ]/= totals[ idx ] 
+                rec[ idx ] /= totals[ idx ] 
             else:
                 sus[ idx ] = 0
                 inf[ idx ] = 0
@@ -45,7 +42,7 @@ def collect_and_report(csvwriter, timestep):
     #print( fractions["S"][10] )
     #print( counts["S"][10] )
     try:
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], report_births, report_deaths )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births={}, new_deaths={} )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, fractions, totals
@@ -56,17 +53,17 @@ def run_simulation(ctx, csvwriter, num_timesteps):
 
         # We should always be in a low prev setting so this should only really ever operate
         # on ~1% of the active population
-        ctx = model.progress_infections( ctx )
+        ctx = model.progress_infections( ctx, timestep )
 
         # The perma-immune should not consume cycles but there could be lots of waning immune
-        ctx = model.progress_immunities( ctx )
+        # ctx = model.progress_immunities( ctx )
 
         # The core transmission part begins
         new_infections = model.calculate_new_infections( ctx, fractions["I"], fractions["S"], totals )
         #print( f"new_infections=\n{new_infections}" )
 
         # TBD: for loop should probably be implementation-specific
-        ctx = model.handle_transmission( ctx, new_infections )
+        ctx = model.handle_transmission( ctx, new_infections, timestep )
 
         ctx = model.add_new_infections( ctx )
 
@@ -78,7 +75,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         # if we have had total fade-out, inject imports
         if sum(counts["I"].values()) == 0:
             print( f"Injecting 100 new cases into node {settings.num_nodes-1}." )
-            model.inject_cases( ctx, import_cases=100, import_node=settings.num_nodes-1 )
+            model.inject_cases( ctx, timestep=timestep, import_cases=10, import_node=settings.num_nodes-1 )
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
