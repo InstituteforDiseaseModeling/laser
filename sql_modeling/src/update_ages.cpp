@@ -466,7 +466,6 @@ void reconstitute(
     //printf( "%s: num_new_babies = %d\n", __FUNCTION__, num_new_babies );
     int counter = 0;
     for (int i = start_idx; i > 0; --i) {
-    //for (int i = num_agents; i > 0; --i) {
         if( age[i] < 0 ) {
             node[i] = new_nodes[ counter ];
             age[i] = 0;
@@ -485,5 +484,46 @@ void reconstitute(
     }
     printf( "ERROR: We ran out of open slots for new babies!" );
     abort();
+    }
+
+double random_double() {
+    return (double) rand() / RAND_MAX;
 }
+
+// Function to generate a binomial random variable
+int binomial(int n, double p) {
+    int successes = 0;
+    for (int i = 0; i < n; ++i) {
+        if (random_double() < p) {
+            successes++;
+        }
+    }
+    return successes;
+}
+
+/*
+ * Need access to the eula map/dict. Probably should pass in the sorted values as an array
+ */
+void progress_natural_mortality_binned(
+    int* eula, // sorted values as an array
+    int num_nodes,
+    int num_age_bins,  // size of eula array
+    float* probs,
+    int timesteps_elapsed // how many timesteps are we covering
+) {
+    // Iterate over nodes and age bins
+    for (int node = 0; node < num_nodes; ++node) {
+        for (int age_bin = 0; age_bin < num_age_bins; ++age_bin) {
+            // Compute expected deaths
+            double prob = probs[age_bin]; // Implement this function as needed
+            int count = eula[node * num_age_bins + age_bin];
+            int expected_deaths = 0;
+            for (int i = 0; i < timesteps_elapsed; ++i) {
+                expected_deaths += binomial(count, prob); // Implement binomial function as needed
+            }
+            eula[node * num_age_bins + age_bin] -= expected_deaths;
+        }
+    }
+}
+
 }
