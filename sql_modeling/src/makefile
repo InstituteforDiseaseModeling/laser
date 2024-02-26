@@ -1,7 +1,11 @@
 # Define variables
 PYTHON := python3
 CC := g++
-CFLAGS := -shared -fPIC -O3 -march=native -flto -fpermissive
+CFLAGS := -shared -fPIC -O3 -march=native -flto -fpermissive# -mfma
+# ALSO NO: -finline-functions
+# NO: -floop-parallelize-all
+# neutral: -funroll-loops
+# NO: -ffast-math
 #CFLAGS := -shared -fPIC -O0 -g
 DB_SCRIPT := python3 -m laser_numpy_model.csv_to_db
 PREPROC_SCRIPT := ./eula_preproc.sh
