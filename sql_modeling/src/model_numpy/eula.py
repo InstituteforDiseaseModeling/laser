@@ -74,7 +74,6 @@ def progress_natural_mortality( timesteps ):
                     return_deaths[node] += expected_deaths 
         return return_deaths
     def c():
-        pdb.set_trace()
         return update_ages_lib.progress_natural_mortality_binned(
             # TBD: SORT
             eula.values(), # sorted values as an array
@@ -82,6 +81,7 @@ def progress_natural_mortality( timesteps ):
             len(eula.values()),  # size of eula array
             probability_of_dying,
             timesteps_elapsed )
+    c()
 
 def get_recovereds_by_node():   
     summary = {}
