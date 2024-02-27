@@ -2,6 +2,7 @@ import numpy as np
 from collections import defaultdict
 import settings
 import ctypes
+import pdb
 
 update_ages_lib = ctypes.CDLL('./update_ages.so')
 update_ages_lib.progress_natural_mortality_binned.argtypes = [
@@ -37,17 +38,14 @@ def init():
     # Load the remaining data as numerical values, skipping the header row
     data = np.genfromtxt(settings.eula_file, delimiter=',', dtype=float, skip_header=1)
 
-    # Extract headers from the header row
-    headers = header_row
-
-    # Load each column into a separate NumPy array
-    columns = {header: data[:, i] for i, header in enumerate(headers)}
-    columns['node'] = columns['node'].astype(np.uint32)
-    columns['age'] = columns['age'].astype(np.float32)
-    nodes = columns['node']
-    ages = columns['age']
-
-    eula = count_by_node_and_age( nodes, ages )
+    #pdb.set_trace()
+    for row in data:
+        node = int(row[0])
+        age = int(float(row[1]))  # Convert string to float and then to int
+        total = int(row[2])
+        if node not in eula:
+            eula[node] = {}
+        eula[node][age] = total
 
 def progress_natural_mortality( timesteps ):
     def python():

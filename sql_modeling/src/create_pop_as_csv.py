@@ -10,7 +10,7 @@ initialize_database( conn, from_file=False )
 # 2) Convert the modeled population into a csv file
 print( f"Writing population file out out to csv: modeled_pop.csv." )
 cursor = conn.cursor()
-get_all_query = f"SELECT * FROM agents WHERE age>{settings.eula_age} ORDER BY age"
+get_all_query = f"SELECT * FROM agents WHERE age<{settings.eula_age} ORDER BY age"
 
 cursor.execute( get_all_query )
 rows = cursor.fetchall()
