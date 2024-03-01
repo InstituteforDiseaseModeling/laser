@@ -1,6 +1,7 @@
 """Implement a community of agents, grouped by type."""
 
 from typing import Any
+from typing import Union
 
 import numpy as np
 
@@ -89,7 +90,7 @@ class Community:
         self.groupdefs.append((name, count))
         return index
 
-    def add_agent_property(self, name: str, dtype: type, default: int) -> None:
+    def add_agent_property(self, name: str, dtype: np.dtype, default: Union[int, float] = 0) -> None:
         """Add a property to the class."""
         self.attrdefs.append((name, dtype, default))
         return
