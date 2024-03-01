@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import polars as pl  # noqa: E402
+from groupedcommunity import Community
 from tqdm import tqdm  # noqa: E402
 
 timport = datetime.now(timezone.utc)
@@ -52,118 +53,6 @@ def get_params():
     return args
 
 
-_FIRST = 0
-_LAST = 1
-
-
-class Group:
-    """A (virtual) group of agents."""
-
-    def __init__(self, indices):
-        # This is a reference (view) into the Community object's array of indices.
-        # So, when we move agents, these values will get updated.
-        self.indices = indices
-        return
-
-    def __len__(self):
-        first, last = self.indices[:]
-        return last - first + 1 if last >= first else 0
-
-
-def __add_property__(cls, name, field):
-    def getter(self):
-        first, last = self.indices[:]
-        return field[first : last + 1]
-
-    def setter(self, value):
-        first, last = self.indices[:]
-        field[first : last + 1] = value
-        return
-
-    setattr(cls, name, property(getter, setter))
-    return
-
-
-class Community:
-    """A community of agents."""
-
-    def __init__(self) -> None:
-        self.groupdefs = []
-        self.attrdefs = []
-
-        self._count = 0
-        self.ngroups = -1
-        self.igroups = None
-        self.gmap = {}
-
-        self.groups = {}
-        self.attributes = []
-
-        return
-
-    def add_group(self, name: str, count: int) -> int:
-        """Add a group of agents to the community."""
-        index = len(self.groupdefs)
-        self.groupdefs.append((name, count))
-        return index
-
-    def add_property(self, name: str, dtype: type, default: int) -> None:
-        """Add a property to the class."""
-        self.attrdefs.append((name, dtype, default))
-        return
-
-    @property
-    def count(self):
-        """Return the number of agents in the community."""
-        return self._count
-
-    def allocate(self):
-        """Allocate memory for the agents."""
-        self.ngroups = len(self.groupdefs)
-        self.igroups = np.zeros((self.ngroups, 2), dtype=np.uint32)
-        inext = 0
-        for index, (name, count) in enumerate(self.groupdefs):
-            self.gmap[name] = index
-            setattr(self, f"i{name}", index)  # save on dictionary lookups
-            self.igroups[index, _FIRST] = inext
-            self.igroups[index, _LAST] = inext + count - 1
-            group = Group(self.igroups[index])  # [index] is implicitly [index,:]
-            self.groups[name] = group
-            setattr(self, name, group)
-            inext += count  # + 1
-        self._count = inext
-        for name, dtype, default in self.attrdefs:
-            array = np.full(self.count, default, dtype=dtype)
-            setattr(self, name, array)  # e.g. self.age
-            self.attributes.append(array)
-            # add a getter/setter for this property to the Group class
-            __add_property__(Group, name, array)
-        return
-
-    def move(self, source: int, index: int, target: int):
-        """Move an agent from one group (index) to another group."""
-        if target == source + 1:
-            isource, iswap = self.igroups[source, :]
-            isource += index
-            if isource != iswap:
-                for array in self.attributes:
-                    array[iswap], array[isource] = array[isource], array[iswap]
-            self.igroups[source, _LAST] -= 1
-            self.igroups[target, _FIRST] -= 1
-        else:
-            for src in range(source, target):
-                dst = src + 1
-                isource, iswap = self.igroups[src, :]
-                isource += index
-                if isource != iswap:
-                    for array in self.attributes:
-                        array[iswap], array[isource] = array[isource], array[iswap]
-                self.igroups[src, _LAST] -= 1
-                self.igroups[dst, _FIRST] -= 1
-
-        return
-
-
 def run_sim(params):
     """Run the simulation."""
 
@@ -175,34 +64,38 @@ def run_sim(params):
     daily_birth_rate = params.mu / 365
     daily_mortality = params.nu / 365
     num_unborn = (np.power(1 + daily_birth_rate, params.timesteps) - 1) * params.pop_size
-    num_unborn *= 1.05  # fudge factor
+
+    FUDGE = [10.0, 4.0, 1.5, 1.2, 1.05, 1.02, 1.005, 1.002, 1.0005, 1.0002]
+    index = min(int(np.log10(num_unborn)), len(FUDGE) - 1)
+
+    num_unborn *= FUDGE[index]  # fudge factor
     num_unborn = np.uint32(np.round(num_unborn))
-    c.add_group("unborn", num_unborn)
+    c.add_agent_group("unborn", num_unborn)
 
     S = np.uint32(np.round(params.pop_size / params.r_naught))  # * 1.0625
     I = params.initial_inf
     R = params.pop_size - S - I
 
-    c.add_group("susceptible", S)  # c.add_group("susceptible", params.pop_size - params.initial_inf)
-    c.add_group("exposed", 0)
-    c.add_group("infectious", I)  # c.add_group("infectious", params.initial_inf)
-    c.add_group("recovered", R)  # c.add_group("recovered", 0)
-    c.add_group("deceased", 0)
+    c.add_agent_group("susceptible", S)  # c.add_agent_group("susceptible", params.pop_size - params.initial_inf)
+    c.add_agent_group("exposed", 0)
+    c.add_agent_group("infectious", I)  # c.add_agent_group("infectious", params.initial_inf)
+    c.add_agent_group("recovered", R)  # c.add_agent_group("recovered", 0)
+    c.add_agent_group("deceased", 0)
 
-    c.add_property("dob", np.int16, 0)  # support up to ~90 year olds at start of simulation and ~90 years of simulation
-    c.add_property("susceptibility", np.uint8, 0)
-    c.add_property("etimer", np.uint8, 0)
-    c.add_property("itimer", np.uint8, 0)
-    c.add_property("uid", np.uint32, 0)
+    c.add_agent_property("dob", np.int16, 0)  # support up to ~90 year olds at start of simulation and ~90 years of simulation
+    c.add_agent_property("susceptibility", np.uint8, 0)
+    c.add_agent_property("etimer", np.uint8, 0)
+    c.add_agent_property("itimer", np.uint8, 0)
+    c.add_agent_property("uid", np.uint32, 0)
 
     c.allocate()
 
-    c.unborn.dob[:] = -1
-    c.susceptible.dob[:] = np.random.randint(-80 * 365, 1, size=len(c.susceptible))
-    c.susceptible.susceptibility[:] = 1
-    c.infectious.itimer[:] = np.random.normal(params.inf_mean, params.inf_std, size=len(c.infectious)) + 1
+    c.unborn.dob = -1
+    c.susceptible.dob = np.random.randint(-80 * 365, 1, size=len(c.susceptible))
+    c.susceptible.susceptibility = 1
+    c.infectious.itimer = np.random.normal(params.inf_mean, params.inf_std, size=len(c.infectious)) + 1
 
-    # 7 slots - timestep + USEIRD
+    # 10 slots - timestep + elapsed time + USEIRD + births + deaths
     results = np.zeros((params.timesteps + 1, 10), dtype=np.uint32)
     results[0, :] = [0, 0, len(c.unborn), len(c.susceptible), len(c.exposed), len(c.infectious), len(c.recovered), len(c.deceased), 0, 0]
 
@@ -239,8 +132,8 @@ def run_sim(params):
             len(c.infectious),
             len(c.recovered),
             len(c.deceased),
-            results[t, 2] - len(c.unborn),
-            len(c.deceased) - results[t, 7],
+            results[t, 2] - len(c.unborn),  # Previous # unborn - current # unborn
+            len(c.deceased) - results[t, 7],  # Current # deceased - previous # deceased
         ]
 
     finish = datetime.now(timezone.utc)
@@ -278,7 +171,7 @@ def deliver_babies(c, daily_birth_rate, t):
     iunborn = c.gmap["unborn"]
     isusceptible = c.gmap["susceptible"]
     for _ in range(min(births, index := len(c.unborn))):
-        # We will move the last of the unborn to the first of the susceptibles. It is slightly more efficient.
+        # We will move the last of the unborn to the first of the susceptibles. It is more efficient (saves a copy).
         index -= 1
         c.unborn.dob[index] = t
         c.unborn.susceptibility[index] = 1
