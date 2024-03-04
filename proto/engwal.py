@@ -7,6 +7,7 @@ from argparse import Namespace
 from collections import namedtuple
 from functools import lru_cache
 from pathlib import Path
+from sys import stderr
 from typing import List
 from typing import Tuple
 
@@ -37,7 +38,7 @@ def main(args: Namespace) -> None:
         ],
     )
     pop.add_population_property("contagion", np.zeros(args.nodes, dtype=np.uint32))
-    pop.add_population_property("report", np.zeros((args.timesteps + 1, args.nodes, 6), dtype=np.uint32))
+    pop.add_population_property("report", np.zeros((args.ticks + 1, args.nodes, 6), dtype=np.uint32))
 
     def init_community(population, community, index):
         """Initialize a community."""
@@ -115,12 +116,12 @@ def main(args: Namespace) -> None:
     #         community.move(community.gmap["susceptible"], i, community.gmap["infectious"])
 
     # contagion = np.zeros(len(communities), dtype=np.uint32)
-    # report = np.zeros((args.timesteps + 1, len(communities), 6), dtype=np.uint32)
+    # report = np.zeros((args.ticks + 1, len(communities), 6), dtype=np.uint32)
 
     # update_report(communities, report, 0)
     update_report(pop, 0)
 
-    for tick in tqdm(range(args.timesteps)):
+    for tick in tqdm(range(args.ticks)):
         # 1 vital dynamics (deaths, births, and immigration)
         # for community in communities:
         #     do_vital_dynamics(community, tick)
@@ -139,10 +140,12 @@ def main(args: Namespace) -> None:
         # 4 - Transmit to susceptible agents
         for index, community in enumerate(pop.communities):
             pop.contagion[index] = len(community.infectious)
+        print(f"tick: {tick:04}, contagion: [{', '.join(str(c) for c in pop.contagion)}]", file=stderr)
         # transfer = (contagion * network).round().astype(contagion.dtype)
         transfer = pop.contagion * network
         pop.contagion += transfer.sum(axis=1).round().astype(pop.contagion.dtype)  # increment by incoming infections
         pop.contagion -= transfer.sum(axis=0).round().astype(pop.contagion.dtype)  # decrement by outgoing infections
+        print(f"tick: {tick:04}, contagion: [{', '.join(str(c) for c in pop.contagion)}]", file=stderr)
         # for index, community in enumerate(communities):
         #     do_transmission(community, contagion[index], args.beta, args.exp_mean, args.exp_std)
         pop.apply(do_transmission, beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std)
@@ -338,7 +341,7 @@ def plot_report(report: np.ndarray) -> None:
 def parse_args() -> Namespace:
     """Parse command line arguments."""
 
-    TIMESTEPS = np.uint32(10 * 365)  # 10 years
+    TICKS = np.uint32(10 * 365)  # 10 years
     NODES = np.uint32(32)  # top 32 places by population
     EXP_MEAN = np.float32(4)  # 4 days
     EXP_STD = np.float32(1)  # 1 day
@@ -349,7 +352,7 @@ def parse_args() -> Namespace:
     SEED = np.uint32(20240227)  # random seed
 
     parser = ArgumentParser()
-    parser.add_argument("--timesteps", type=np.uint32, default=TIMESTEPS)
+    parser.add_argument("-t", "--ticks", type=np.uint32, default=TICKS)
     parser.add_argument("-n", "--nodes", type=np.uint32, default=NODES)
     parser.add_argument("--exp_mean", type=np.float32, default=EXP_MEAN)
     parser.add_argument("--exp_std", type=np.float32, default=EXP_STD)
