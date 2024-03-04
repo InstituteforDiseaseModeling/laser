@@ -21,7 +21,7 @@ gompertz_parameter = 0.05
 age_bins = np.arange(settings.eula_age, 102)
 probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
 #print( f"probability_of_dying = {probability_of_dying}" )
-fits = np.load('fits.npy', allow_pickle=True).item()
+fits = np.load(setings.eula_pop_fits, allow_pickle=True).item()
 def calculate_y(x, m, b):
     return int(m * x + b)
 
