@@ -1,4 +1,7 @@
-# Define variables
+# NOTE that there are hard-coded filenames here that are also variable in settings.py. That's an open issue.
+# Ideally those filenames would be gotten from settings.py but that's mixing makefiles and python in a way 
+# That might suggest we move to snakemake.
+# # Define variables
 PYTHON := python3
 CC := g++
 CFLAGS := -shared -fPIC -O3 -march=native -flto -fpermissive# -mfma
@@ -7,9 +10,11 @@ CFLAGS := -shared -fPIC -O3 -march=native -flto -fpermissive# -mfma
 # neutral: -funroll-loops
 # NO: -ffast-math
 #CFLAGS := -shared -fPIC -O0 -g
-DB_SCRIPT := python3 -m laser_numpy_model.csv_to_db
+#DB_SCRIPT := python3 -m laser_numpy_model.csv_to_db
+DB_SCRIPT := python3 utils/csv_to_db.py
 PREPROC_SCRIPT := ./eula_preproc.sh
-CREATE_POP_SCRIPT := python3 -m laser_numpy_model.create_pop_as_csv
+#CREATE_POP_SCRIPT := python3 -m laser_numpy_model.create_pop_as_csv
+CREATE_POP_SCRIPT := python3 utils/create_pop_as_csv.py
 POP_SEEDED_CSV := pop_seeded.csv
 EULA_DB := eula.db
 UPDATE_AGES_SO := update_ages.so
@@ -17,24 +22,14 @@ MODELED_POP_CSV := modeled_pop.csv
 EULA_POP_CSV := eula_pop.csv
 
 # Default target
-all: $(EULA_DB) $(MODELED_POP_CSV)
+all: $(fits.npy) $(MODELED_POP_CSV)
 
 # Rule to build update_ages.so from update_ages.c
 $(UPDATE_AGES_SO): update_ages.cpp
 	$(CC) $(CFLAGS) -o $@ $<
-	
 
-# Rule to create eula.db from eula_pop.csv
-$(EULA_DB): eula_pop.csv
-	rm -f $(EULA_DB)
-	$(DB_SCRIPT) $<
-
-$(POP_SEEDED_CSV): settings.py
+$(MODELED_POP_CSV): settings.py
 	$(CREATE_POP_SCRIPT)
-
-# Rule to create modeled_pop.csv and pop_seeded.csv
-$(MODELED_POP_CSV) $(EULA_POP_CSV): $(POP_SEEDED_CSV)
-	$(PREPROC_SCRIPT) $(POP_SEEDED_CSV) 5
 
 eula_pops_20yr_noaging.csv: eula_binned.csv
 	$(PYTHON) utils/eula_precalc.py eula_pops_20yr_noaging.csv

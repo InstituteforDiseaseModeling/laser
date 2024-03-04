@@ -1,5 +1,6 @@
 import numpy as np
 from collections import defaultdict
+from sparklines import sparklines
 import sys
 sys.path.append( "." )
 import settings
@@ -13,7 +14,9 @@ makeham_parameter = 0.01
 gompertz_parameter = 0.05
 age_bins = np.arange(0, 102)
 probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
-print( f"probability_of_dying = {probability_of_dying}" )
+#print( f"probability_of_dying = {probability_of_dying}" )
+print( "probability_of_dying=" )
+print( sparklines( probability_of_dying ) )
 
 eula = defaultdict(lambda: defaultdict(int))
 
