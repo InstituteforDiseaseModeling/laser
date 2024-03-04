@@ -36,6 +36,12 @@ $(POP_SEEDED_CSV): settings.py
 $(MODELED_POP_CSV) $(EULA_POP_CSV): $(POP_SEEDED_CSV)
 	$(PREPROC_SCRIPT) $(POP_SEEDED_CSV) 5
 
+eula_pops_20yr_noaging.csv: eula_binned.csv
+	$(PYTHON) utils/eula_precalc.py eula_pops_20yr_noaging.csv
+
+fits.npy: eula_pops_20yr_noaging.csv
+	$(PYTHON) utils/fit_eula_pops.py eula_pops_20yr_noaging.csv
+
 run:
 	python3 tlc.py
 
