@@ -10,8 +10,8 @@ import pdb
 # and generates a CSV file with aggregate populations by node over time.
 
 # Define Gompertz-Makeham parameters
-makeham_parameter = 0.01
-gompertz_parameter = 0.05
+makeham_parameter = 0.008
+gompertz_parameter = 0.04
 age_bins = np.arange(0, 102)
 probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
 #print( f"probability_of_dying = {probability_of_dying}" )
