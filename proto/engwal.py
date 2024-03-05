@@ -13,6 +13,7 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 from engwaldata import data as engwal
+from gcpopulation import Population
 from groupedcommunity import Community
 from tqdm import tqdm
 
@@ -24,12 +25,25 @@ def main(args: Namespace) -> None:
     network = load_network(args.nodes, args.g_k, args.g_a, args.g_b, args.g_c)
 
     # Create a list of communities, one for each population in pops
-    communities = [Community() for _ in range(args.nodes)]
-    # Enumerate communities to get index and community
-    for index, community in enumerate(communities):
-        # Add community properties: annual population and births
-        community.add_community_property("population", engwal.places[places[index].name].population)
-        community.add_community_property("births", engwal.places[places[index].name].births)
+    pop = Population(
+        args.nodes,
+        community_props=None,  # ["population", "births"],
+        agent_groups=["unactive", "susceptible", "exposed", "infectious", "recovered", "deceased"],
+        agent_props=[
+            ("dob", np.int16, 0),
+            ("susceptibility", np.uint8, 0),
+            ("etimer", np.uint8, 0),
+            ("itimer", np.uint8, 0),
+            ("uid", np.uint32, 0),
+        ],
+    )
+
+    def init_community(population: Population, community: Community, index: int) -> None:
+        """Initialize a community with its properties and populations."""
+        print(f"Realizing community {index:3}... ", end="")
+
+        community.population = engwal.places[places[index].name].population
+        community.births = engwal.places[places[index].name].births
 
         max_pop = community.population.max()
         init_pop = community.population[0]
@@ -38,69 +52,56 @@ def main(args: Namespace) -> None:
         susceptible = np.uint32(np.round(init_pop / args.r_naught))
         recovered = init_pop - susceptible
         # add groups: unactive, susceptible, exposed, infectious, recovered, and deceased
-        print(f"{index:2} unactive: {unactive:8}, susceptible: {susceptible:8}, recovered: {recovered:8}")
-        community.add_agent_group("unactive", unactive)
-        community.add_agent_group("susceptible", susceptible)
-        community.add_agent_group("exposed", 0)
-        community.add_agent_group("infectious", 0)
-        community.add_agent_group("recovered", recovered)
-        community.add_agent_group("deceased", 0)
-        # add properties: dob, susceptibility, etimer, itimer, and uid
-        community.add_agent_property("dob", np.int16, 0)
-        community.add_agent_property("susceptibility", np.uint8, 0)
-        community.add_agent_property("etimer", np.uint8, 0)
-        community.add_agent_property("itimer", np.uint8, 0)
-        community.add_agent_property("uid", np.uint32, 0)
+        print(f"{index:3} unactive: {unactive:8}, susceptible: {susceptible:8}, recovered: {recovered:8}")
+        # unlisted entries will default to 0 population
+        pops = {"unactive": unactive, "susceptible": susceptible, "recovered": recovered}
+        pop.allocate_community(community, pops=pops)
 
-        community.allocate()
         community.susceptible.dob = -np.random.exponential(2.5 * 365, len(community.susceptible)).astype(community.susceptible.dob.dtype)
         community.recovered.dob = -(np.minimum(np.random.exponential(40 * 365, len(community.recovered)), 88 * 365) + 365)
         community.susceptible.susceptibility = 1
 
-    # Seed infections - enumerate each community and get index and community
-    for community, place in zip(communities, places):
-        if engwal.places[place.name].cases[0] > 0:
+        if engwal.places[places[index].name].cases[0] > 0:
             i = np.random.randint(0, len(community.susceptible))
+            # community.susceptible.itimer[i] = max(1, np.round(np.random.normal(args.inf_mean, args.inf_std))) + 1
             community.susceptible.susceptibility[i] = 0
-            community.itimer[i] = max(1, np.round(np.random.normal(args.inf_mean, args.inf_std))) + 1
             community.move(community.gmap["susceptible"], i, community.gmap["infectious"])
 
-    contagion = np.zeros(len(communities), dtype=np.uint32)
-    report = np.zeros((args.timesteps + 1, len(communities), 6), dtype=np.uint32)
+        return
 
-    update_report(communities, report, 0)
+    pop.realize(init_community)
 
-    for tick in tqdm(range(args.timesteps)):
+    pop.add_population_property("contagion", np.zeros(len(pop.communities), dtype=np.uint32))
+    pop.add_population_property("report", np.zeros((args.ticks + 1, len(pop.communities), 6), dtype=np.uint32))
+
+    pop.apply(update_report, tick=0)
+
+    for tick in tqdm(range(args.ticks)):
         # 1 vital dynamics (deaths, births, and immigration)
-        for community in communities:
-            do_vital_dynamics(community, tick)
+        pop.apply(do_vital_dynamics, tick=tick)
 
         # 2 - Update infectious agents
-        for community in communities:
-            update_infections(community)
+        pop.apply(update_infections)
 
         # 3 - Update exposed agents
-        for community in communities:
-            update_exposures(community, args.inf_mean, args.inf_std)
+        pop.apply(update_exposures, inf_mean=args.inf_mean, inf_std=args.inf_std)
 
         # 4 - Transmit to susceptible agents
-        for index, community in enumerate(communities):
-            contagion[index] = len(community.infectious)
-        # transfer = (contagion * network).round().astype(contagion.dtype)
-        transfer = contagion * network
-        contagion += transfer.sum(axis=1).round().astype(contagion.dtype)  # increment by incoming infections
-        contagion -= transfer.sum(axis=0).round().astype(contagion.dtype)  # decrement by outgoing infections
-        for index, community in enumerate(communities):
-            do_transmission(community, contagion[index], args.beta, args.exp_mean, args.exp_std)
+        pop.apply(update_contagion)
+        transfer = pop.contagion * network
+        pop.contagion += transfer.sum(axis=1).round().astype(pop.contagion.dtype)  # increment by incoming infections
+        pop.contagion -= transfer.sum(axis=0).round().astype(pop.contagion.dtype)  # decrement by outgoing infections
+        pop.apply(do_transmission, beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std)
 
         # 6 - Gather statistics for reporting
-        update_report(communities, report, tick + 1)
+        pop.apply(update_report, tick=tick + 1)
 
-    # Save the report
-    np.save("report.npy", report)
+    np.save("report.npy", pop.report)  # Save the raw report data
+    plot_report(pop.report)  # Plot the susceptible and infectious traces
 
-    # Plot the report
-    plot_report(report)
+    if False:
+        df = pd.DataFrame(report[:, :, 3])
+        df.to_csv("report.csv")
 
     return
 
@@ -113,7 +114,7 @@ def get_places(num_nodes: np.uint32) -> List[Tuple[str, int, int]]:
     """Get a list of places for the model."""
     places = []
     for index, placename in enumerate(engwal.placenames):
-        # Create list tuples of (placename, index, population)
+        # Create list of tuples of (placename, index, population)
         places.append(Place(placename, index, engwal.places[placename].population[-1]))
 
     places = sorted(places, key=lambda x: x[2], reverse=True)  # Sort places by population
@@ -140,27 +141,26 @@ def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float
         popi = places[i].population
         for j in range(i + 1, num_nodes):
             popj = places[j].population
-            distm = distances[i, j] * 1000  # convert to meters
+            distm = distances[i, j] * 1000  # convert to meters TODO - move into k
             network[i, j] = k * (popi**a) * (popj**b) / (N * (distm**c))
             network[j, i] = network[i, j]
 
     return network
 
 
-def update_report(communities: List[Community], report: np.ndarray, tick: np.uint32) -> None:
-    """Get a report of the current state of the communities."""
-    for index, community in enumerate(communities):
-        report[tick, index, 0] = len(community.unactive)
-        report[tick, index, 1] = len(community.susceptible)
-        report[tick, index, 2] = len(community.exposed)
-        report[tick, index, 3] = len(community.infectious)
-        report[tick, index, 4] = len(community.recovered)
-        report[tick, index, 5] = len(community.deceased)
+def update_report(p: Population, c: Community, i: int, tick: int) -> None:
+    """Capture the current state of the community."""
+    p.report[tick, i, 0] = len(c.unactive)
+    p.report[tick, i, 1] = len(c.susceptible)
+    p.report[tick, i, 2] = len(c.exposed)
+    p.report[tick, i, 3] = len(c.infectious)
+    p.report[tick, i, 4] = len(c.recovered)
+    p.report[tick, i, 5] = len(c.deceased)
 
     return
 
 
-def do_vital_dynamics(c: Community, tick: np.uint32) -> None:
+def do_vital_dynamics(p: Population, c: Community, i: int, tick: np.uint32) -> None:
     """Do the vital dynamics of births, deaths, and external immigration."""
     year = tick // 365  # Determine the year to look up total population change and births for the year.
     if year < (len(c.population) - 1):  # If we are not in the last year of the data
@@ -195,7 +195,7 @@ def do_vital_dynamics(c: Community, tick: np.uint32) -> None:
         if delta > births:  # If the total population change is greater than the number of births
             immigrants = delta - births
             for _ in range(min(immigrants, index := len(c.unactive))):
-                # We will move the last of the unactive to the first of the susceptibles. It is more efficient (saves a copy).
+                # We will move the last of the unactive. It is more efficient (saves a copy).
                 index -= 1
                 c.unactive.dob[index] = np.random.randint(0, 365 * 89)  # random age between 0 and 89 years
                 c.unactive.susceptibility[index] = 0  # Assume immigrant is not susceptible
@@ -204,7 +204,7 @@ def do_vital_dynamics(c: Community, tick: np.uint32) -> None:
     return
 
 
-def update_infections(c: Community) -> None:
+def update_infections(p: Population, c: Community, i: int) -> None:
     """Update the infectious agents."""
 
     itimers = c.infectious.itimer
@@ -219,7 +219,7 @@ def update_infections(c: Community) -> None:
     return
 
 
-def update_exposures(c: Community, inf_mean: np.float32, inf_std: np.float32) -> None:
+def update_exposures(p: Population, c: Community, i: int, inf_mean: np.float32, inf_std: np.float32) -> None:
     """Update the exposed agents."""
     etimers = c.exposed.etimer
     itimers = c.exposed.itimer
@@ -235,7 +235,14 @@ def update_exposures(c: Community, inf_mean: np.float32, inf_std: np.float32) ->
     return
 
 
-def do_transmission(c: Community, contagion: np.float32, beta: np.float32, exp_mean: np.float32, exp_std: np.float32) -> None:
+def update_contagion(p: Population, c: Community, i: int) -> None:
+    """Update the contagion."""
+    p.contagion[i] = len(c.infectious)
+
+    return
+
+
+def do_transmission(p: Population, c: Community, i: int, beta: np.float32, exp_mean: np.float32, exp_std: np.float32) -> None:
     """Do the transmission."""
     susceptibility = c.susceptible.susceptibility
     etimers = c.susceptible.etimer
@@ -243,7 +250,7 @@ def do_transmission(c: Community, contagion: np.float32, beta: np.float32, exp_m
     iexposed = c.gmap["exposed"]
     # TODO - iterate over groups to get N (i.e., if we change the groups, this code breaks)
     N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
-    force = beta * contagion * len(c.susceptible) / N
+    force = beta * p.contagion[i] * len(c.susceptible) / N
     num_exposures = np.uint32(np.round(np.random.poisson(force)))
     if num_exposures >= len(c.susceptible):
         raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
@@ -282,24 +289,22 @@ def plot_report(report: np.ndarray) -> None:
 def parse_args() -> Namespace:
     """Parse command line arguments."""
 
-    TIMESTEPS = np.uint32(10 * 365)  # 10 years
+    TICKS = np.uint32(10 * 365)  # 10 years
     NODES = np.uint32(32)  # top 32 places by population
     EXP_MEAN = np.float32(4)  # 4 days
     EXP_STD = np.float32(1)  # 1 day
     INF_MEAN = np.float32(5)  # 5 days
     INF_STD = np.float32(1)  # 1 day
-    # INIT_INF = np.uint32(10)        # 10 initial infections
     R_NAUGHT = np.float32(2.5)  # R0
     SEED = np.uint32(20240227)  # random seed
 
     parser = ArgumentParser()
-    parser.add_argument("--timesteps", type=np.uint32, default=TIMESTEPS)
+    parser.add_argument("-t", "--ticks", type=np.uint32, default=TICKS)
     parser.add_argument("-n", "--nodes", type=np.uint32, default=NODES)
     parser.add_argument("--exp_mean", type=np.float32, default=EXP_MEAN)
     parser.add_argument("--exp_std", type=np.float32, default=EXP_STD)
     parser.add_argument("--inf_mean", type=np.float32, default=INF_MEAN)
     parser.add_argument("--inf_std", type=np.float32, default=INF_STD)
-    # parser.add_argument("--initial_infs", type=np.uint32, default=INIT_INF)
     parser.add_argument("--r_naught", type=np.float32, default=R_NAUGHT)
     parser.add_argument("-s", "--seed", type=np.uint32, default=SEED)
 

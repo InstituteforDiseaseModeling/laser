@@ -1,6 +1,6 @@
 """Implement a community of agents, grouped by type."""
 
-from typing import Any
+from typing import Union
 
 import numpy as np
 
@@ -78,10 +78,10 @@ class Community:
 
         return
 
-    def add_community_property(self, name: str, value: Any) -> None:
-        """Add a property to the class."""
-        setattr(self, name, value)
-        return
+    # def add_community_property(self, name: str, value: Any) -> None:
+    #     """Add a property to the class."""
+    #     setattr(self, name, value)
+    #     return
 
     def add_agent_group(self, name: str, count: int) -> int:
         """Add a group of agents to the community."""
@@ -89,7 +89,7 @@ class Community:
         self.groupdefs.append((name, count))
         return index
 
-    def add_agent_property(self, name: str, dtype: type, default: int) -> None:
+    def add_agent_property(self, name: str, dtype: np.dtype, default: Union[int, float] = 0) -> None:
         """Add a property to the class."""
         self.attrdefs.append((name, dtype, default))
         return
@@ -98,29 +98,6 @@ class Community:
     def count(self):
         """Return the number of agents in the community."""
         return self._count
-
-    # def allocate(self):
-    #     """Allocate memory for the agents."""
-    #     self.ngroups = len(self.groupdefs)
-    #     self.igroups = np.zeros((self.ngroups, 2), dtype=np.uint32)
-    #     inext = 0
-    #     for index, (name, count) in enumerate(self.groupdefs):
-    #         self.gmap[name] = index
-    #         setattr(self, f"i{name}", index)  # save on dictionary lookups
-    #         self.igroups[index, _FIRST] = inext
-    #         self.igroups[index, _LAST] = inext + count - 1
-    #         group = Group(self.igroups[index])  # [index] is implicitly [index,:]
-    #         self.groups[name] = group
-    #         setattr(self, name, group)
-    #         inext += count  # + 1
-    #     self._count = inext
-    #     for name, dtype, default in self.attrdefs:
-    #         array = np.full(self.count, default, dtype=dtype)
-    #         setattr(self, name, array)  # e.g. self.age
-    #         self.attributes.append(array)
-    #         # add a getter/setter for this property to the Group class
-    #         __add_property__(Group, name, array)
-    #     return
 
     def allocate(self):
         """Allocate memory for the agents."""
@@ -132,7 +109,6 @@ class Community:
             self.attributes.append(array)
 
         self.ngroups = len(self.groupdefs)
-        # self.igroups = np.zeros((self.ngroups, 2), dtype=np.uint32)
         self.igroups = np.zeros((self.ngroups, 2), dtype=np.int32)
 
         inext = 0
