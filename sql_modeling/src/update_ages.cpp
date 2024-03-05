@@ -222,7 +222,7 @@ void handle_new_infections(
     }
     
     // Initialize random number generator
-    srand(time(NULL)); // TBD: this should just be done once.
+    //srand(time(NULL)); // TBD: this should just be done once. But I don't really have an "init" function yet.
     
     // Count the number of eligible agents
     int num_eligible_agents = 0;
@@ -323,6 +323,8 @@ void collect_report(
     uint32_t * node,
     bool * infected,
     bool * immunity,
+    float * age,
+    float * expected_lifespan, // so we can not count dead people
     uint32_t * infection_count,
     uint32_t * susceptible_count,
     uint32_t * recovered_count
@@ -330,32 +332,21 @@ void collect_report(
 {
     //printf( "%s called w/ num_agents = %d, start_idx = %d, eula_idx = %d.\n", __FUNCTION__, num_agents, start_idx, eula_idx );
     for (int i = start_idx; i < eula_idx; ++i) {
-    //for (int i = start_idx; i < num_agents; ++i) {
-        //printf( "i=%d\n", i );
         if( node[i] < 0 ) {
             continue;
         }
         int node_id = node[i];
-        //printf( "node_id=%d\n", node_id );
-        /*if ( node_id == (uint32_t)-1 ) {
-            printf( "node_id is (uint32_t)-1\n" );
-            break;
-        } else if ( node_id < 0 ) {
-            printf( "node_id is negative\n" );
-            break;
-        } else if ( node_id == 1091567616 ) {
-            printf( "node_id is 1091567616\n" );
-            break;
-        }*/
-        if( infected[ i ] ) {
-            infection_count[ node_id ]+=1;
-            //printf( "Incrementing I count for node %d = %d from idx %d.\n", node_id, infection_count[ node_id ], i );
-        } else if( immunity[ i ] ) {
-            recovered_count[ node_id ]+=1;
-            //printf( "Incrementing R count for node %d = %d from idx %d.\n", node_id, recovered_count[ node_id ], i );
-        } else {
-            susceptible_count[ node_id ]+=1;
-            //printf( "Incrementing S count for node %d = %d from idx %d.\n", node_id, susceptible_count[ node_id ], i );
+        if( age[ i ] < expected_lifespan[ i ] ) {
+            if( infected[ i ] ) {
+                infection_count[ node_id ]+=1;
+                //printf( "Incrementing I count for node %d = %d from idx %d.\n", node_id, infection_count[ node_id ], i );
+            } else if( immunity[ i ] ) {
+                recovered_count[ node_id ]+=1;
+                //printf( "Incrementing R count for node %d = %d from idx %d.\n", node_id, recovered_count[ node_id ], i );
+            } else {
+                susceptible_count[ node_id ]+=1;
+                //printf( "Incrementing S count for node %d = %d from idx %d.\n", node_id, susceptible_count[ node_id ], i );
+            }
         }
     }
     for (int i = eula_idx; i < num_agents; ++i) {
@@ -515,7 +506,7 @@ void progress_natural_mortality_binned(
     for (int node = 0; node < num_nodes; ++node) {
         for (int age_bin = 0; age_bin < num_age_bins; ++age_bin) {
             // Compute expected deaths
-            double prob = probs[age_bin]; // Implement this function as needed
+            float prob = probs[age_bin]; // Implement this function as needed
             int count = eula[node * num_age_bins + age_bin];
             int expected_deaths = 0;
             for (int i = 0; i < timesteps_elapsed; ++i) {

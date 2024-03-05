@@ -102,6 +102,8 @@ update_ages_lib.collect_report.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
+    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # expected_lifespan
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # infection_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # susceptible_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # recovered_count_out
@@ -245,6 +247,8 @@ def collect_report( data ):
             data['node'],
             data['infected'],
             data['immunity'],
+            data['age'],
+            data['expected_lifespan'],
             infected_counts_raw,
             susceptible_counts_raw,
             recovered_counts_raw
