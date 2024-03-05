@@ -3,9 +3,11 @@ import random
 import csv
 import concurrent.futures
 import numpy as np # not for modeling
+from scipy.stats import beta
 import pdb
 import sys
 import os
+
 
 # We'll fix this settings stuff up soon.
 from settings import * # local file
@@ -20,6 +22,17 @@ conn = sql.connect(":memory:")  # Use in-memory database for simplicity
 cursor = conn.cursor() # db-specific
 # use cursor as model data context; cf dataframe for polars/pandas
 #conn = sqlite3.connect("simulation.db")  # Great for inspecting; presumably a bit slower
+
+# Define parameters
+lifespan_mean = 75
+lifespan_max_value = 110
+
+# Scale and shift parameters to fit beta distribution
+alpha = 4  # Adjust this parameter to increase lower spread
+beta_ = 2
+samples = beta.rvs(alpha, beta_, size=pop)
+scaled_samples = samples * (lifespan_max_value - 1) + 1
+lifespan_idx = 0
 
 def get_node_ids():
     import numpy as np
@@ -52,12 +65,24 @@ def get_node_ids():
     return array
 
 def get_rand_lifespan():
-    mean_lifespan = 75  # Mean lifespan in years
-    stddev_lifespan = 10  # Standard deviation of lifespan in years
+    def beta_lifespan():
+        # Generate random samples from the beta distribution
 
-    # Draw a random number from the normal distribution
-    random_lifespan = round(max(np.random.normal(mean_lifespan, stddev_lifespan),0))
-    return random_lifespan 
+        # Scale samples to match the desired range
+        #scaled_samples = samples * max_value
+        global lifespan_idx 
+        ret_value = scaled_samples[lifespan_idx]
+        lifespan_idx += 1
+        return ret_value 
+
+    def gaussian():
+        mean_lifespan = 75  # Mean lifespan in years
+        stddev_lifespan = 10  # Standard deviation of lifespan in years
+
+        # Draw a random number from the normal distribution
+        random_lifespan = round(max(np.random.normal(mean_lifespan, stddev_lifespan),0))
+
+    return beta_lifespan()
 
 def init_db_from_csv():
     print( f"Initializing pop from file: {settings.pop_file}." )
