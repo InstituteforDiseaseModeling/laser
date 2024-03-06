@@ -23,15 +23,18 @@ cursor = conn.cursor() # db-specific
 # use cursor as model data context; cf dataframe for polars/pandas
 #conn = sqlite3.connect("simulation.db")  # Great for inspecting; presumably a bit slower
 
-# Define parameters
-lifespan_mean = 75
-lifespan_max_value = 110
+def get_beta_samples(number):
+    # Define parameters
+    lifespan_mean = 75
+    lifespan_max_value = 110
 
-# Scale and shift parameters to fit beta distribution
-alpha = 4  # Adjust this parameter to increase lower spread
-beta_ = 2
-samples = beta.rvs(alpha, beta_, size=pop)
-scaled_samples = samples * (lifespan_max_value - 1) + 1
+    # Scale and shift parameters to fit beta distribution
+    alpha = 4  # Adjust this parameter to increase lower spread
+    beta_ = 2
+    samples = beta.rvs(alpha, beta_, size=number)
+    scaled_samples = samples * (lifespan_max_value - 1) + 1
+    return scaled_samples 
+scaled_samples = get_beta_samples( pop )
 lifespan_idx = 0
 
 def get_node_ids():

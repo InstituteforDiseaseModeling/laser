@@ -55,7 +55,9 @@ def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
     new_immunity_timer = np.zeros( num_slots ).astype( np.float32 )
     new_infection_timer = np.zeros( num_slots ).astype( np.float32 )
     new_incubation_timer = np.zeros( num_slots ).astype( np.float32 )
-    new_expected_lifespan = np.ones( num_slots, dtype=np.float32 )*-1
+    import sir_sql
+    lifespan_samples = sir_sql.get_beta_samples( num_slots )
+    new_expected_lifespan = np.array( lifespan_samples ).astype( dtype=np.float32 )
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)

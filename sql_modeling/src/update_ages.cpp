@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cassert>
 
+
 const float one_day = 1.0f/365.0f;
 static std::unordered_map<int,std::deque<int>> infection_queue_map;
 static std::unordered_map<int,std::deque<int>> incubation_queue_map;
@@ -459,13 +460,6 @@ void reconstitute(
     for (int i = start_idx; i > 0; --i) {
         if( age[i] < 0 ) {
             node[i] = new_nodes[ counter ];
-            age[i] = 0;
-            infected[i] = false;
-            incubation_timer[i] = 0;
-            immunity[i] = 0;
-            immunity_timer[i] = 0;
-            expected_lifespan[i] = 75;
-
             new_ids_out[counter] = i;
             counter ++;
             if( counter == num_new_babies ) {
