@@ -8,13 +8,13 @@ The model, using the `-n` or `--nodes` parameter, runs the n-largest communities
 
 ## Network
 
-The network is based on the distances between communities (cached on disk) and optional `k`, `a`, `b`, and `c` parameters for the function
+The network is based on the distances between communities (cached on disk) and optional $`k`$, $`a`$, $`b`$, and $`c`$ parameters for the function
 
 ```math
-\left k • p_1^a • p_2^b \right \over \left N • d^c \right
+k \left( p_1^a p_2^b \over N d^c \right)
 ```
 
-where `N` is the total population (per @kfrey-idm). The `k`, `a`, `b`, and `c` parameters may be specified on the command line.
+where $`N`$ is the total population (per @kfrey-idm). The $`k`$, $`a`$, $`b`$, and $`c`$ parameters may be specified on the command line.
 
 ## Community Initialization
 
