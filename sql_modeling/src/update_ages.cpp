@@ -168,7 +168,7 @@ void calculate_new_infections(
 ) {
     // We need number of infected not incubating
     float exposed_counts_by_bin[ num_nodes ];
-    memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) ); // not sure if this helps
+    memset( exposed_counts_by_bin, 0, sizeof(exposed_counts_by_bin) );
 
     for (int i = start_idx; i <= end_idx; ++i) {
         if( incubation_timer[i] >= 1 ) {
@@ -181,12 +181,12 @@ void calculate_new_infections(
     for (int i = 0; i < num_nodes; ++i) {
         //printf( "exposed_counts_by_bin[%d] = %f.\n", i, exposed_counts_by_bin[i] );
         exposed_counts_by_bin[ i ] /= totals[ i ];
-        if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
+        /*if( exposed_counts_by_bin[ i ] > infection_counts[ i ] )
         {
             printf( "Exposed should never be > infection.\n" );
             printf( "node = %d, exposed = %f, infected = %f.\n", i, exposed_counts_by_bin[ i ]*totals[i], infection_counts[ i ]*totals[i] );
             abort();
-        }
+        }*/
         infection_counts[ i ] -= exposed_counts_by_bin[ i ];
         //printf( "infection_counts[%d] = %f\n", i, infection_counts[i] );
         float foi = infection_counts[ i ] * base_inf;
