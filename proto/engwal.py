@@ -20,6 +20,16 @@ from tqdm import tqdm
 
 def main(args: Namespace) -> None:
     """Main function for the England and Wales Measles model."""
+
+    network, population = initialize_model(args)
+    run_model(population, network, args)
+    generate_results(population)
+
+    return
+
+
+def initialize_model(args: Namespace):
+    """Initialize the model from files and arguments."""
     places = get_places(args.nodes)
 
     network = load_network(args.nodes, args.g_k, args.g_a, args.g_b, args.g_c)
@@ -38,8 +48,8 @@ def main(args: Namespace) -> None:
         ],
     )
 
-    def init_community(population: Population, community: Community, index: int) -> None:
-        """Initialize a community with its properties and populations."""
+    def init_community(_population: Population, community: Community, index: int) -> Tuple[np.ndarray, Population]:
+        """Callback to initialize a community with its properties and populations."""
         print(f"Realizing community {index:3}... ", end="")
 
         community.population = engwal.places[places[index].name].population
@@ -74,44 +84,52 @@ def main(args: Namespace) -> None:
     pop.add_population_property("contagion", np.zeros(len(pop.communities), dtype=np.uint32))
     pop.add_population_property("report", np.zeros((args.ticks + 1, len(pop.communities), 6), dtype=np.uint32))
 
-    pop.apply(update_report, tick=0)
+    return network, pop
+
+
+def run_model(population: Population, network: np.ndarray, args: Namespace) -> None:
+    """Run the model for the specified number of ticks."""
+    population.apply(update_report, tick=0)  # Capture the initial state of the population.
 
     for tick in tqdm(range(args.ticks)):
         # 1 vital dynamics (deaths, births, and immigration)
-        pop.apply(do_vital_dynamics, tick=tick)
+        population.apply(do_vital_dynamics, tick=tick)
 
         # 2 - Update infectious agents
-        pop.apply(update_infections)
+        population.apply(update_infections)
 
         # 3 - Update exposed agents
-        pop.apply(update_exposures, inf_mean=args.inf_mean, inf_std=args.inf_std)
+        population.apply(update_exposures, inf_mean=args.inf_mean, inf_std=args.inf_std)
 
         # 4 - Transmit to susceptible agents
-        pop.apply(update_contagion)
-        transfer = pop.contagion * network
-        pop.contagion += transfer.sum(axis=1).round().astype(pop.contagion.dtype)  # increment by incoming infections
-        pop.contagion -= transfer.sum(axis=0).round().astype(pop.contagion.dtype)  # decrement by outgoing infections
-        pop.apply(do_transmission, beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std)
+        population.apply(update_contagion)
+        transfer = population.contagion * network
+        population.contagion += transfer.sum(axis=1).round().astype(population.contagion.dtype)  # increment by incoming infections
+        population.contagion -= transfer.sum(axis=0).round().astype(population.contagion.dtype)  # decrement by outgoing infections
+        population.apply(do_transmission, beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std)
 
         # 6 - Gather statistics for reporting
-        pop.apply(update_report, tick=tick + 1)
+        population.apply(update_report, tick=tick + 1)
 
-    np.save("report.npy", pop.report)  # Save the raw report data
-    plot_report(pop.report)  # Plot the susceptible and infectious traces
+    return
+
+
+def generate_results(population: Population) -> None:
+    """Generate the results of the model (files, plots, etc.)."""
+    np.save("report.npy", population.report)  # Save the raw report data
+    plot_report(population.report)  # Plot the susceptible and infectious traces
 
     if False:
-        df = pd.DataFrame(report[:, :, 3])
+        df = pd.DataFrame(population.report[:, :, 3])
         df.to_csv("report.csv")
 
     return
 
 
-Place = namedtuple("Place", ["name", "index", "population"])
-
-
 @lru_cache
 def get_places(num_nodes: np.uint32) -> List[Tuple[str, int, int]]:
     """Get a list of places for the model."""
+    Place = namedtuple("Place", ["name", "index", "population"])
     places = []
     for index, placename in enumerate(engwal.placenames):
         # Create list of tuples of (placename, index, population)
@@ -160,7 +178,7 @@ def update_report(p: Population, c: Community, i: int, tick: int) -> None:
     return
 
 
-def do_vital_dynamics(p: Population, c: Community, i: int, tick: np.uint32) -> None:
+def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) -> None:
     """Do the vital dynamics of births, deaths, and external immigration."""
     year = tick // 365  # Determine the year to look up total population change and births for the year.
     if year < (len(c.population) - 1):  # If we are not in the last year of the data
@@ -204,7 +222,7 @@ def do_vital_dynamics(p: Population, c: Community, i: int, tick: np.uint32) -> N
     return
 
 
-def update_infections(p: Population, c: Community, i: int) -> None:
+def update_infections(_p: Population, c: Community, _i: int) -> None:
     """Update the infectious agents."""
 
     itimers = c.infectious.itimer
@@ -219,7 +237,7 @@ def update_infections(p: Population, c: Community, i: int) -> None:
     return
 
 
-def update_exposures(p: Population, c: Community, i: int, inf_mean: np.float32, inf_std: np.float32) -> None:
+def update_exposures(_p: Population, c: Community, _i: int, inf_mean: np.float32, inf_std: np.float32) -> None:
     """Update the exposed agents."""
     etimers = c.exposed.etimer
     itimers = c.exposed.itimer
