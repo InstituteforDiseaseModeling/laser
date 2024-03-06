@@ -13,7 +13,6 @@ from model_numpy import eula
 import sir_numpy
 
 from collections import defaultdict 
-births_report = defaultdict(int)
 unborn_end_idx = 0
 dynamic_eula_idx = None
 ninemo_tracker_idx = None
@@ -309,9 +308,10 @@ def update_ages( data, totals, timestep ):
         for new_id in new_ids_out:
             sir_numpy.schedule_9mo_ria( new_id, 0, timestep=timestep )
         """
-        global births_report
+        births_report = defaultdict(int)
         for node, babies in num_new_babies_by_node.items():
-            births_report[node] += babies
+            if babies > 0:
+                births_report[node] += babies
 
         unborn_end_idx -= len( new_ids_out )
         return births_report

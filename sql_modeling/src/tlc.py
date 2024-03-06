@@ -42,7 +42,7 @@ def collect_and_report(csvwriter, timestep):
     #print( fractions["S"][10] )
     #print( counts["S"][10] )
     try:
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births={}, new_deaths={} )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births, new_deaths={} )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, fractions, totals
@@ -83,10 +83,8 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         ( report_births, report_deaths ) = model.update_ages( ctx, totals, timestep )
 
         # Report
-        #currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
-        #totals = normalize( currently_sus, currently_infectious, cur_reco )
         counts, fractions, totals = collect_and_report(csvwriter,timestep)
-        #report.write_timestep_report( csvwriter, timestep, currently_infectious, currently_sus, cur_reco )
+        
 
     print(f"Simulation completed. Report saved to '{settings.report_filename}'.")
 
