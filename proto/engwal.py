@@ -73,7 +73,7 @@ def initialize_model(args: Namespace):
 
         if engwal.places[places[index].name].cases[0] > 0:
             i = np.random.randint(0, len(community.susceptible))
-            # community.susceptible.itimer[i] = max(1, np.round(np.random.normal(args.inf_mean, args.inf_std))) + 1
+            community.susceptible.itimer[i] = max(1, np.round(np.random.normal(args.inf_mean, args.inf_std))) + 1
             community.susceptible.susceptibility[i] = 0
             community.move(community.gmap["susceptible"], i, community.gmap["infectious"])
 
@@ -155,6 +155,7 @@ def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float
     # Gravity model: k * pop1^a * pop2^b / N / distance^c
     # TODO - ¿should not include population here, but use instantaneous population at time of transmission?
     N = sum(place.population for place in places)
+    print(f"Total population: {N:,}")
     for i in range(num_nodes):
         popi = places[i].population
         for j in range(i + 1, num_nodes):
@@ -184,8 +185,20 @@ def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) ->
     if year < (len(c.population) - 1):  # If we are not in the last year of the data
         doy = (tick % 365) + 1  # Determine the day of the year 1..365
         delta = np.int32(c.population[year + 1]) - np.int32(c.population[year])  # Determine the change in population
-        delta = np.int32((delta * doy // 365) - (delta * (doy - 1) // 365))  # Interpolate the change in population
         births = c.births[year]  # Get the number of births for the year
+
+        if births > delta:  # If there are more births than total population change, then there are deaths
+            deaths = births - delta
+            deaths = np.int32((deaths * doy // 365) - (deaths * (doy - 1) // 365))  # Interpolate the number of deaths
+            immigrants = 0
+        elif delta > births:  # If the total population change is greater than the number of births
+            deaths = 0
+            immigrants = delta - births
+            immigrants = np.int32((immigrants * doy // 365) - (immigrants * (doy - 1) // 365))  # Interpolate immigrantss
+        else:  # If the total population change is equal to the number of births
+            deaths = 0
+            immigrants = 0
+
         births = np.int32((births * doy // 365) - (births * (doy - 1) // 365))  # Interpolate the number of births
 
         iunactive = c.gmap["unactive"]
@@ -194,12 +207,10 @@ def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) ->
         ideceased = c.gmap["deceased"]
 
         # 1 - Handle non-disease related deaths
-        if births > delta:  # If there are more births than total population change, then there are deaths
-            deaths = births - delta
-            for _ in range(min(deaths, limit := len(c.recovered))):
-                target = np.random.randint(limit)  # Randomly select a recovered agent to die
-                c.move(irecovered, target, ideceased)
-                limit -= 1
+        for _ in range(min(deaths, limit := len(c.recovered))):
+            target = np.random.randint(limit)  # Randomly select a recovered agent to die
+            c.move(irecovered, target, ideceased)
+            limit -= 1
 
         # 2 - Handle births
         for _ in range(min(births, index := len(c.unactive))):
@@ -210,14 +221,12 @@ def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) ->
             c.move(iunactive, index, isusceptible)
 
         # 3 - Handle immigration
-        if delta > births:  # If the total population change is greater than the number of births
-            immigrants = delta - births
-            for _ in range(min(immigrants, index := len(c.unactive))):
-                # We will move the last of the unactive. It is more efficient (saves a copy).
-                index -= 1
-                c.unactive.dob[index] = np.random.randint(0, 365 * 89)  # random age between 0 and 89 years
-                c.unactive.susceptibility[index] = 0  # Assume immigrant is not susceptible
-                c.move(iunactive, index, irecovered)
+        for _ in range(min(immigrants, index := len(c.unactive))):
+            # We will move the last of the unactive. It is more efficient (saves a copy).
+            index -= 1
+            c.unactive.dob[index] = np.random.randint(0, 365 * 89)  # random age between 0 and 89 years
+            c.unactive.susceptibility[index] = 0  # Assume immigrant is not susceptible
+            c.move(iunactive, index, irecovered)
 
     return
 
@@ -271,7 +280,9 @@ def do_transmission(p: Population, c: Community, i: int, beta: np.float32, exp_m
     force = beta * p.contagion[i] * len(c.susceptible) / N
     num_exposures = np.uint32(np.round(np.random.poisson(force)))
     if num_exposures >= len(c.susceptible):
-        raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
+        # raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
+        print(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
+        num_exposures = len(c.susceptible)
     for _ in range(min(num_exposures, limit := len(c.susceptible))):
         target = np.random.randint(limit)
         if np.random.uniform() < susceptibility[target]:
@@ -288,11 +299,11 @@ def plot_report(report: np.ndarray) -> None:
 
     def plot_trace(report: np.ndarray, index: int, trace: str) -> None:
         """Plot the trace for a given index."""
-        df = pd.DataFrame(report[:, :, index], columns=[f"{trace}{i:02}" for i in range(1, 33)])
+        df = pd.DataFrame(report[:, :, index], columns=[f"{trace}{(i+1):02}" for i in range(report.shape[1])])
         axs = df.plot()
         axs.set_xlabel("ticks")
         fig = axs.get_figure()
-        fig.set_size_inches(12, 8)
+        fig.set_size_inches(18, 12)
         fig.tight_layout()
         fig.savefig(f"{trace}.png", dpi=300)
 
