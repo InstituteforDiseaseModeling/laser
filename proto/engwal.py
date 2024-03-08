@@ -5,6 +5,7 @@
 from argparse import ArgumentParser
 from argparse import Namespace
 from collections import namedtuple
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import List
@@ -21,6 +22,8 @@ from tqdm import tqdm
 def main(args: Namespace) -> None:
     """Main function for the England and Wales Measles model."""
 
+    print(f"Running England and Wales Measles model with\n{args.__dict__}")
+
     network, population = initialize_model(args)
     run_model(population, network, args)
     generate_results(population)
@@ -30,11 +33,14 @@ def main(args: Namespace) -> None:
 
 def initialize_model(args: Namespace):
     """Initialize the model from files and arguments."""
-    places = get_places(args.nodes)
+    print(f"Initializing np.random with seed {args.seed}... ")
+    np.random.seed(args.seed)
 
-    network = load_network(args.nodes, args.g_k, args.g_a, args.g_b, args.g_c)
+    places = get_places(args.nodes)
+    network = load_network(args.nodes, args.g_k, args.g_a, args.g_b, args.g_c, args.g_max_frac)
 
     # Create a list of communities, one for each population in pops
+    print(f"Initializing model with {args.nodes} nodes... ")
     pop = Population(
         args.nodes,
         community_props=None,  # ["population", "births"],
@@ -59,7 +65,8 @@ def initialize_model(args: Namespace):
         init_pop = community.population[0]
 
         unactive = max_pop - init_pop
-        susceptible = np.uint32(np.round(init_pop / args.r_naught))
+        # Adding a little to the susceptible population to help the initial infections take root
+        susceptible = np.uint32(np.round(1.0625 * init_pop / args.r_naught))
         recovered = init_pop - susceptible
         # add groups: unactive, susceptible, exposed, infectious, recovered, and deceased
         print(f"{index:3} unactive: {unactive:8}, susceptible: {susceptible:8}, recovered: {recovered:8}")
@@ -91,6 +98,7 @@ def run_model(population: Population, network: np.ndarray, args: Namespace) -> N
     """Run the model for the specified number of ticks."""
     population.apply(update_report, tick=0)  # Capture the initial state of the population.
 
+    print(f"Running model for {args.ticks} ticks... ")
     for tick in tqdm(range(args.ticks)):
         # 1 vital dynamics (deaths, births, and immigration)
         population.apply(do_vital_dynamics, tick=tick)
@@ -141,7 +149,7 @@ def get_places(num_nodes: np.uint32) -> List[Tuple[str, int, int]]:
     return places
 
 
-def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float32, c: np.float32) -> np.ndarray:
+def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float32, c: np.float32, max_frac: np.float32) -> np.ndarray:
     """Load network data for England and Wales."""
     # Create a list of indices for the selected places
     places = get_places(num_nodes)
@@ -163,6 +171,10 @@ def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float
             distm = distances[i, j] * 1000  # convert to meters TODO - move into k
             network[i, j] = k * (popi**a) * (popj**b) / (N * (distm**c))
             network[j, i] = network[i, j]
+
+    outflows = network.sum(axis=0)
+    if (maximum := outflows.max()) > 0:
+        network *= max_frac / maximum
 
     return network
 
@@ -271,25 +283,27 @@ def update_contagion(p: Population, c: Community, i: int) -> None:
 
 def do_transmission(p: Population, c: Community, i: int, beta: np.float32, exp_mean: np.float32, exp_std: np.float32) -> None:
     """Do the transmission."""
-    susceptibility = c.susceptible.susceptibility
-    etimers = c.susceptible.etimer
-    isusceptible = c.gmap["susceptible"]
-    iexposed = c.gmap["exposed"]
-    # TODO - iterate over groups to get N (i.e., if we change the groups, this code breaks)
-    N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
-    force = beta * p.contagion[i] * len(c.susceptible) / N
-    num_exposures = np.uint32(np.round(np.random.poisson(force)))
-    if num_exposures >= len(c.susceptible):
-        # raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
-        print(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
-        num_exposures = len(c.susceptible)
-    for _ in range(min(num_exposures, limit := len(c.susceptible))):
-        target = np.random.randint(limit)
-        if np.random.uniform() < susceptibility[target]:
-            susceptibility[target] = 0
-            etimers[target] = max(1, int(np.round(np.random.normal(exp_mean, exp_std))))
-            c.move(isusceptible, target, iexposed)
-            limit -= 1
+    if (contagion := p.contagion[i]) > 0:
+        susceptibility = c.susceptible.susceptibility
+        etimers = c.susceptible.etimer
+        isusceptible = c.gmap["susceptible"]
+        iexposed = c.gmap["exposed"]
+        # TODO - iterate over groups to get N (i.e., if we change the groups, this code breaks)
+        N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
+        force = beta * contagion * len(c.susceptible) / N
+        num_exposures = np.uint32(np.random.poisson(force))
+        if num_exposures > 0:
+            if num_exposures >= len(c.susceptible):
+                # raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
+                print(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
+                num_exposures = len(c.susceptible)
+            for _ in range(min(num_exposures, limit := len(c.susceptible))):
+                target = np.random.randint(limit)
+                if np.random.uniform() < susceptibility[target]:
+                    susceptibility[target] = 0
+                    etimers[target] = max(1, int(np.round(np.random.normal(exp_mean, exp_std))))
+                    c.move(isusceptible, target, iexposed)
+                    limit -= 1
 
     return
 
@@ -320,12 +334,13 @@ def parse_args() -> Namespace:
 
     TICKS = np.uint32(10 * 365)  # 10 years
     NODES = np.uint32(32)  # top 32 places by population
-    EXP_MEAN = np.float32(4)  # 4 days
-    EXP_STD = np.float32(1)  # 1 day
-    INF_MEAN = np.float32(5)  # 5 days
+    EXP_MEAN = np.float32(7)  # 7 days
+    EXP_STD = np.float32(2)  # 2 days
+    INF_MEAN = np.float32(8)  # 8 days
     INF_STD = np.float32(1)  # 1 day
-    R_NAUGHT = np.float32(2.5)  # R0
+    R_NAUGHT = np.float32(10.0)  # R0
     SEED = np.uint32(20240227)  # random seed
+    SEED = np.uint32(datetime.now().microsecond)  # noqa: DTZ005
 
     parser = ArgumentParser()
     parser.add_argument("-t", "--ticks", type=np.uint32, default=TICKS)
@@ -341,11 +356,13 @@ def parse_args() -> Namespace:
     DEF_A = np.float32(1.0)
     DEF_B = np.float32(1.0)
     DEF_C = np.float32(2.0)
+    DEF_MAX_FRAC = np.float32(0.1)
 
     parser.add_argument("--g_k", type=np.float32, default=DEF_K)
     parser.add_argument("--g_a", type=np.float32, default=DEF_A)
     parser.add_argument("--g_b", type=np.float32, default=DEF_B)
     parser.add_argument("--g_c", type=np.float32, default=DEF_C)
+    parser.add_argument("--g_max_frac", type=np.float32, default=DEF_MAX_FRAC)
 
     args = parser.parse_args()
     args.__setattr__("beta", np.float32(args.r_naught / args.inf_mean))
