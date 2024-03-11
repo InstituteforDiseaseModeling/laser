@@ -259,7 +259,9 @@ def collect_report( data ):
     #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
     recovered_counts_eula = eula.get_recovereds_by_node()
     for key, count in recovered_counts_eula.items():
-        recovered_counts[key] += count
+        if key not in recovered_counts:
+            recovered_counts[key] = 0
+        recovered_counts[key] += count 
     return infected_counts, susceptible_counts, recovered_counts
     
 

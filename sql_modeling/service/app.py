@@ -1,4 +1,5 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, send_file
+import subprocess
 
 app = Flask(__name__)
 
@@ -92,28 +93,145 @@ FORM_TEMPLATE = """
 </head>
 <body>
   <h1>Submit Parameters</h1>
-  <form method="POST" action="/submit">
-    {% for param in params %}
-      <label for="{{ param['name'] }}">{{ param['name'] }}:</label>
-      <input type="text" name="{{ param['name'] }}" id="{{ param['name'] }}" value="{{ param['default'] }}"><br>
-      <small>{{ param['description'] }}</small><br><br>
-    {% endfor %}
+  <form id="myForm" method="POST" action="/submit">
+    <!-- Dynamically generate form fields -->
+    <div id="formFields"></div>
     <button type="submit">Submit</button>
   </form>
+
+  <!-- Div to display the returned image -->
+  <div id="imageContainer"></div>
+
+  <!-- JavaScript to handle form submission and image display -->
+  <script>
+    // Define the params list of dictionaries
+    var params = [
+{
+	'name': "pop",
+	'default': "int(1e7)+1",
+        'description': "Total human population (not agents)"
+},
+{
+        'name': 'num_nodes',
+	'default': "60",
+        'description': "Number of nodes/populations"
+},
+{
+        'name': 'eula_age',
+	'default': "5",
+        'description': "Age at which we assume initial population is Epidemiologically Uninteresting (Immune)"
+},
+{
+        'name': 'simulation duration in years',
+	'default': "1",
+        'description': "Like it sounds"
+},
+{
+        'name': 'base_infectivity',
+	'default': "1.5e7",
+        'description': "Proxy for R0"
+},
+{
+        'name': 'cbr',
+	'default': "15",
+        'description': "Crude Birth Rate (same for all nodes)"
+},
+{
+        'name': 'campaign_day',
+	'default': "60",
+        'description': "Day at which one-time demo campaign occurs"
+},
+{
+        'name': 'campaign_coverage',
+	'default': "0.75",
+        'description': "Coverage to use for demo campaign"
+},
+{
+        'name': 'campaign_node',
+	'default': "15",
+        'description': "Node to target with demo campaign"
+},
+{
+        'name': 'migration_interval',
+	'default': "7",
+        'description': "Timesteps to wait being doing demo migration"
+},
+{
+        'name': 'mortality_interval',
+	'default': "7",
+        'description': "Timesteps between applying non-disease mortality."
+},
+{
+        'name': 'fertility_interval',
+	'default': "7",
+        'description': "Timesteps between adding new babies."
+},
+{
+        'name': 'ria_interval',
+	'default': "7",
+        'description': "Timesteps between applying routine immunization of 9-month-olds."
+}
+    ];
+
+    // Function to create text entry fields based on params list
+    function createFormFields() {
+      var formFieldsHtml = '';
+      params.forEach(function(param) {
+        formFieldsHtml += '<label for="' + param.name + '">' + param.name + ':</label>';
+        formFieldsHtml += '<input type="text" name="' + param.name + '" id="' + param.name + '" value="' + param.default + '"><br>';
+        formFieldsHtml += '<small>' + param.description + '</small><br><br>';
+      });
+      document.getElementById('formFields').innerHTML = formFieldsHtml;
+    }
+
+    // Call createFormFields function when the page loads
+    window.onload = createFormFields;
+
+    // Function to handle form submission
+    document.getElementById('myForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent default form submission
+
+      // Serialize form data
+      var formData = new FormData(this);
+
+      // Send form data using AJAX
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/submit', true);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          // If request is successful, display the returned image
+          var imageUrl = 'prevs.png'; // Replace with actual URL of returned image
+          document.getElementById('imageContainer').innerHTML = '<img src="' + imageUrl + '" alt="prevs">';
+        }
+      };
+      xhr.send(formData);
+    });
+  </script>
 </body>
 </html>
-"""
+""" 
 
 def run_sim():
+    import sir_numpy_c as model
+    import settings
+    import report
+    from tlc import run_simulation
     ctx = model.initialize_database()
     ctx = model.eula_init( ctx, settings.eula_age )
 
     csv_writer = report.init()
 
     # Run the simulation for 1000 timesteps
-    from functools import partial
-    runsim = partial( run_simulation, ctx=ctx, csvwriter=csv_writer, num_timesteps=settings.duration )
-    runsim()
+    try:
+        subprocess.run(['/usr/local/bin/python3', 'tlc.py'], check=True)
+    except subprocess.CalledProcessError as e:
+        # Handle subprocess error (e.g., log the error, restart the subprocess)
+        print(f"Subprocess error: {e}")
+    #from functools import partial
+    #runsim = partial( run_simulation, ctx=ctx, csvwriter=csv_writer, num_timesteps=settings.duration )
+    #runsim()
+    import plot_spatial
+    plot_spatial.load_and_plot( csv_file="simulation_output.csv" )
 
 @app.route('/submit', methods=['GET', 'POST'])
 def submit():
@@ -125,10 +243,15 @@ def submit():
         cbr = int(data['cbr'])
         #return 'Data received: {}'.format(data)
         run_sim()
-        return f'Sim ran'
+        #return f'Sim ran'
+        return {'url': '/prevs.png'}
     else:
         # Return the API documentation
         return API_DOC
+
+@app.route('/prevs.png')
+def download_prevs():
+    return send_file("./prevs.png", as_attachment=True)
 
 @app.route('/')
 def index():

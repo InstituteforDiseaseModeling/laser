@@ -23,7 +23,7 @@ with open( settings.pop_file, "w", newline='' ) as csvfile:
     csv_writer.writerow( ['id', 'node', 'age', 'infected', 'infection_timer', 'incubation_timer', 'immunity', 'immunity_timer', 'expected_lifespan' ] )
     csv_writer.writerows( rows )
 
-get_eula_query = f"SELECT node, FLOOR(age) AS age, COUNT(*) AS total_individuals FROM agents WHERE age>={settings.eula_age} GROUP BY node, FLOOR(age) ORDER BY node, age"
+get_eula_query = f"SELECT node, CAST(age as INT) AS age, COUNT(*) AS total_individuals FROM agents WHERE age>={settings.eula_age} GROUP BY node, CAST(age as INT) ORDER BY node, age"
 cursor.execute( get_eula_query )
 rows = cursor.fetchall()
 

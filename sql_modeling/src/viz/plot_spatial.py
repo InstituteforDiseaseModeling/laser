@@ -2,24 +2,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def load_and_plot( csv_file ):
-# Timestep,Node,Susceptible,Infected,Recovered
-# Read the CSV file into a DataFrame
+    # Timestep,Node,Susceptible,Infected,Recovered
+    # Read the CSV file into a DataFrame
     df = pd.read_csv( csv_file )
 
-# Extract unique node values
+    # Extract unique node values
     nodes = df['Node'].unique()
 
-# Plot line graphs for I for each node
+    # Plot line graphs for I for each node
     prevalences = []
     for node in nodes:
         node_data = df[df['Node'] == node]
-#    plt.plot(node_data['Timestep'], , label=f'Node {node}')
+        #plt.plot(node_data['Timestep'], , label=f'Node {node}')
         prevalences.append( node_data['Infected']/(node_data['Infected']+node_data['Susceptible']+node_data['Recovered']) )
 
     def plot_together():
         #plt.stackplot(node_data['Timestep'], *prevalences)
         for i, line in enumerate(prevalences):
-            plt.plot(node_data['Timestep'], prevalences[i], label=f"Node {i}" )
+            try:
+                plt.plot(node_data['Timestep'], prevalences[i], label=f"Node {i}" )
+            except Exception as ex:
+                print( str( ex ) )
 
         # Set labels and title
         plt.xlabel('Time')
@@ -43,7 +46,7 @@ def load_and_plot( csv_file ):
         # Adjust layout to prevent clipping of labels
         plt.tight_layout()
 
-    prevalences = prevalences[-25:]
+    prevalences = prevalences[-59:]
 #plot_grid()
     plot_together()
 
@@ -52,6 +55,7 @@ def load_and_plot( csv_file ):
 
 # Show the plot
     plt.show()
+    plt.savefig("prevs.png")
 
 if __name__ == "__main__":
     import sys

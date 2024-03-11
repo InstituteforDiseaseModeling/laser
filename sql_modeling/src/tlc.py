@@ -5,14 +5,15 @@ import sir_numpy_c as model
 from copy import deepcopy
 
 import settings
-from laser_numpy_model import report
+#from laser_numpy_model 
+import report
 
 report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 fractions = {}
 report_births = {}
 report_deaths = {}
 
-def collect_and_report(csvwriter, timestep):
+def collect_and_report(csvwriter, timestep, ctx):
     currently_infectious, currently_sus, cur_reco = model.collect_report( ctx )
     counts = {
             "S": deepcopy( currently_sus ),
@@ -48,7 +49,7 @@ def collect_and_report(csvwriter, timestep):
     return counts, fractions, totals
 
 def run_simulation(ctx, csvwriter, num_timesteps):
-    counts, fractions, totals = collect_and_report(csvwriter,0)
+    counts, fractions, totals = collect_and_report(csvwriter,0,ctx)
     for timestep in range(1, num_timesteps + 1):
 
         # We should always be in a low prev setting so this should only really ever operate
@@ -83,7 +84,7 @@ def run_simulation(ctx, csvwriter, num_timesteps):
         ( report_births, report_deaths ) = model.update_ages( ctx, totals, timestep )
 
         # Report
-        counts, fractions, totals = collect_and_report(csvwriter,timestep)
+        counts, fractions, totals = collect_and_report(csvwriter,timestep,ctx)
         
 
     print(f"Simulation completed. Report saved to '{settings.report_filename}'.")
