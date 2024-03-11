@@ -15,7 +15,7 @@ report_filename="simulation_output.csv"
 
 # numerical runtime config params
 # simulation duration
-duration = 20*365
+duration = 1*365
 #base_infectivity = 2e7
 base_infectivity = 1.5e7
 # cbr=crude bith rate
