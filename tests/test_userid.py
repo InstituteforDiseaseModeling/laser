@@ -2,6 +2,7 @@
 
 """England and Wales Measles Model"""
 
+import json
 from argparse import ArgumentParser
 from argparse import Namespace
 from collections import namedtuple
@@ -506,7 +507,16 @@ def parse_args() -> Namespace:
 
     parser.add_argument("-i", "--init_infs", type=np.float32, default=1.0, help="Initial infections [1.0]")
 
+    parser.add_argument("-p", "--parameters", type=Path, default=None, help="Parameters file [None]")
+
     args = parser.parse_args()
+
+    if args.parameters is not None:
+        with args.parameters.open("r") as file:
+            params = json.load(file)
+            for key, value in params.items():
+                args.__setattr__(key, value)
+
     args.__setattr__("beta", np.float32(args.r_naught / args.inf_mean))
 
     return args
