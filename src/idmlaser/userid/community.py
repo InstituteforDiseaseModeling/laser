@@ -94,10 +94,14 @@ class Community:
         self.attrdefs.append((name, dtype, default))
         return
 
+    def __len__(self):
+        """Return the number of agents in the community."""
+        return self._count
+
     @property
     def count(self):
         """Return the number of agents in the community."""
-        return self._count
+        return len(self)
 
     def allocate(self):
         """Allocate memory for the agents."""

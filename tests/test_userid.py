@@ -18,6 +18,18 @@ from tqdm import tqdm
 from engwaldata import data as engwal
 from idmlaser.userid import Community
 from idmlaser.userid import Population
+from idmlaser.userid.population import ScheduledEvent
+
+# [X] vital dynamics
+# [X] network connectivity, gravity model
+# [X] maternal protection, binary
+# [ ] age-based mixing
+# [X] seasonal forcing, sinusoidal
+# [X] routine immunization
+# [X] SIAs
+# [X] age-based initialization of susceptibles
+# [ ] correlation between individual level acquisition and transmission
+# [ ] non-uniform shedding
 
 
 def main(args: Namespace) -> None:
@@ -46,15 +58,19 @@ def initialize_model(args: Namespace):
     pop = Population(
         num_communities=num_places,
         community_props=None,  # ["population", "births"],
-        agent_groups=["unactive", "susceptible", "exposed", "infectious", "recovered", "deceased"],
+        agent_groups=["unactive", "infants", "susceptible", "exposed", "infectious", "recovered", "deceased"],
         agent_props=[
-            ("dob", np.int16, 0),
-            ("susceptibility", np.uint8, 0),
-            ("etimer", np.uint8, 0),
-            ("itimer", np.uint8, 0),
-            ("uid", np.uint32, 0),
+            ("dob", np.int16, 0),  # day of birth
+            ("susceptibility", np.uint8, 0),  # susceptibility to infection
+            ("dmabs", np.int16, 0),  # day of maternal antibody 50% waning
+            ("dri", np.int16, 0),  # day of routine immunization
+            ("etimer", np.uint8, 0),  # exposure timer
+            ("itimer", np.uint8, 0),  # infectious timer
+            ("uid", np.uint32, 0),  # unique identifier
         ],
     )
+
+    pop.seasonal_factor = args.seasonality
 
     def init_community(_population: Population, community: Community, index: int) -> Tuple[np.ndarray, Population]:
         """Callback to initialize a community with its properties and populations."""
@@ -62,25 +78,38 @@ def initialize_model(args: Namespace):
 
         community.population = engwal.places[places[index].name].population
         community.births = engwal.places[places[index].name].births
+        community.ri_coverage = args.ri_coverage
 
         max_pop = community.population.max()
         init_pop = community.population[0]
 
         unactive = max_pop - init_pop
         # Adding a little to the susceptible population to help the initial infections take root
-        susceptible = np.uint32(np.round(1.0625 * init_pop / args.r_naught))
+        # susceptible = np.uint32(np.round(1.0625 * init_pop / args.r_naught))
+        susceptible = np.uint32(np.round(1.0 * init_pop / args.r_naught)) + 1
         recovered = init_pop - susceptible
         # add groups: unactive, susceptible, exposed, infectious, recovered, and deceased
-        print(f"{index:3} unactive: {unactive:8}, susceptible: {susceptible:8}, recovered: {recovered:8}")
+        print(f"{index:3} unactive: {unactive:8}, susceptible: {susceptible:8}, recovered: {recovered:8}", end="")
         # unlisted entries will default to 0 population
         pops = {"unactive": unactive, "susceptible": susceptible, "recovered": recovered}
         pop.allocate_community(community, pops=pops)
 
         community.susceptible.dob = -np.random.exponential(2.5 * 365, len(community.susceptible)).astype(community.susceptible.dob.dtype)
+        community.susceptible.dmabs = community.susceptible.dob + np.round(np.random.normal(180, 15, len(community.susceptible))).astype(
+            community.susceptible.dmabs.dtype
+        )
+        community.susceptible.dri = (
+            community.susceptible.dob
+            + 270
+            + np.round(np.random.uniform(-30, 30, len(community.susceptible))).astype(community.susceptible.dri.dtype)
+        )
         community.recovered.dob = -(np.minimum(np.random.exponential(40 * 365, len(community.recovered)), 88 * 365) + 365)
         community.susceptible.susceptibility = 1
 
-        if engwal.places[places[index].name].cases[0] > 0:
+        # if engwal.places[places[index].name].cases[0] > 0:
+        n_infs = np.random.poisson(args.init_infs)
+        print(f"Initial infections: {n_infs}")
+        for _ in range(n_infs):
             i = np.random.randint(0, len(community.susceptible))
             community.susceptible.itimer[i] = max(1, np.round(np.random.normal(args.inf_mean, args.inf_std))) + 1
             community.susceptible.susceptibility[i] = 0
@@ -96,12 +125,46 @@ def initialize_model(args: Namespace):
     return network, pop
 
 
+def supplemental_immunization_activity(population: Population, community: Community, index: int, tick: int) -> None:
+    """Supplemental Immunization Activity."""
+    print(f"Running an SIA in community {index} at tick {tick}... ", end="")
+    print(f"Considering {len(community.infants)} infants and {len(community.susceptible)} susceptibles: ", end="")
+    dobs = community.infants.dob
+    susceptibility = community.infants.susceptibility
+    iinfants = community.gmap["infants"]
+    irecovered = community.gmap["recovered"]
+    cinfants = 0
+    for index in range(len(community.infants) - 1, -1, -1):
+        agedays = tick - dobs[index]
+        if agedays > 270 and agedays < 5 * 365:  # 9+ months to 5 years
+            if np.random.uniform() < 0.9:
+                susceptibility[index] = 0
+                community.move(iinfants, index, irecovered)
+                cinfants += 1
+    dobs = community.susceptible.dob
+    susceptibility = community.susceptible.susceptibility
+    isusceptible = community.gmap["susceptible"]
+    csusceptible = 0
+    for index in range(len(community.susceptible) - 1, -1, -1):
+        agedays = tick - dobs[index]
+        if agedays > 270 and agedays < 5 * 365:  # 9+ months to 5 years
+            if np.random.uniform() < 0.9:
+                susceptibility[index] = 0
+                community.move(isusceptible, index, irecovered)
+                csusceptible += 1
+    print(f"Vaccinated {cinfants} infants and {csusceptible} susceptibles.")
+    return
+
+
 def run_model(population: Population, network: np.ndarray, args: Namespace) -> None:
     """Run the model for the specified number of ticks."""
     population.apply(update_report, tick=0)  # Capture the initial state of the population.
 
+    population.add_event(ScheduledEvent(supplemental_immunization_activity, {0, 3}, [], {"tick": 290}), 290)
+    # population.add_event(ScheduledEvent(supplemental_immunization_activity, {}, [], {"tick": 42}), 42)
+
     print(f"Running model for {args.ticks} ticks... ")
-    for tick in tqdm(range(args.ticks)):
+    for tick in (pbar := tqdm(range(args.ticks))):
         # 1 vital dynamics (deaths, births, and immigration)
         population.apply(do_vital_dynamics, tick=tick)
 
@@ -112,11 +175,17 @@ def run_model(population: Population, network: np.ndarray, args: Namespace) -> N
         population.apply(update_exposures, inf_mean=args.inf_mean, inf_std=args.inf_std)
 
         # 4 - Transmit to susceptible agents
-        population.apply(update_contagion)
+        population.apply(update_contagion, tick=tick)
         transfer = population.contagion * network
         population.contagion += transfer.sum(axis=1).round().astype(population.contagion.dtype)  # increment by incoming infections
         population.contagion -= transfer.sum(axis=0).round().astype(population.contagion.dtype)  # decrement by outgoing infections
-        population.apply(do_transmission, beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std)
+        population.apply(do_transmission, tick=np.int16(tick), beta=args.beta, exp_mean=args.exp_mean, exp_std=args.exp_std, pbar=pbar)
+
+        # 5 - Do routine immunization
+        population.apply(do_routine_immunization, tick=tick)
+
+        # ? - Do scheduled events
+        population.do_events(tick)
 
         # 6 - Gather statistics for reporting
         population.apply(update_report, tick=tick + 1)
@@ -157,8 +226,7 @@ def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float
     # Create a list of indices for the selected places
     places = get_places(num_nodes)
     indices = np.array([place.index for place in places])
-    # distances = np.load(Path(__file__).parent / "engwaldist.npy")
-    distances = np.load(Path(__file__).parent.parent / "proto" / "engwaldist.npy")
+    distances = np.load(Path(__file__).parent / "engwaldist.npy")
     # Only take the distances between the selected places
     distances = distances[indices][:, indices]
 
@@ -186,13 +254,18 @@ def load_network(num_nodes: np.uint32, k: np.float32, a: np.float32, b: np.float
 def update_report(p: Population, c: Community, i: int, tick: int) -> None:
     """Capture the current state of the community."""
     p.report[tick, i, 0] = len(c.unactive)
-    p.report[tick, i, 1] = len(c.susceptible)
+    p.report[tick, i, 1] = len(c.infants) + len(c.susceptible)
     p.report[tick, i, 2] = len(c.exposed)
     p.report[tick, i, 3] = len(c.infectious)
     p.report[tick, i, 4] = len(c.recovered)
     p.report[tick, i, 5] = len(c.deceased)
 
     return
+
+
+DEATHS = 0
+BIRTHS = 0
+IMMIGRATION = 0
 
 
 def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) -> None:
@@ -218,9 +291,15 @@ def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) ->
         births = np.int32((births * doy // 365) - (births * (doy - 1) // 365))  # Interpolate the number of births
 
         iunactive = c.gmap["unactive"]
-        isusceptible = c.gmap["susceptible"]
+        iinfants = c.gmap["infants"]
+        # isusceptible = c.gmap["susceptible"]
         irecovered = c.gmap["recovered"]
         ideceased = c.gmap["deceased"]
+
+        global DEATHS, BIRTHS, IMMIGRATION
+        DEATHS += min(deaths, len(c.recovered))
+        BIRTHS += min(births, len(c.unactive))
+        IMMIGRATION += min(immigrants, len(c.unactive))
 
         # 1 - Handle non-disease related deaths
         for _ in range(min(deaths, limit := len(c.recovered))):
@@ -229,19 +308,25 @@ def do_vital_dynamics(_p: Population, c: Community, _i: int, tick: np.uint32) ->
             limit -= 1
 
         # 2 - Handle births
+        dobs = c.unactive.dob
+        dri = c.unactive.dri
+        susceptibility = c.unactive.susceptibility
+        dmabs = c.unactive.dmabs
         for _ in range(min(births, index := len(c.unactive))):
-            # We will move the last of the unactive to the first of the susceptibles. It is more efficient (saves a copy).
+            # We will move the last of the unactive to the first of the infants. It is more efficient (saves a copy).
             index -= 1
-            c.unactive.dob[index] = tick
-            c.unactive.susceptibility[index] = 1
-            c.move(iunactive, index, isusceptible)
+            dobs[index] = tick
+            dri[index] = tick + 270 + np.round(np.random.uniform(-30, 30)).astype(dri.dtype)
+            susceptibility[index] = 1
+            dmabs[index] = tick + np.int16(np.random.normal(180, 15))
+            c.move(iunactive, index, iinfants)
 
         # 3 - Handle immigration
         for _ in range(min(immigrants, index := len(c.unactive))):
             # We will move the last of the unactive. It is more efficient (saves a copy).
             index -= 1
-            c.unactive.dob[index] = np.random.randint(0, 365 * 89)  # random age between 0 and 89 years
-            c.unactive.susceptibility[index] = 0  # Assume immigrant is not susceptible
+            dobs[index] = np.random.randint(0, 365 * 89)  # random age between 0 and 89 years
+            susceptibility[index] = 0  # Assume immigrant is not susceptible
             c.move(iunactive, index, irecovered)
 
     return
@@ -272,42 +357,84 @@ def update_exposures(_p: Population, c: Community, _i: int, inf_mean: np.float32
         timer = etimers[index] - 1
         etimers[index] = timer
         if timer == 0:  # If the timer has expired move the agent to the infectious group
-            itimers[index] = max(1, int(np.round(np.random.normal(inf_mean, inf_std))))
+            itimers[index] = max(2, int(np.round(np.random.normal(inf_mean, inf_std))) + 1)
             c.move(iexposed, index, iinfectious)
 
     return
 
 
-def update_contagion(p: Population, c: Community, i: int) -> None:
+def update_contagion(p: Population, c: Community, i: int, tick: int) -> None:
     """Update the contagion."""
-    p.contagion[i] = len(c.infectious)
+    p.contagion[i] = len(c.infectious) * (1.0 + p.seasonal_factor * np.sin(tick / 365))  # Add a sinusoidal component to the contagion
 
     return
 
 
-def do_transmission(p: Population, c: Community, i: int, beta: np.float32, exp_mean: np.float32, exp_std: np.float32) -> None:
+def do_transmission(
+    p: Population, c: Community, i: int, tick: np.int16, beta: np.float32, exp_mean: np.float32, exp_std: np.float32, pbar
+) -> None:
     """Do the transmission."""
     if (contagion := p.contagion[i]) > 0:
-        susceptibility = c.susceptible.susceptibility
-        etimers = c.susceptible.etimer
-        isusceptible = c.gmap["susceptible"]
         iexposed = c.gmap["exposed"]
         # TODO - iterate over groups to get N (i.e., if we change the groups, this code breaks)
-        N = len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
-        force = beta * contagion * len(c.susceptible) / N
-        num_exposures = np.uint32(np.random.poisson(force))
-        if num_exposures > 0:
-            if num_exposures >= len(c.susceptible):
-                # raise ValueError(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
-                print(f"Too many exposures: {num_exposures} >= {len(c.susceptible)}")
-                num_exposures = len(c.susceptible)
-            for _ in range(min(num_exposures, limit := len(c.susceptible))):
-                target = np.random.randint(limit)
+        N = len(c.infants) + len(c.susceptible) + len(c.exposed) + len(c.infectious) + len(c.recovered)
+        expose_group(beta, contagion, c.infants, N, tick, exp_mean, exp_std, c, c.gmap["infants"], iexposed, pbar)
+        expose_group(beta, contagion, c.susceptible, N, tick, exp_mean, exp_std, c, c.gmap["susceptible"], iexposed, pbar)
+
+    return
+
+
+def expose_group(beta, contagion, group, N, tick, exp_mean, exp_std, community, isource, idest, pbar):
+    """Expose a group of agents."""
+    force = beta * contagion * len(group) / N
+    num_exposures = np.uint32(np.random.poisson(force))
+    pbar.set_description(f"Contagion: {contagion}, Force: {force:.2f}, Exposures: {num_exposures}")
+    if num_exposures > 0:
+        dmabs = group.dmabs
+        susceptibility = group.susceptibility
+        etimers = group.etimer
+        if num_exposures >= len(group):
+            # raise ValueError(f"Too many exposures: {num_exposures} >= {len(group)}")
+            print(f"Too many exposures: {num_exposures} >= {len(group)}")
+            num_exposures = len(group)
+        for _ in range(min(num_exposures, limit := len(group))):
+            target = np.random.randint(limit)
+            if tick > dmabs[target]:  # infants aren't susceptible until after maternal antibodies wane
                 if np.random.uniform() < susceptibility[target]:
                     susceptibility[target] = 0
-                    etimers[target] = max(1, int(np.round(np.random.normal(exp_mean, exp_std))))
-                    c.move(isusceptible, target, iexposed)
+                    etimers[target] = max(2, int(np.round(np.random.normal(exp_mean, exp_std))) + 1)
+                    community.move(isource, target, idest)
                     limit -= 1
+
+    return
+
+
+RI_CHECKS = 0
+RI_DOSES = 0
+
+
+def do_routine_immunization(_p: Population, c: Community, _i: int, tick: np.int16) -> None:
+    """Do routine immunization."""
+    dri = c.infants.dri
+    dmabs = c.infants.dmabs
+    coverage = c.ri_coverage
+    susceptibility = c.infants.susceptibility
+    iinfants = c.gmap["infants"]
+    isusceptible = c.gmap["susceptible"]
+    irecovered = c.gmap["recovered"]
+    global RI_CHECKS, RI_DOSES
+    RI_CHECKS += len(c.infants)
+    for index in range(len(c.infants) - 1, -1, -1):  # Iterate over the infants in reverse order
+        if tick == dri[index]:  # If today is the agent's routine immunization date
+            if tick > dmabs[index]:  # RI vaccine doesn't take until after maternal antibodies wane
+                if np.random.uniform() < coverage:
+                    susceptibility[index] = 0
+                    c.move(isusceptible, index, irecovered)
+                    RI_DOSES += 1
+                else:
+                    c.move(iinfants, index, isusceptible)
+            else:
+                c.move(iinfants, index, isusceptible)
 
     return
 
@@ -347,14 +474,16 @@ def parse_args() -> Namespace:
     SEED = np.uint32(datetime.now().microsecond)  # noqa: DTZ005
 
     parser = ArgumentParser()
-    parser.add_argument("-t", "--ticks", type=np.uint32, default=TICKS)
-    parser.add_argument("-n", "--nodes", type=np.uint32, default=NODES)
-    parser.add_argument("--exp_mean", type=np.float32, default=EXP_MEAN)
-    parser.add_argument("--exp_std", type=np.float32, default=EXP_STD)
-    parser.add_argument("--inf_mean", type=np.float32, default=INF_MEAN)
-    parser.add_argument("--inf_std", type=np.float32, default=INF_STD)
-    parser.add_argument("--r_naught", type=np.float32, default=R_NAUGHT)
-    parser.add_argument("-s", "--seed", type=np.uint32, default=SEED)
+    parser.add_argument("-t", "--ticks", type=np.uint32, default=TICKS, help=f"Number of ticks to run the model [{TICKS}]")
+    parser.add_argument("-n", "--nodes", type=np.uint32, default=NODES, help=f"Number of nodes to use [{NODES} - 0 for all nodes]")
+    parser.add_argument("--exp_mean", type=np.float32, default=EXP_MEAN, help=f"Mean exposure time [{EXP_MEAN}]")
+    parser.add_argument("--exp_std", type=np.float32, default=EXP_STD, help=f"Standard deviation of exposure time [{EXP_STD}]")
+    parser.add_argument("--inf_mean", type=np.float32, default=INF_MEAN, help=f"Mean infectious time [{INF_MEAN}]")
+    parser.add_argument("--inf_std", type=np.float32, default=INF_STD, help=f"Standard deviation of infectious time [{INF_STD}]")
+    parser.add_argument(
+        "--r_naught", type=np.float32, default=R_NAUGHT, help=f"Basic reproduction number [{R_NAUGHT} - beta will be r_naught / inf_mean]"
+    )
+    parser.add_argument("-s", "--seed", type=np.uint32, default=SEED, help=f"Random seed [{SEED} from datetime.now().microsecond]")
 
     DEF_K = np.float32(500)
     DEF_A = np.float32(1.0)
@@ -362,11 +491,20 @@ def parse_args() -> Namespace:
     DEF_C = np.float32(2.0)
     DEF_MAX_FRAC = np.float32(0.1)
 
-    parser.add_argument("--g_k", type=np.float32, default=DEF_K)
-    parser.add_argument("--g_a", type=np.float32, default=DEF_A)
-    parser.add_argument("--g_b", type=np.float32, default=DEF_B)
-    parser.add_argument("--g_c", type=np.float32, default=DEF_C)
-    parser.add_argument("--g_max_frac", type=np.float32, default=DEF_MAX_FRAC)
+    parser.add_argument("--g_k", type=np.float32, default=DEF_K, help=f"Gravity model k parameter [{DEF_K}]")
+    parser.add_argument("--g_a", type=np.float32, default=DEF_A, help=f"Gravity model a parameter [{DEF_A}]")
+    parser.add_argument("--g_b", type=np.float32, default=DEF_B, help=f"Gravity model b parameter [{DEF_B}]")
+    parser.add_argument("--g_c", type=np.float32, default=DEF_C, help=f"Gravity model c parameter [{DEF_C}]")
+    parser.add_argument(
+        "--g_max_frac", type=np.float32, default=DEF_MAX_FRAC, help=f"Maximum fraction of outgoing infections [{DEF_MAX_FRAC}]"
+    )
+
+    DEF_SEASONALITY = np.float32(0.1)
+    parser.add_argument("--seasonality", type=np.float32, default=DEF_SEASONALITY, help=f"Seasonality factor [{DEF_SEASONALITY}]")
+    DEF_RI = np.float32(0.75)
+    parser.add_argument("--ri_coverage", type=np.float32, default=DEF_RI, help=f"Routine immunization coverage [{DEF_RI}]")
+
+    parser.add_argument("-i", "--init_infs", type=np.float32, default=1.0, help="Initial infections [1.0]")
 
     args = parser.parse_args()
     args.__setattr__("beta", np.float32(args.r_naught / args.inf_mean))
@@ -377,3 +515,6 @@ def parse_args() -> Namespace:
 if __name__ == "__main__":
     arguments = parse_args()
     main(arguments)
+
+    print(f"Deaths: {DEATHS}, Births: {BIRTHS}, Immigrations: {IMMIGRATION}")
+    print(f"Routine Immunization Checks: {RI_CHECKS}, Doses: {RI_DOSES}")

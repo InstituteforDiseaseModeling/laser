@@ -1,13 +1,28 @@
 """This module contains the Population class, a collection of grouped communities."""
 
+import heapq
+from collections import namedtuple
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
 from typing import Dict
 
 from .community import Community
 
+ScheduledEvent = namedtuple("ScheduledEvent", ["func", "nodes", "args", "kwargs"])
+
+
+@dataclass(order=True)
+class ScheduledItem:
+    tick: int
+    eid: int
+    event: ScheduledEvent = field(compare=False)
+
 
 class Population:
     """A collection of grouped communities."""
+
+    eid = 0
 
     def __init__(self, num_communities, community_props, agent_groups, agent_props):
         self.num_communities = num_communities
@@ -15,6 +30,7 @@ class Population:
         self.community_props = community_props
         self.agent_groups = agent_groups
         self.agent_props = agent_props
+        self.queue = []
 
         return
 
@@ -52,4 +68,19 @@ class Population:
         """Apply the callback to each community in turn."""
         for index, community in enumerate(self._communities):
             callback(self, community, index, *args, **kwargs)
+        return
+
+    def add_event(self, event: ScheduledEvent, tick: int):
+        """Add an event to each community."""
+        heapq.heappush(self.queue, ScheduledItem(tick, self.eid, event))
+        self.eid += 1
+        return
+
+    def do_events(self, tick):
+        """Do scheduled events for this tick."""
+        while self.queue and (self.queue[0].tick == tick):
+            event = heapq.heappop(self.queue).event
+            for index, community in enumerate(self._communities):
+                if (not event.nodes) or (index in event.nodes):
+                    event.func(self, community, index, *event.args, **event.kwargs)
         return
