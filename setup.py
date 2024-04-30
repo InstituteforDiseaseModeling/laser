@@ -62,11 +62,14 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        "click==8.1.7",
-        "numpy==1.26.2",
-        "numba==0.58.1",
-        "polars==0.19.19",
-        "tqdm==4.66.1",
+        "click",  # ==8.1.7",
+        "numpy",  # ==1.26.2",
+        "numba",  # ==0.58.1",
+        "polars",  # ==0.19.19",
+        "tqdm",  # ==4.66.1",
+        "matplotlib",
+        "pandas",
+        "taichi",
     ],
     extras_require={
         # eg:

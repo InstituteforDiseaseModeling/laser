@@ -1,0 +1,215 @@
+"""Run the NumPy+Numba based spatial SEIR model."""
+
+import json
+from argparse import ArgumentParser
+from collections import namedtuple
+from pathlib import Path
+
+import numpy as np
+
+from idmlaser.models import NumbaSpatialSEIR
+from idmlaser.numpynumba import DemographicsStatic
+
+
+def main(parameters):
+    """Run the model with the given parameters."""
+    model = NumbaSpatialSEIR(parameters)
+
+    if parameters.scenario == "engwal":
+        initialize_engwal(model, parameters, parameters.nodes)
+    else:
+        initialize_nigeria(model, parameters.nodes)
+
+    model.run(parameters.ticks)
+    model.finalize()
+
+    return
+
+
+Node = namedtuple("Node", ["name", "index", "population", "counts", "births", "immigrations", "deaths"])
+
+
+def initialize_engwal(model, parameters, num_nodes: int = 0):
+    """Initialize the model with the England+Wales scenario."""
+    from data.engwaldata import data
+
+    # get distances between communities
+    distances = np.load(Path(__file__).parent / "data/engwaldist.npy")
+
+    nodes = [
+        Node(
+            k,
+            index,
+            v.population[0],
+            {"I": v.cases[0]},
+            np.zeros(parameters.ticks, dtype=np.uint32),
+            np.zeros(parameters.ticks, dtype=np.uint32),
+            np.zeros(parameters.ticks, dtype=np.uint32),
+        )
+        for index, (k, v) in enumerate(data.places.items())
+    ]
+    if num_nodes > 0:
+        nodes.sort(key=lambda x: x.population, reverse=True)
+        nodes = nodes[:num_nodes]
+
+    nyears = parameters.ticks // 365
+    nnodes = len(nodes)
+    demographics = DemographicsStatic(nyears, nnodes)
+
+    populations = np.zeros((nyears, nnodes), dtype=np.int32)
+    births = np.zeros((nyears, nnodes), dtype=np.int32)
+    deaths = np.zeros((nyears, nnodes), dtype=np.int32)
+    immigrations = np.zeros((nyears, nnodes), dtype=np.int32)
+
+    for i, node in enumerate(nodes):
+        populations[:, i] = data.places[node.name].population[:nyears]
+        births[:, i] = data.places[node.name].births[:nyears]
+
+    deltapop = populations[1:, :] - populations[:-1, :]  # nyears - 1 entries
+    deaths[:-1, :] = np.maximum(births[:-1, :] - deltapop, 0)  # if more births than increase in population, remove some agents
+    immigrations[:-1, :] = np.maximum(deltapop - births[:-1, :], 0)  # if increase in population is more than births, add some agents
+
+    demographics.initialize(
+        population=populations,
+        births=births,
+        deaths=deaths,
+        immigrations=immigrations,
+    )
+
+    initial = np.zeros((nnodes, 4), dtype=np.uint32)  # 4 columns: S, E, I, R
+
+    for i, node in enumerate(nodes):
+        initial[i, 0] = np.uint32(np.round(populations[0, i] / parameters.r_naught))
+        # initial[i, 1] = 0
+        initial[i, 2] = data.places[node.name].cases[0]
+        initial[i, 3] = populations[0, i] - initial[i, 0:3].sum()
+
+    indices = np.array([node.index for node in nodes], dtype=np.uint32)
+    network = distances[indices][:, indices]
+    network *= 1000  # convert to meters
+
+    # gravity model: k * pop_1^a * pop_2^b / (N * dist^c)
+    a = parameters.a
+    b = parameters.b
+    c = parameters.c
+    k = parameters.k
+    totalpop = sum(node.population for node in nodes)
+    for i in range(len(nodes)):
+        popi = nodes[i].population
+        for j in range(i + 1, len(nodes)):
+            popj = nodes[j].population
+            network[i, j] = network[j, i] = k * (popi**a) * (popj**b) / (network[i, j] ** c)
+    network /= totalpop
+
+    outflows = network.sum(axis=0)
+    max_frac = parameters.max_frac
+    if (maximum := outflows.max()) > max_frac:
+        print(f"Rescaling network by {max_frac / maximum}")
+        network *= max_frac / maximum
+
+    max_capacity = populations[0, :].sum() + births.sum() + immigrations.sum()
+    print(f"Initial population: {populations[0, :].sum():>11,}")
+    print(f"Total births:       {births.sum():>11,}")
+    print(f"Total immigrations: {immigrations.sum():>11,}")
+    print(f"Max capacity:       {max_capacity:>11,}")
+
+    model.initialize(max_capacity, demographics, initial, network)
+    return
+
+
+def initialize_nigeria(model, num_nodes: int = 0):
+    """Initialize the model with the Nigeria scenario."""
+    from data.nigeria import gravity
+    from data.nigeria import lgas
+
+    communities = [Community(k, v[0][0], 1 if v[0][0] > 100_000 else 0) for k, v in lgas.items() if len(k.split(":")) == 5]
+    network = np.array(gravity, dtype=np.float32)
+    model.initialize(communities, network)
+    return
+
+
+def get_parameters():
+    """Get the parameters for the model from the command line arguments."""
+    DEF_SCENARIO = "engwal"
+    DEF_TICKS = np.uint32(365)
+    DEF_NNODES = np.uint32(0)
+    EXP_MEAN = np.float32(7)
+    EXP_STD = np.float32(1)
+    INF_MEAN = np.float32(7)
+    INF_STD = np.float32(1)
+    # INIT_INF = np.uint32(10)
+    R_NAUGHT = np.float32(14)
+    SEED = np.uint32(20231205)
+    OUTPUT_DIR = Path.cwd()
+
+    # England + Wales distance model parameters
+    DEF_A = np.float32(1.0)
+    DEF_B = np.float32(1.0)
+    DEF_C = np.float32(2.0)
+    DEF_K = np.float32(500.0)
+    DEF_MAX_FRAC = np.float32(0.05)
+
+    nodes_help = f"The number of nodes in the network (0 == all) [{DEF_NNODES}]"
+    inf_mean_help = f"The mean of the infectious period (beta will be r_naught/inf_mean) [{INF_MEAN}]"
+    r_naught_help = f"The basic reproduction number (beta will be r_naught/inf_mean) [{R_NAUGHT}]"
+
+    parser = ArgumentParser()
+    parser.add_argument("--scenario", type=str, default=DEF_SCENARIO, help=f"The scenario to run {{'engwal'|'nigeria'}} [{DEF_SCENARIO}]")
+    parser.add_argument("-t", "--ticks", type=np.uint32, default=DEF_TICKS, help=f"The number of timesteps [{DEF_TICKS}]")
+    parser.add_argument("-n", "--nodes", type=np.uint32, default=DEF_NNODES, help=nodes_help)
+    parser.add_argument("--exp_mean", type=np.float32, default=EXP_MEAN, help=f"The mean of the exposed period [{EXP_MEAN}]")
+    parser.add_argument("--exp_std", type=np.float32, default=EXP_STD, help=f"The standard deviation of the exposed period [{EXP_STD}]")
+    parser.add_argument("--inf_mean", type=np.float32, default=INF_MEAN, help=inf_mean_help)
+    parser.add_argument("--inf_std", type=np.float32, default=INF_STD, help=f"The standard deviation of the infectious period [{INF_STD}]")
+    # parser.add_argument("--initial_infs", type=np.uint32, default=INIT_INF, help=f"The initial number of infectious agents [{INIT_INF}]")
+    parser.add_argument("--r_naught", type=np.float32, default=R_NAUGHT, help=r_naught_help)
+    parser.add_argument("-s", "--seed", type=np.uint32, default=SEED, help=f"The random seed [{SEED}]")
+    parser.add_argument("-o", "--output", type=Path, default=OUTPUT_DIR, help=f"Output directory ['{OUTPUT_DIR}']")
+
+    DEF_SEASONALITY_FACTOR = np.float32(0.1)
+    DEF_SEASONALITY_OFFSET = np.float32(182.5)
+
+    parser.add_argument(
+        "--seasonality_factor",
+        type=np.float32,
+        default=DEF_SEASONALITY_FACTOR,
+        help=f"The seasonality factor for the transmission rate [{DEF_SEASONALITY_FACTOR:0.2f}]",
+    )
+    parser.add_argument(
+        "--seasonality_offset",
+        type=np.float32,
+        default=DEF_SEASONALITY_OFFSET,
+        help=f"The seasonality offset (ticks) for the transmission rate [{DEF_SEASONALITY_OFFSET}]",
+    )
+
+    # England + Wales distance model parameters
+    parser.add_argument("--a", type=np.float32, default=DEF_A, help=f"England+Wales distance model parameter a [{DEF_A}]")
+    parser.add_argument("--b", type=np.float32, default=DEF_B, help=f"England+Wales distance model parameter b [{DEF_B}]")
+    parser.add_argument("--c", type=np.float32, default=DEF_C, help=f"England+Wales distance model parameter c [{DEF_C}]")
+    parser.add_argument("--k", type=np.float32, default=DEF_K, help=f"England+Wales (or Nigeria) distance model parameter k [{DEF_K}]")
+    parser.add_argument(
+        "--max_frac", type=np.float32, default=DEF_MAX_FRAC, help=f"England+Wales maximum fraction of the network [{DEF_MAX_FRAC}]"
+    )
+
+    DEF_PARAMETERS = None  # Path(__file__).parent / "data/parameters.json"
+    parser.add_argument("-p", "--parameters", type=Path, default=DEF_PARAMETERS, help=f"Parameters file [{DEF_PARAMETERS}]")
+
+    args = parser.parse_args()
+
+    if args.parameters:  # read parameters from file if --parameters is neither None nor empty
+        with args.parameters.open("r") as file:
+            params = json.load(file)
+            for key, value in params.items():
+                args.__setattr__(key, value)
+
+    args.__setattr__("beta", np.float32(args.r_naught / args.inf_mean))
+
+    print(f"User parameters: {vars(args)}")
+
+    return args
+
+
+if __name__ == "__main__":
+    print(f"Working directory: {Path.cwd()}")
+    parameters = get_parameters()
+    main(parameters)
