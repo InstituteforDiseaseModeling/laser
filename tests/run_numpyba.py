@@ -4,10 +4,12 @@ import json
 from argparse import ArgumentParser
 from collections import namedtuple
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 
 from idmlaser.models import NumbaSpatialSEIR
+from idmlaser.numpynumba import DemographicsByYear
 from idmlaser.numpynumba import DemographicsStatic
 
 
@@ -16,9 +18,15 @@ def main(parameters):
     model = NumbaSpatialSEIR(parameters)
 
     if parameters.scenario == "engwal":
-        initialize_engwal(model, parameters, parameters.nodes)
+        max_capacity, demographics, initial, network = initialize_engwal(model, parameters, parameters.nodes)
+    elif parameters.scenario == "nigeria":
+        max_capacity, demographics, initial, network = initialize_nigeria(model, parameters, parameters.nodes)
+    elif parameters.scenario == "ccs":
+        max_capacity, demographics, initial, network = initialize_ccs(model, parameters)
     else:
-        initialize_nigeria(model, parameters.nodes)
+        raise ValueError(f"Invalid scenario: {parameters.scenario}")
+
+    model.initialize(max_capacity, demographics, initial, network)
 
     model.run(parameters.ticks)
     model.finalize()
@@ -29,7 +37,7 @@ def main(parameters):
 Node = namedtuple("Node", ["name", "index", "population", "counts", "births", "immigrations", "deaths"])
 
 
-def initialize_engwal(model, parameters, num_nodes: int = 0):
+def initialize_engwal(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsStatic, np.ndarray, np.ndarray]:
     """Initialize the model with the England+Wales scenario."""
     from data.engwaldata import data
 
@@ -113,19 +121,105 @@ def initialize_engwal(model, parameters, num_nodes: int = 0):
     print(f"Total immigrations: {immigrations.sum():>11,}")
     print(f"Max capacity:       {max_capacity:>11,}")
 
-    model.initialize(max_capacity, demographics, initial, network)
-    return
+    return (max_capacity, demographics, initial, network)
 
 
-def initialize_nigeria(model, num_nodes: int = 0):
+def initialize_nigeria(model, parameters, num_nodes: int = 0, level: int = 5) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:
     """Initialize the model with the Nigeria scenario."""
     from data.nigeria import gravity
     from data.nigeria import lgas
 
-    communities = [Community(k, v[0][0], 1 if v[0][0] > 100_000 else 0) for k, v in lgas.items() if len(k.split(":")) == 5]
-    network = np.array(gravity, dtype=np.float32)
-    model.initialize(communities, network)
-    return
+    # Massage the data into the format expected by the model
+    assert level == 5, f"Invalid level {level=} (We only have network data for level 5)"
+    filtered = {k: v for k, v in lgas.items() if len(k.split(":")) == level}
+    nodes = [
+        Node(
+            k,
+            index,
+            v[0][0],  # ((POP, YEAR), (LONG, LAT), AREA)
+            {"I": 0 if v[0][0] < 100_000 else 10},
+            None,
+            None,
+            None,
+        )
+        for index, (k, v) in enumerate(filtered.items())
+    ]
+    if num_nodes > 0:
+        nodes.sort(key=lambda x: x.population, reverse=True)
+        nodes = nodes[:num_nodes]
+
+    # Setup demographics
+    nyears = parameters.ticks // 365
+    nnodes = len(nodes)
+    demographics = DemographicsByYear(nyears, nnodes)
+    populations = np.zeros(nnodes, dtype=np.int32)  # initial population (year 0)
+    for i, node in enumerate(nodes):
+        populations[i] = node.population
+    # https://database.earth/population/nigeria/fertility-rate
+    demographics.initialize(initial_population=populations, cbr=35.0, mortality=17.0, immigration=0.0)
+
+    # Setup initial conditions (distribution of agents to S, E, I, and R)
+    initial = np.zeros((nnodes, 4), dtype=np.uint32)  # 4 columns: S, E, I, R
+
+    for i, node in enumerate(nodes):
+        initial[i, 0] = np.uint32(np.round(node.population / parameters.r_naught))
+        # initial[i, 1] = 0
+        initial[i, 2] = 0 if node.population < 100_000 else 10
+        initial[i, 3] = node.population - initial[i, 0:3].sum()
+
+    # Setup network (gravity model)
+
+    indices = np.array([node.index for node in nodes], dtype=np.uint32)
+    network = np.array(gravity, dtype=np.float32)[indices][:, indices]
+    network *= parameters.k
+
+    outflows = network.sum(axis=0)
+    max_frac = parameters.max_frac
+    if (maximum := outflows.max()) > max_frac:
+        print(f"Rescaling network by {max_frac / maximum}")
+        network *= max_frac / maximum
+
+    max_capacity = demographics.population[0, :].sum() + demographics.births.sum() + demographics.immigrations.sum()
+    print(f"Initial population: {demographics.population[0, :].sum():>11,}")
+    print(f"Total births:       {demographics.births.sum():>11,}")
+    print(f"Total immigrations: {demographics.immigrations.sum():>11,}")
+    print(f"Max capacity:       {max_capacity:>11,}")
+
+    return (max_capacity, demographics, initial, network)
+
+
+def initialize_ccs(model, parameters) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:
+    """Initialize the model with the CCS scenario."""
+
+    # Setup demographics
+    nyears = parameters.ticks // 365
+    nnodes = parameters.nodes * parameters.nodes
+    demographics = DemographicsByYear(nyears, nnodes)
+    populations = np.zeros(nnodes, dtype=np.int32)  # initial population (year 0)
+    for i, power in enumerate(np.linspace(3, 7, parameters.nodes)):
+        for j in range(parameters.nodes):
+            populations[i * parameters.nodes + j] = 10**power
+    # https://database.earth/population/nigeria/fertility-rate
+    demographics.initialize(initial_population=populations, cbr=35.0, mortality=0.0, immigration=0.0)
+
+    # Setup initial conditions (distribution of agents to S, E, I, and R)
+    initial = np.zeros((nnodes, 4), dtype=np.uint32)  # 4 columns: S, E, I, R
+    for i in range(nnodes):
+        initial[i, 0] = np.uint32(np.round(populations[i] / parameters.r_naught))
+        # initial[i, 1] = 0
+        initial[i, 2] = 10
+        initial[i, 3] = populations[i] - initial[i, 0:3].sum()
+
+    # Setup network (independent nodes)
+    network = np.zeros((nnodes, nnodes), dtype=np.float32)
+
+    max_capacity = demographics.population[0, :].sum() + demographics.births.sum() + demographics.immigrations.sum()
+    print(f"Initial population: {demographics.population[0, :].sum():>11,}")
+    print(f"Total births:       {demographics.births.sum():>11,}")
+    print(f"Total immigrations: {demographics.immigrations.sum():>11,}")
+    print(f"Max capacity:       {max_capacity:>11,}")
+
+    return (max_capacity, demographics, initial, network)
 
 
 def get_parameters():
@@ -188,7 +282,10 @@ def get_parameters():
     parser.add_argument("--c", type=np.float32, default=DEF_C, help=f"England+Wales distance model parameter c [{DEF_C}]")
     parser.add_argument("--k", type=np.float32, default=DEF_K, help=f"England+Wales (or Nigeria) distance model parameter k [{DEF_K}]")
     parser.add_argument(
-        "--max_frac", type=np.float32, default=DEF_MAX_FRAC, help=f"England+Wales maximum fraction of the network [{DEF_MAX_FRAC}]"
+        "--max_frac",
+        type=np.float32,
+        default=DEF_MAX_FRAC,
+        help=f"England+Wales (or Nigeria) maximum fraction of the network [{DEF_MAX_FRAC}]",
     )
 
     DEF_PARAMETERS = None  # Path(__file__).parent / "data/parameters.json"

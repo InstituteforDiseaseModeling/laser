@@ -38,11 +38,11 @@ class Population:
     def capacity(self):
         return self._capacity
 
-    def add(self, count):
+    def add(self, count: int):
         """Add agents to the population"""
         assert self._count + count <= self._capacity, f"Population exceeds capacity ({self._count=}, {count=}, {self._capacity=})"
         i = self._count
-        self._count += count
+        self._count += int(count)
         j = self._count
         return i, j
 

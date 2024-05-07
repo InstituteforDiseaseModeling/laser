@@ -1,5 +1,6 @@
 """Spatial SEIR model implementation with NumPy+Numba"""
 
+import json
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -7,11 +8,11 @@ from typing import Optional
 
 import numba as nb
 import numpy as np
-import polars as pl
 from tqdm import tqdm
 
 from idmlaser.numpynumba import Demographics
 from idmlaser.numpynumba import Population
+from idmlaser.utils import NumpyJSONEncoder
 
 from .model import DiseaseModel
 
@@ -196,11 +197,18 @@ class NumbaSpatialSEIR(DiseaseModel):
     def finalize(self, directory: Optional[Path] = None) -> None:
         """Finalize the model."""
         directory = directory if directory else self.parameters.output
-        np.save(filename := directory / "spatial_seir.npy", self.report)
+        prefix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        try:
+            Path(directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
+            print(f"Wrote parameters to '{directory / (prefix + '-parameters.json')}'.")
+        except Exception as e:
+            print(f"Error writing parameters: {e}")
+        prefix += f"-{self._demographics.ncommunities}-{self.parameters.ticks}-"
+        np.save(filename := directory / (prefix + "spatial_seir.npy"), self.report)
         print(f"Wrote SEIR channels, by node, to '{filename}'.")
-        sdf = pl.DataFrame(data=self.cases, schema=[f"node{i}" for i in range(len(self._popcounts))])
-        sdf.write_csv(filename := directory / "spatial_seir_cases.csv")
-        print(f"Wrote spatial cases to '{filename}'.")
+        # sdf = pl.DataFrame(data=self.cases, schema=[f"node{i}" for i in range(len(self._popcounts))])
+        # sdf.write_csv(filename := directory / "spatial_seir_cases.csv")
+        # print(f"Wrote spatial cases to '{filename}'.")
 
         return
 
@@ -241,29 +249,31 @@ def vital_dynamics(model: NumbaSpatialSEIR, tick: int) -> None:
 
     # Deactive deaths_t randomly selected individuals
     # deaths = sum(community.deaths[tick] for community in model.communities)
+
     # Activate births_t new individuals as susceptible
     annual_births = model._demographics.births[year]
     todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
-    total_births = todays_births.sum()
-    istart, iend = population.add(total_births)
-    population.dob[istart:iend] = tick
-    population.states[istart:iend] = STATE_SUSCEPTIBLE
-    population.susceptibility[istart:iend] = 1
-    index = istart
-    for nodeid, births in enumerate(todays_births):
-        population.nodeid[index : index + births] = _NODEID_TYPE_NP(nodeid)  # assign newborns to their nodes
-        index += births
+    if (total_births := todays_births.sum()) > 0:
+        istart, iend = population.add(total_births)
+        population.dob[istart:iend] = tick
+        population.states[istart:iend] = STATE_SUSCEPTIBLE
+        population.susceptibility[istart:iend] = 1
+        index = istart
+        for nodeid, births in enumerate(todays_births):
+            population.nodeid[index : index + births] = _NODEID_TYPE_NP(nodeid)  # assign newborns to their nodes
+            index += births
+
     # Activate immigrations_t new individuals as not-susceptible
     annual_immigrations = model._demographics.immigrations[year]
     todays_immigrations = (annual_immigrations * doy // 365) - (annual_immigrations * (doy - 1) // 365)
-    total_immigrations = todays_immigrations.sum()
-    istart, iend = model.population.add(total_immigrations)
-    population.states[istart:iend] = STATE_RECOVERED
-    population.susceptibility[istart:iend] = 0
-    index = istart
-    for nodeid, immigrations in enumerate(todays_immigrations):
-        population.nodeid[index : index + immigrations] = _NODEID_TYPE_NP(nodeid)  # assign immigrants to their nodes
-        index += immigrations
+    if (total_immigrations := todays_immigrations.sum()) > 0:
+        istart, iend = model.population.add(total_immigrations)
+        population.states[istart:iend] = STATE_RECOVERED
+        population.susceptibility[istart:iend] = 0
+        index = istart
+        for nodeid, immigrations in enumerate(todays_immigrations):
+            population.nodeid[index : index + immigrations] = _NODEID_TYPE_NP(nodeid)  # assign immigrants to their nodes
+            index += immigrations
 
     return
 

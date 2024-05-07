@@ -1,6 +1,8 @@
 """Utility functions for the IDMLaser package."""
 
 from collections.abc import Iterable
+from json import JSONEncoder
+from pathlib import Path
 from typing import Any
 from typing import Tuple
 from typing import Union
@@ -125,3 +127,18 @@ def daily_births_deaths_from_annual(annual_births, annual_deaths) -> Tuple[np.nd
         daily_deaths[day] = (annual_deaths[year] * doy // 365) - (annual_deaths[year] * (doy - 1) // 365)
 
     return daily_births, daily_deaths
+
+
+class NumpyJSONEncoder(JSONEncoder):
+    """Custom JSON encoder for NumPy arrays."""
+
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, Path):
+            return str(obj)
+        return JSONEncoder.default(self, obj)

@@ -89,22 +89,22 @@ class DemographicsByYear(Demographics):
         self._mortality = kwargs["mortality"] if "mortality" in kwargs else np.float32(0.0)
         self._immigration = kwargs["immigration"] if "immigration" in kwargs else np.float32(0.0)
 
-        if isinstance(self._cbr, Number, np.number):
+        if isinstance(self._cbr, (Number, np.number)):
             self._cbr = np.full(self.nyears, self._cbr, dtype=np.float32)
 
-        if isinstance(self._mortality, Number, np.number):
+        if isinstance(self._mortality, (Number, np.number)):
             self._mortality = np.full(self.nyears, self._mortality, dtype=np.float32)
 
-        if isinstance(self._immigration, Number, np.number):
+        if isinstance(self._immigration, (Number, np.number)):
             self._immigration = np.full(self.nyears, self._immigration, dtype=np.float32)
 
-        for year, cbr, mort, imm in zip(range(1, self.nyears), self._cbr, self._mortality, self._immigration):
+        for year, cbr, mort, imm in zip(range(self.nyears), self._cbr, self._mortality, self._immigration):
             p = self._population[year]
             self._births[year] = np.round(p * cbr / 1000.0)
             self._deaths[year] = np.round(p * mort / 1000.0)
             self._immigrations[year] = np.round(p * imm / 1000.0)
 
-            if year < len(self._population):
+            if year < (self._nyears - 1):
                 self._population[year + 1] = p + self._births[year] - self._deaths[year] + self._immigrations[year]
 
         return
