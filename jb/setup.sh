@@ -2,7 +2,7 @@
 
 # Directory paths
 #sandbox_dir="~/sandbox"
-sandbox_dir="/var/opt/idm/sandbox"
+sandbox_dir="/var/tmp/sandbox"
 src_dir="$(pwd)/src"
 
 # Prompt the user to choose between England & Wales and CCS

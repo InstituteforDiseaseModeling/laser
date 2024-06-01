@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <unordered_map>
-#include <deque>
+#include <vector>
 #include <mutex>
 #include <algorithm>
 #include <cassert>
