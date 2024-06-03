@@ -49,7 +49,7 @@ cp "$src_dir/sir_numpy.py" .
 cp "$src_dir/model_numpy/eula.py" model_numpy/
 cp "$src_dir/sir_numpy_c.py" .
 cp "$src_dir/update_ages.cpp" .
-cp "$src_dir/tlc.py" .
+cp "$src_dir/measles.py" .
 cp "$src_dir/../service/app.py" app.py
 #ln -sfn "$src_dir/../service/requirements.txt" requirements.txt
 cp "$src_dir/../service/requirements.txt" requirements.txt

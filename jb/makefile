@@ -41,7 +41,7 @@ fits.npy: eula_pops_20yr_noaging.csv
 	$(PYTHON) utils/fit_eula_pops.py eula_pops_20yr_noaging.csv
 
 run:
-	python3 tlc.py
+	python3 measles.py
 
 setup:
 	./setup.sh
