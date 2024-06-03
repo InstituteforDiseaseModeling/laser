@@ -5,18 +5,15 @@ sys.path.insert(0, os.getcwd())
 import pdb
 
 # Import a model
-#import laser_numpy_mode.sir_numpy as model
 import sir_numpy_c as model
 import numpy as np
 
 import settings
 import demographics_settings
-#from laser_numpy_model import report
 import report
 
 #report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 report_births = []
-#report_deaths = {}
 
 new_infections_empty = {}
 for i in range(demographics_settings.num_nodes):
@@ -32,8 +29,7 @@ def collect_and_report(csvwriter, timestep, ctx):
     #print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
 
     try:
-        #report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births, new_deaths={} )
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births, new_deaths={} )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, totals
@@ -58,9 +54,7 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
         # The core transmission part begins
         if timestep>settings.burnin_delay:
             new_infections = list()
-            #if sum( fractions["I"].values() ) > 0:
             if sum( counts["I"].values() ) > 0:
-                #new_infections = model.calculate_new_infections( ctx, fractions["I"], fractions["S"], totals, timestep, seasonal_multiplier=sm, base_infectivity=bi )
                 new_infections = model.calculate_new_infections( ctx, counts["I"], counts["S"], totals, timestep, seasonal_multiplier=sm, base_infectivity=bi )
                 report.new_infections = new_infections 
             #print( f"new_infections=\n{new_infections}" )
@@ -83,12 +77,9 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
                     susceptibles[node] = round(count / 80)
                 return list(susceptibles.values())
             import_cases = np.array(divide_and_round( counts["S"] ), dtype=np.uint32)
-            #print( f"ELIMINATION Detected: Reseeding: Injecting {import_cases} new cases." )
             print( f"ELIMINATION Detected: Reseeding: Injecting new cases." )
-                #model.inject_cases( ctx, sus=counts["S"], import_cases=import_cases, import_node=node )
             model.handle_transmission( ctx, import_cases, counts["S"] )
-
-            #model.inject_cases( ctx, sus=counts["S"], import_cases=settings.import_cases, import_node=507 )
+            
 
         # We almost certainly won't waste time updating everyone's ages every timestep but this is 
         # here as a placeholder for "what if we have to do simple math on all the rows?"
@@ -100,7 +91,6 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
         
 
     print(f"Simulation completed. Report saved to '{settings.report_filename}'.")
-    print(f"Total infecteds = {model.infecteds}, total recovereds = {model.recovereds}" )
 
 # Main simulation
 if __name__ == "__main__":
@@ -118,6 +108,7 @@ if __name__ == "__main__":
     runtime = timeit( runsim, number=1 )
     print( f"Execution time = {runtime}." )
 
+    # The lines below are required for calibration; running them imposes requirements, and uses more time and memory.
     #import post_proc
     #post_proc.analyze()
 

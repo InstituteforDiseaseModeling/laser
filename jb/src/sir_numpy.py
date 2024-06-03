@@ -129,17 +129,11 @@ def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
         # For permanently recovereds, we want those over threshold age and not infected
         mask = ((df['age'] >= age_threshold_yrs) & (~df['infected']))[filter_arr]
         # need this by node
-        # BUG! This seems to be returning the number of susceptibles, not recovereds
-
+        
         # For actual removal, we want thsoe not infected and those over threshold age but don't remove those with age == -1
         # So keep the rest
         mask = ((df['age'] < age_threshold_yrs) | (df['infected'] ))
 
-        # We are going to delete number_recovereds agents
-        # Then we're going to add 1 with a huge mcw: Not any more
-        # TBD: Recycle 1 of the deletes instead of delete and add
-        # Add 1 perma-immune, mega-agent per node...
-        # New plan: Add 1 perma-immune mega-agent per age per node...
         eula.init()
 
         for column in df.keys():
@@ -198,7 +192,6 @@ def collect_report( data ):
 
         # Display the result
         # Does this code assume there's an entry for each node even if the total is 0?
-        #pdb.set_trace()
         recovered_counts_eula = eula.get_recovereds_by_node()
         for node in range( settings.num_nodes ):
             # Now add in eulas
@@ -301,27 +294,6 @@ def births(data,totals_by_node):
     # Can't do demographic_dependent_Rate if downsampling recovereds to N, hence:
     # Or CBR
     # totals_by_node supports CBR
-
-    def births_from_demog():
-        # Return actual numbers of new babies by node, not just rates
-        # Create a boolean mask for the age condition
-        age_condition_mask = (data['age'] > 15) & (data['age'] < 45)
-
-        # Filter data based on the age condition
-        filtered_nodes = data['node'][age_condition_mask]
-        filtered_ages  = data['age'][age_condition_mask]
-
-        # Calculate the count of data per node and divide by 2
-        unique_nodes, counts = np.unique(filtered_nodes, return_counts=True)
-        wocba = np.column_stack((unique_nodes, counts // 2))
-
-        # Create a dictionary from the wocba array
-        wocba_dict = dict(wocba)
-        num_new_babies = dict()
-        for node, count in wocba_dict.items():
-            num_new_babies[node] = np.sum(np.random.rand(count) < 2.7e-4)
-        return num_new_babies
-
 
     # Function to add newborns
     def add_newborns( nodes ):
@@ -457,10 +429,8 @@ def handle_transmission_by_node( data, new_infections, node=0 ):
         selected_indices = np.random.choice(eligible_agents_indices, size=min(new_infections, len(eligible_agents_indices)), replace=False)
 
         # Update the 'infected' column based on the selected indices
-        #if any(data['infected'][selected_indices]):
-            #print( "ERROR: Infecting someone already infected!." )
         data['infected'][selected_indices] = True
-        #data['incubation_timer'][selected_indices] = 2
+        
         return selected_indices 
 
     return handle_new_infections(new_infections)
