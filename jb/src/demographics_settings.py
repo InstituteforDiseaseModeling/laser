@@ -15,3 +15,4 @@ eula_file="ew_eula_binned.csv"
 #pop_file_out=f"pop_seeded.csv"
 eula_pop_fits="fits.npy"
 
+cbr_file="cbrs.csv"

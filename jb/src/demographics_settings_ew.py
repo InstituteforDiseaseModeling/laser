@@ -11,3 +11,4 @@ pop_file="engwal_modeled.csv.gz"
 eula_file="ew_eula_binned.csv"
 eula_pop_fits="fits.npy"
 
+cbr_file="cbrs_ew.csv"

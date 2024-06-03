@@ -9,7 +9,6 @@ report_start= 365*4
 base_infectivity = 1.48 # 4.42
 
 cbr=17.5 # needed for default even if not used
-cbr_file="cbrs.csv"
 #births_file="births.csv"
 # total E&W babies = 12638423
 # number of babies we expect to be born

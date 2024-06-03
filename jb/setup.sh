@@ -64,7 +64,7 @@ if [[ -n $england_wales ]]; then
     wget https://packages.idmod.org:443/artifactory/idm-data/laser/engwal_modeled.csv.gz
     wget https://packages.idmod.org:443/artifactory/idm-data/laser/attraction_probabilities.csv.gz
     wget https://packages.idmod.org:443/artifactory/idm-data/laser/cities.csv
-    wget https://packages.idmod.org:443/artifactory/idm-data/laser/cbrs.csv
+    wget https://packages.idmod.org:443/artifactory/idm-data/laser/cbrs_ew.csv
     gunzip attraction_probabilities.csv.gz
     cp "$src_dir/demographics_settings_ew.py" ./demographics_settings.py
     cp "$src_dir/../Dockerfile_ew" ./Dockerfile

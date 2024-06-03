@@ -419,28 +419,18 @@ def update_ages( data, totals, timestep ):
     global unborn_end_idx
     def births( data, interval ):
         labor_start_time = time.time()
-        #import sir_numpy
 
-        num_new_babies_by_node = sir_numpy.births_from_cbr_fast( totals, rate=settings.cbr )
-
-        """
         global cbrs
         if not cbrs:
             cbrs = load_cbrs()
-        num_new_babies_by_node = sir_numpy.births_from_cbr_var( totals, rate=cbrs[timestep//365] )
-        """
-
+        num_new_babies_by_node = sir_numpy.births_from_cbr_fast( totals, rate=cbrs[timestep//365] )
         #num_new_babies_by_node = sir_numpy.births_from_lorton_algo( timestep )
 
-        #keys = np.array(list(num_new_babies_by_node.keys()))
-        #values = np.array(list(num_new_babies_by_node.values()))
         # Create an array of indices (nodes)
         nodes = np.arange(len(num_new_babies_by_node))
 
         # Repeat the nodes according to the values in num_new_babies_by_node
         result_array = np.repeat(nodes, num_new_babies_by_node).astype( np.uint32 )
-        #result_array = np.repeat(keys, values)
-        #tot_new_babies = sum(num_new_babies_by_node.values())
         tot_new_babies = sum(num_new_babies_by_node)
         global unborn_end_idx
         if tot_new_babies > 0 :
