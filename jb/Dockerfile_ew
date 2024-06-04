@@ -30,6 +30,7 @@ RUN wget https://packages.idmod.org:443/artifactory/idm-data/laser/cbrs_ew.csv
 RUN gunzip attraction_probabilities.csv.gz
 
 COPY src/post_proc.py .
+COPY data/pops.csv .
 
 CMD ["python", "app.py"]
 
