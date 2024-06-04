@@ -35,6 +35,9 @@ extern "C" {
  * @param ages Pointer to the array containing ages of individuals.
  *             The ages are expected to be in units of years.
  *             The array is modified in place.
+ *
+ * SQL: UPDATE ages SET age = age + 1.0f/365.0f WHERE age >= 0 
+ * AND index >= start_idx AND index <= stop_idx;
  */
 const float one_day = 1.0f/365.0f;
 void update_ages_vanilla(unsigned long int start_idx, unsigned long int stop_idx, float *ages) {
@@ -72,8 +75,12 @@ void update_ages(unsigned long int start_idx, unsigned long int stop_idx, float 
 /*
  * Progress all infections. Collect the indexes of those who recover. 
  * Assume recovered_idxs is pre-allocated to same size as infecteds.
+ *
+ * SQL: UPDATE data SET incubation_timer = incubation_timer - 1 WHERE incubation_timer >= 1;
+ *      UPDATE data SET infection_timer = infection_timer - 1 WHERE infection_timer >= 1;
+ *      UPDATE data SET infected = 0, immunity_timer = -1, immunity = true WHERE infection_timer = 0;
  */
-size_t progress_infections(
+void progress_infections(
     int start_idx,
     int end_idx,
     unsigned char * infection_timer,
@@ -81,17 +88,9 @@ size_t progress_infections(
     bool* infected,
     signed char * immunity_timer,
     bool* immunity
-    //, uint32_t * recovered_idxs
 ) {
-    recovered_counter = 0;
-
-    // Allocate a 2D vector to store thread-local buffers
-    //std::vector<std::vector<int>> thread_local_buffers(omp_get_max_threads());
-
 #pragma omp parallel
     {
-        //int thread_id = omp_get_thread_num();
-        //std::vector<int> &local_buffer = thread_local_buffers[thread_id];
 
 #pragma omp for
         for (unsigned long int i = start_idx; i <= end_idx; ++i) {
@@ -116,21 +115,17 @@ size_t progress_infections(
             }
         }
     }
-
-    /*
-    // Accumulate results from thread-local buffers
-    int global_counter = 0;
-    for (const auto &buffer : thread_local_buffers) {
-        for (int idx : buffer) {
-            recovered_idxs[global_counter++] = idx;
-        }
-    }
-    recovered_counter = global_counter;
-    */
-
-    return recovered_counter;
 }
 
+/*
+ * SQL: UPDATE data 
+ *         SET immunity_timer = immunity_timer - 1
+ *         WHERE immunity = true
+ *             AND immunity_timer > 0;
+ *      UPDATE data
+ *          SET immunity = false
+ *          WHERE immunity_timer = 0;
+ */
 void progress_immunities(
     int start_idx,
     int end_idx,
@@ -219,88 +214,6 @@ void calculate_new_infections(
     }
 }
 
-void handle_new_infections(
-    unsigned long int start_idx,
-    unsigned long int end_idx,
-    int node,
-    uint32_t * agent_node,
-    bool * infected,
-    bool * immunity,
-    unsigned char  * incubation_timer,
-    unsigned char  * infection_timer,
-    int new_infections,
-    int * new_infection_idxs_out,
-    int num_eligible_agents
-) {
-    //printf( "DEBUG: hni: creating %d new infections in node %d from %d susceptibles.\n", new_infections, node, num_eligible_agents );
-    if( new_infections == 0 )
-    {
-        return;
-    }
-    assert( new_infections > 0 );
-    if( num_eligible_agents == 0 )
-    {
-        return;
-    }
-    if( end_idx < start_idx ) {
-        printf( "ERROR: start_idx (%ld) is not < end_idx (%ld).\n", start_idx, end_idx );
-        return;
-    }
-
-    if( num_eligible_agents > 0 ) {
-        unsigned long int num_agents = end_idx-start_idx+1;
-        int selected_indices[num_eligible_agents]; // store idxs of selected for infection
-                                                   // these should be zeroed out first.
-        int count = 0;
-
-        for (unsigned long int i = start_idx; i <= end_idx; i++) {
-            if( !infected[i] && !immunity[i] && agent_node[i] == node ) {
-                // Found eligible (susceptible) in group of S & Is & maybe Es and Rs
-                unsigned long int selected_idx = i;
-                selected_indices[count++] = selected_idx;
-                //printf( "DEBUG: selected_indices[%d] = %ld.\n", count-1, selected_idx );
-                if( count == num_eligible_agents ) {
-                    // Note that we saw a bug where sometimes more agents were found to satisfy our sus condition than the value passed it! TBD
-                    break;
-                }
-            }
-        }
-        if( count < num_eligible_agents )
-        {
-            printf( "ERROR: count = %d, num_eligible_agents = %d.\n", count, num_eligible_agents  );
-            abort();
-        }
-        if( count == 0 ) {
-            printf( "WARNING: Found no susceptibles for some reason. Not infecting anyone.\n" );
-            abort();
-            return;
-        }
-        //num_eligible_agents = count; // ask me about this.
-
-        int i, step, selected_count = 0;
-        // Calculate the step size
-        if (new_infections >= num_eligible_agents) {
-            step = 1; // If we need to select all elements or more, select each one
-        } else {
-            step = num_eligible_agents/new_infections; // If we need to select less than N, calculate step size
-        }
-        //printf( "Selecting %d new infectees by skipping through %d candidates %d at a time.\n", new_infections, num_eligible_agents, step );
-        for (i = 0; i < num_eligible_agents && selected_count < new_infections; i += step) {
-            unsigned long int selected_id = selected_indices[i];
-            //assert( selected_id > 0 ); // this can be true
-            //printf( "DEBUG: Checking if selected_id (%ld) is >= start_idx(%ld).\n", selected_id, start_idx );
-            assert( selected_id >= start_idx );
-            //printf( "DEBUG: Checking if selected_id (%ld) is <= end_idx(%ld).\n", selected_id, end_idx );
-            assert( selected_id <= end_idx );
-            //printf( "Infecting index=%d.\n", selected_id );
-            infected[selected_id] = true;
-            incubation_timer[selected_id] = 7;
-            infection_timer[selected_id] = 14 + rand() % 2;
-            new_infection_idxs_out[ selected_count++ ] = selected_id;
-        }
-    }
-}
-
 void handle_new_infections_mp(
     unsigned long int start_idx,
     unsigned long int end_idx,
@@ -367,199 +280,11 @@ void handle_new_infections_mp(
     }
 }
 
-typedef struct {
-    int node_id;
-    // Add any other arguments needed by the worker function here
-    unsigned long int start_idx;
-    unsigned long int end_idx;
-    uint32_t * agent_node;
-    bool * infected;
-    bool * immunity;
-    unsigned char  * incubation_timer;
-    unsigned char  * infection_timer;
-    int new_infections;
-    int * new_infection_idxs_out;
-    int num_eligible_agents;
-} ThreadArgs;
-
-
-void* worker(void* arg) {
-    // Unpack arg struct and call existing function that does the nodewise work.
-    ThreadArgs* args = (ThreadArgs*)arg;
-
-    if( args->new_infections == 0 )
-        return NULL;
-    if( args->num_eligible_agents == 0 )
-        return NULL;
-
-    int node = args->node_id; // Retrieve the thread ID
-    /*
-    printf( "worker: node = %d.\n", node );
-    printf( "args->start_idx = %d.\n", args->start_idx );
-    printf( "args->end_idx = %d.\n", args->end_idx );
-    printf( "args->agent_node[0] = %d.\n", args->agent_node[0] );
-    printf( "args->infected[0] = %d.\n", args->infected[0] );
-    printf( "args->immunity[0] = %d.\n", args->immunity[0] );
-    printf( "args->incubation_timer[0] = %d.\n", args->incubation_timer[0] );
-    printf( "args->infection_timer[0] = %d.\n", args->infection_timer[0] );
-    printf( "args->new_infections[0] = %d.\n", args->new_infections );
-    printf( "args->new_infection_idxs_out[0] = %d.\n", args->new_infection_idxs_out[0] );
-    printf( "args->num_eligible_agents[0] = %d.\n", args->num_eligible_agents );
-    */
-    // Call the worker function with the provided arguments
-    if( args->new_infections == 0 ) {
-        return NULL;
-    }
-    handle_new_infections(
-        args->start_idx,
-        args->end_idx,
-        node, // Pass the thread ID
-        args->agent_node,
-        args->infected,
-        args->immunity,
-        args->incubation_timer,
-        args->infection_timer,
-        args->new_infections,
-        args->new_infection_idxs_out,
-        args->num_eligible_agents
-    );
-    
-    return NULL;
-}
-
-// Function to calculate the effective index
-int calculate_effective_index(int idx, int* new_infections) {
-    int start_idx = 0;
-    for (int i = 0; i < idx; i++) {
-        start_idx += new_infections[i];
-    }
-    return start_idx;
-}
-
-void handle_new_infections_threaded(
-    unsigned long int start_idx,
-    unsigned long int end_idx,
-    unsigned int num_nodes,
-    uint32_t * agent_node,
-    bool * infected,
-    bool * immunity,
-    unsigned char  * incubation_timer,
-    unsigned char  * infection_timer,
-    int * new_infections,
-    int * new_infection_idxs_out,
-    int * num_eligible_agents
-) {
-    if( end_idx < start_idx ) {
-        printf( "ERROR: start_idx (%ld) is not < end_idx (%ld).\n", start_idx, end_idx );
-        return;
-    }
-
-    unsigned long int num_threads = num_nodes;
-    pthread_t threads[num_threads];
-    ThreadArgs thread_args[num_threads];
-
-    for (int i = 0; i < num_threads; i++) {
-        /*
-        if( new_infections[ i ] == 0 )
-            continue;
-        if( num_eligible_agents[ i ] == 0 )
-            continue;
-        */
-        if( new_infections[ i ] > num_eligible_agents[ i ] )
-        {
-            //printf( "WARNING: Asked for %d new infections in node %d but only have %d susceptibles.\n", new_infections[ i ], i, num_eligible_agents[ i ] );
-            new_infections[ i ] = num_eligible_agents[ i ];
-        }
-        //assert( new_infections[ i ] <= num_eligible_agents[ i ] );
-        // We have to be a bit clever here with the index of new_infection_idxs_out.
-        // We have a single array that's going to be written to by all the threads.
-        // They all need to write to different parts, no clobbering.
-        // If we are expecting 10, 4, 7, and 1 new infections, we need to pass 
-        // 0, 10, 14, 21, and 22 as the start of the array to each node/thread.
-        thread_args[i].node_id = i;
-        thread_args[i].start_idx = start_idx;
-        thread_args[i].end_idx = end_idx;
-        thread_args[i].agent_node = agent_node;
-        thread_args[i].infected = infected;
-        thread_args[i].immunity = immunity;
-        thread_args[i].incubation_timer = incubation_timer;
-        thread_args[i].infection_timer = infection_timer;
-        thread_args[i].new_infections = new_infections[ i ];
-        int start_idx = calculate_effective_index(i, new_infections);
-        thread_args[i].new_infection_idxs_out = &new_infection_idxs_out[ start_idx ];
-        thread_args[i].num_eligible_agents = num_eligible_agents[ i ];
-        // Initialize other arguments for the worker function
-
-        pthread_create(&threads[i], NULL, worker, (void*)&thread_args[i]);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(threads[i], NULL);
-    }
-}
-
 /*
- Collects and aggregates statistical data on infection and immunity status
- of a population of agents within a specified range of indices.
-
- This function iterates over a subset of agents defined by the range
- [start_idx, eula_idx] and collects data on their infection and immunity
- status. It calculates and aggregates counts of susceptible, infected,
- and recovered agents for each unique node in the population.
-
- - num_agents: The total number of agents in the population.
- - start_idx: The starting index of the subset of agents to process.
- - eula_idx: The ending index of the subset of agents to process.
- - node: An array containing the node IDs of each agent.
- - infected: An array indicating whether each agent is infected.
- - immunity: An array indicating whether each agent is immune.
- - age: An array containing the age of each agent.
- - expected_lifespan: An array containing the expected lifespan of each agent.
- - infection_count: An array to store the count of infected agents per node.
- - susceptible_count: An array to store the count of susceptible agents per node.
- - recovered_count: An array to store the count of recovered agents per node.
-*/
-void collect_report_vanilla( 
-    int num_agents,
-    int start_idx,
-    int eula_idx,
-    uint32_t * node,
-    bool * infected,
-    bool * immunity,
-    float * age,
-    float * expected_lifespan, // so we can not count dead people
-    uint32_t * infection_count,
-    uint32_t * susceptible_count,
-    uint32_t * recovered_count
-)
-{
-    //printf( "%s called w/ num_agents = %d, start_idx = %d, eula_idx = %d.\n", __FUNCTION__, num_agents, start_idx, eula_idx );
-    for (int i = start_idx; i <= eula_idx; ++i) {
-        if( node[i] >= 0 )
-        {
-            int node_id = node[i];
-            if( age[ i ] < expected_lifespan[ i ] ) {
-                if( infected[ i ] ) {
-                    infection_count[ node_id ] ++;
-                    //printf( "Incrementing I count for node %d = %d from idx %d.\n", node_id, infection_count[ node_id ], i );
-                } else if( immunity[ i ] ) {
-                    recovered_count[ node_id ] ++;
-                    //printf( "Incrementing R count for node %d = %d from idx %d.\n", node_id, recovered_count[ node_id ], i );
-                } else {
-                    susceptible_count[ node_id ] ++;
-                    //printf( "Incrementing S count for node %d = %d from idx %d.\n", node_id, susceptible_count[ node_id ], i );
-                }
-            }
-        }
-    }
-    for (int i = eula_idx; i < num_agents; ++i) {
-        int node_id = node[i];
-        if( age[ i ] < expected_lifespan[ i ] ) {
-            recovered_count[ node_id ]++;
-        }
-    }
-}
-
+ * SQL: SELECT node, COUNT(*) FROM agents WHERE infected=0 AND immunity=0 GROUP BY node
+        SELECT node, COUNT(*) FROM agents WHERE infected=1 GROUP BY node
+        SELECT node, COUNT(*) FROM agents WHERE immunity=1 GROUP BY node
+ */
 void collect_report(
     int num_agents,
     int start_idx,
@@ -861,33 +586,5 @@ void progress_natural_mortality_binned(
         }
     }
 }
-
-/////////////////////////////
-// DEPRECATED
-/////////////////////////////
-
-float logistic_density_fn(float x) {
-    float L = 4.5; // Maximum value
-    float x0 = 250000.0; // Midpoint
-    float k = 0.0001; // Steepness parameter
-    float ret = 0.5 + (L / (1.0 + exp(-k * (x - x0))));
-    //printf( "ccs multiplier = %f.\n", ret );
-    return ret;
-}
-
-// Function to generate a random number of new infections
-int generate_new_infections(int N, double P) {
-    // Generate a random number of new infections from a binomial distribution
-    int new_infections = 0;
-    for (int i = 0; i < N; i++) {
-        double rand_num = (double)rand() / RAND_MAX;  // Generate a random number between 0 and 1
-        if (rand_num < P) {  // Probability of infection
-            new_infections++;
-        }
-    }
-    //printf( "generate_new_infections returning %d for num sus = %d and prob = %f.\n", new_infections, N, P );
-    return new_infections;
-}
-
 
 }
