@@ -16,7 +16,7 @@ RUN mkdir static
 
 COPY src/settings.py .
 COPY src/demographics_settings.py .
-COPY src/tlc.py .
+COPY src/measles.py .
 COPY src/sir_numpy_c.py .
 COPY src/sir_numpy.py .
 COPY src/report.py .

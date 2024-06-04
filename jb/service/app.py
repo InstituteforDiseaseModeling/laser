@@ -170,7 +170,7 @@ def run_sim( base_infectivity, migration_fraction, seasonal_multiplier ):
     import settings
     import demographics_settings as ds
     import report
-    from tlc import run_simulation
+    from measles import run_simulation
     #ctx = model.initialize_database()
     #ctx = model.eula_init( ctx, ds.eula_age )
 
@@ -178,7 +178,7 @@ def run_sim( base_infectivity, migration_fraction, seasonal_multiplier ):
 
     try:
         print( "Run sim" )
-        subprocess.run(['/usr/local/bin/python3', 'tlc.py'], check=True) 
+        subprocess.run(['/usr/local/bin/python3', 'measles.py'], check=True) 
     except subprocess.CalledProcessError as e:
         # Handle subprocess error (e.g., log the error, restart the subprocess)
         print(f"Subprocess error: {e}")
