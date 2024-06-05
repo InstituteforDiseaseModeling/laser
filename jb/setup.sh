@@ -53,6 +53,7 @@ cp "$src_dir/measles.py" .
 cp "$src_dir/../service/app.py" app.py
 #ln -sfn "$src_dir/../service/requirements.txt" requirements.txt
 cp "$src_dir/../service/requirements.txt" requirements.txt
+pip3 install -r requirements.txt
 #ln -sfn "$src_dir/births.csv"
 #ln -sfn "$src_dir/cbrs.csv"
 
