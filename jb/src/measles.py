@@ -109,6 +109,6 @@ if __name__ == "__main__":
     print( f"Execution time = {runtime}." )
 
     # The lines below are required for calibration; running them imposes requirements, and uses more time and memory.
-    import post_proc
-    post_proc.analyze()
+    #import post_proc
+    #post_proc.analyze()
 
