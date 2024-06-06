@@ -67,7 +67,7 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
             ctx = model.distribute_interventions( ctx, timestep )
 
         # Transmission is done, now migrate some. Only infected?
-        if timestep>settings.burnin_delay and settings.num_nodes>1:
+        if timestep>settings.burnin_delay and settings.num_nodes>1 and mf>0:
             ctx = model.migrate( ctx, timestep, migration_fraction=mf )
 
         # if we have had total fade-out, inject imports

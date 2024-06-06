@@ -70,8 +70,11 @@ if [[ -n $england_wales ]]; then
     cp "$src_dir/demographics_settings_ew.py" ./demographics_settings.py
     cp "$src_dir/../Dockerfile_ew" ./Dockerfile
 elif [[ -n $ccs ]]; then
+    cp "$src_dir/sir_sql.py" .
+    cp "$src_dir/model_sql/eula.py" model_sql/
     cp "$src_dir/demographics_settings_1node.py" ./demographics_settings.py
     cp "$src_dir/../Dockerfile_ccs" ./Dockerfile
+    sed -i 's/migration_fraction=/migration_fraction=0#/g' settings.py
     make
 fi
 

@@ -300,10 +300,13 @@ def update_ages( data, totals, timestep ):
     def births( data, interval ):
         labor_start_time = time.time()
 
-        global cbrs
-        if not cbrs:
-            cbrs = load_cbrs()
-        num_new_babies_by_node = sir_numpy.births_from_cbr_fast( totals, rate=cbrs[timestep//365] )
+        if settings.cbr > -1:
+            num_new_babies_by_node = sir_numpy.births_from_cbr_fast( totals, rate=settings.cbr )
+        else:
+            global cbrs
+            if not cbrs:
+                cbrs = load_cbrs()
+            num_new_babies_by_node = sir_numpy.births_from_cbr_fast( totals, rate=cbrs[timestep//365] )
         #num_new_babies_by_node = sir_numpy.births_from_lorton_algo( timestep )
 
         # Create an array of indices (nodes)
