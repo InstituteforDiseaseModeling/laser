@@ -39,8 +39,8 @@ def _pq_push(pq: PriorityQueue, payload: Any, priority: np.uint32):
         raise IndexError("Priority queue is full")
     pq.payloads[pq.size] = payload
     pq.priority[pq.size] = priority
+    index = pq.size
     pq.size += 1
-    index = pq.size - 1
     while index > 0:
         parent_index = (index - 1) // 2
         if pq.priority[index] < pq.priority[parent_index]:
@@ -60,9 +60,9 @@ def _pq_pop(pq: PriorityQueue) -> Tuple[Any, np.uint32]:
 
     payload, priority = pq.peek()
 
-    pq.payloads[0] = pq.payloads[pq.size - 1]
-    pq.priority[0] = pq.priority[pq.size - 1]
     pq.size -= 1
+    pq.payloads[0] = pq.payloads[pq.size]
+    pq.priority[0] = pq.priority[pq.size]
 
     index = 0
     while index < pq.size:

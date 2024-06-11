@@ -12,13 +12,13 @@ import numpy as np
 class Demographics(ABC):
     """Abstract class to store demographic data for agent-based models"""
 
-    def __init__(self, nyears, ncommunities):
+    def __init__(self, nyears, nnodes):
         self._nyears = nyears
-        self._ncommunities = ncommunities
-        self._population = np.zeros((nyears, ncommunities), dtype=np.uint32)
-        self._births = np.zeros((nyears, ncommunities), dtype=np.uint32)
-        self._deaths = np.zeros((nyears, ncommunities), dtype=np.uint32)
-        self._immigrations = np.zeros((nyears, ncommunities), dtype=np.uint32)
+        self._nnodes = nnodes
+        self._population = np.zeros((nyears, nnodes), dtype=np.uint32)
+        self._births = np.zeros((nyears, nnodes), dtype=np.uint32)
+        self._deaths = np.zeros((nyears, nnodes), dtype=np.uint32)
+        self._immigrations = np.zeros((nyears, nnodes), dtype=np.uint32)
 
         return
 
@@ -32,39 +32,39 @@ class Demographics(ABC):
         return self._nyears
 
     @property
-    def ncommunities(self):
-        """Return the number of communities in the demographic data."""
-        return self._ncommunities
+    def nnodes(self):
+        """Return the number of nodes in the demographic data."""
+        return self._nnodes
 
     @property
     def population(self):
-        """Return the populations of the communities in the given year."""
+        """Return the populations of the nodes in the given year."""
         return self._population
 
     @property
     def births(self):
-        """Return the number of births in the communities in the given year."""
+        """Return the number of births in the nodes in the given year."""
         return self._births
 
     @property
     def deaths(self):
-        """Return the number of deaths in the communities in the given year."""
+        """Return the number of deaths in the nodes in the given year."""
         return self._deaths
 
     @property
     def immigrations(self):
-        """Return the number of immigrations into the communities in the given year."""
+        """Return the number of immigrations into the nodes in the given year."""
         return self._immigrations
 
 
 class DemographicsStatic(Demographics):
-    def __init__(self, nyears, ncommunities):
-        super().__init__(nyears, ncommunities)
+    def __init__(self, nyears, nnodes):
+        super().__init__(nyears, nnodes)
         return
 
     def initialize(self, **kwargs):
         """Initialize the demographic data."""
-        # The following arguments should be 2 dimensional arrays of data [nyears, ncommunities]
+        # The following arguments should be 2 dimensional arrays of data [nyears, nnodes]
         self._population = kwargs["population"]
         self._births = kwargs["births"]
         self._deaths = kwargs["deaths"]
@@ -73,8 +73,8 @@ class DemographicsStatic(Demographics):
 
 
 class DemographicsByYear(Demographics):
-    def __init__(self, nyears, ncommunities):
-        super().__init__(nyears, ncommunities)
+    def __init__(self, nyears, nnodes):
+        super().__init__(nyears, nnodes)
         self._cbr = np.float32(0.0)
         self._mortality = np.float32(0.0)
         self._immigration = np.float32(0.0)
@@ -82,9 +82,9 @@ class DemographicsByYear(Demographics):
 
     def initialize(self, **kwargs):
         """Initialize the demographic data."""
-        # population should be ncommunities long
+        # population should be nnodes long
         self._population[0] = kwargs["initial_population"]
-        # rates are per 1000, may be constant or vary by year (but not by community)
+        # rates are per 1000, may be constant or vary by year (but not by node)
         self._cbr = kwargs["cbr"] if "cbr" in kwargs else np.float32(0.0)
         self._mortality = kwargs["mortality"] if "mortality" in kwargs else np.float32(0.0)
         self._immigration = kwargs["immigration"] if "immigration" in kwargs else np.float32(0.0)
@@ -111,8 +111,8 @@ class DemographicsByYear(Demographics):
 
 
 class DemographicsByYearStochastic(Demographics):
-    def __init__(self, nyears, ncommunities):
-        super().__init__(nyears, ncommunities)
+    def __init__(self, nyears, nnodes):
+        super().__init__(nyears, nnodes)
         self._cbr = np.float32(0.0)
         self._mortality = np.float32(0.0)
         self._immigration = np.float32(0.0)
@@ -120,9 +120,9 @@ class DemographicsByYearStochastic(Demographics):
 
     def initialize(self, **kwargs):
         """Initialize the demographic data."""
-        # population should be ncommunities long
+        # population should be nnodes long
         self._population[0] = kwargs["initial_population"]
-        # rates are per 1000, may be constant or vary by year (but not by community)
+        # rates are per 1000, may be constant or vary by year (but not by node)
         self._cbr = kwargs["cbr"] if "cbr" in kwargs else np.float32(0.0)
         self._mortality = kwargs["mortality"] if "mortality" in kwargs else np.float32(0.0)
         self._immigration = kwargs["immigration"] if "immigration" in kwargs else np.float32(0.0)

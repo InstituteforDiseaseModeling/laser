@@ -95,15 +95,15 @@ class NumbaSpatialSEIR(DiseaseModel):
         Parameters:
         - capacity: The maximum capacity of the model.
         - demographics: The demographic information.
-        - initial: The initial state of the model (S, E, I, and R populations - [community, state]).
+        - initial: The initial state of the model (S, E, I, and R populations - [node, state]).
         - network: The network structure of the model.
 
         Returns:
         None
         """
         assert network.shape[0] == network.shape[1], "Network must be square"
-        assert network.shape[0] == demographics.ncommunities, "Network must be same size as number of communities"
-        print(f"Initializing model with {demographics.ncommunities} communities: ", end="")
+        assert network.shape[0] == demographics.nnodes, "Network must be same size as number of nodes"
+        print(f"Initializing model with {demographics.nnodes} nodes: ", end="")
         self._popcounts = demographics.population[0]
         print(f"(initial population: {self._popcounts.sum():,} maximum capacity: {capacity:,})")
         population = Population(capacity)
@@ -115,7 +115,7 @@ class NumbaSpatialSEIR(DiseaseModel):
         population.add_property("nodeid", dtype=_NODEID_TYPE_NP, default=0)
 
         # TODO? add dob property and initialize
-        # community.add_property("dob", dtype=DOB_TYPE_NP, default=0)
+        # node.add_property("dob", dtype=DOB_TYPE_NP, default=0)
 
         # iterate through population setting nodeid = i for next pops[i] individuals
         nodeidx = 0
@@ -130,7 +130,7 @@ class NumbaSpatialSEIR(DiseaseModel):
         IINF = 2
         IREC = 3
 
-        for c in range(demographics.ncommunities):
+        for c in range(demographics.nnodes):
             popcount = init_pop[c]
             assert initial[c].sum() == popcount, "SEIR counts do not sum to node population"
             i, j = population.add(popcount)
@@ -163,15 +163,15 @@ class NumbaSpatialSEIR(DiseaseModel):
         self._network = network
 
         # pre-allocate these rather than allocating new array on each timestep
-        self._forces = np.zeros(demographics.ncommunities, dtype=np.float32)
+        self._forces = np.zeros(demographics.nnodes, dtype=np.float32)
 
         # ticks+1 here for room to capture the initial state
-        # 3 dimensions: time (tick), state (S:0, E:1, I:2, R:3), community (0..ncommunities-1)
+        # 3 dimensions: time (tick), state (S:0, E:1, I:2, R:3), node (0..nnodes-1)
         # 4 columns: susceptible, exposed, infected, recovered - timestep is implied
-        self.report = np.zeros((self.parameters.ticks + 1, 4, demographics.ncommunities), dtype=np.uint32)
+        self.report = np.zeros((self.parameters.ticks + 1, 4, demographics.nnodes), dtype=np.uint32)
 
-        # self._contagion = np.zeros(demographics.ncommunities, dtype=np.uint32)
-        self.cases = np.zeros((self.parameters.ticks, demographics.ncommunities), dtype=np.uint32)
+        # self._contagion = np.zeros(demographics.nnodes, dtype=np.uint32)
+        self.cases = np.zeros((self.parameters.ticks, demographics.nnodes), dtype=np.uint32)
 
         # record initial state, state _after_ timestep i processing will be in index i+1
         report_update(self, -1)
@@ -198,12 +198,13 @@ class NumbaSpatialSEIR(DiseaseModel):
         """Finalize the model."""
         directory = directory if directory else self.parameters.output
         prefix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        prefix += f"-{self.parameters.scenario}"
         try:
             Path(directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
             print(f"Wrote parameters to '{directory / (prefix + '-parameters.json')}'.")
         except Exception as e:
             print(f"Error writing parameters: {e}")
-        prefix += f"-{self._demographics.ncommunities}-{self.parameters.ticks}-"
+        prefix += f"-{self._demographics.nnodes}-{self.parameters.ticks}-"
         np.save(filename := directory / (prefix + "spatial_seir.npy"), self.report)
         print(f"Wrote SEIR channels, by node, to '{filename}'.")
         # sdf = pl.DataFrame(data=self.cases, schema=[f"node{i}" for i in range(len(self._popcounts))])
@@ -233,7 +234,7 @@ class NumbaSpatialSEIR(DiseaseModel):
 
 # model step phases
 # We do the dance seen below a couple of times because Numba doesn't know what it can
-# do with Python classes, e.g. community. So we use Numba on an inner loop with the
+# do with Python classes, e.g. node. So we use Numba on an inner loop with the
 # argument types explicitly passed and call the inner loop from the more general step function.
 
 # Note that we use the _NB (Numba) type versions here vs. the _NP (Numpy) type versions above.
@@ -247,8 +248,8 @@ def vital_dynamics(model: NumbaSpatialSEIR, tick: int) -> None:
     year = tick // 365
     doy = tick % 365 + 1  # day of year, 1-based
 
-    # Deactive deaths_t randomly selected individuals
-    # deaths = sum(community.deaths[tick] for community in model.communities)
+    # Deactivate deaths_t randomly selected individuals
+    # deaths = sum(node.deaths[tick] for node in model.nodes)
 
     # Activate births_t new individuals as susceptible
     annual_births = model._demographics.births[year]
@@ -374,8 +375,8 @@ def transmission_update(model, tick) -> None:
     cache=True,
 )
 def report_parallel(susceptibilities, etimers, itimers, nodeids, results, scratch):
-    # results indexed by state (SEIR) and community
-    # scratch indexed by core and community
+    # results indexed by state (SEIR) and node
+    # scratch indexed by core and node
 
     num_agents = susceptibilities.shape[0]
     num_cores = scratch.shape[0]
@@ -442,7 +443,7 @@ def report_update(model: NumbaSpatialSEIR, tick: int) -> None:
 
     global _scratch
     if _scratch is None:
-        _scratch = np.zeros((32, model._demographics.ncommunities), dtype=np.uint32)
+        _scratch = np.zeros((32, model._demographics.nnodes), dtype=np.uint32)
     report_parallel(
         population.susceptibility[: population.count],
         population.etimer[: population.count],
