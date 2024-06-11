@@ -16,7 +16,7 @@ class Population:
 
         return
 
-    def add_property(self, name, dtype=ti.i32, default=0):
+    def add_property(self, name, dtype=ti.types.i32, default=0):
         """Add a property to the class"""
         # initialize the property to a Taichi field with of size self._count, dtype, and default value
         setattr(self, name, ti.ndarray(dtype, self._capacity))

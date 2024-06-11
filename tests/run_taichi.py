@@ -9,7 +9,6 @@ import numpy as np
 
 from idmlaser.models import TaichiSpatialSEIR
 from idmlaser.numpynumba import DemographicsByYear
-from idmlaser.numpynumba import DemographicsStatic
 
 
 def main(parameters):
@@ -17,10 +16,16 @@ def main(parameters):
     model = TaichiSpatialSEIR(parameters)
 
     if parameters.scenario == "engwal":
+        from scenario_engwal import initialize_engwal
+
         max_capacity, demographics, initial, network = initialize_engwal(model, parameters, parameters.nodes)
     elif parameters.scenario == "nigeria":
+        from scenario_nigeria import initialize_nigeria
+
         max_capacity, demographics, initial, network = initialize_nigeria(model, parameters, parameters.nodes)
     elif parameters.scenario == "ccs":
+        from scenario_ccs import initialize_ccs
+
         max_capacity, demographics, initial, network = initialize_ccs(model, parameters)
     elif parameters.scenario == "test":
         max_capacity, demographics, initial, network = initialize_test(model, parameters, parameters.nodes)
@@ -33,45 +38,6 @@ def main(parameters):
     model.finalize()
 
     return
-
-
-def initialize_engwal(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsStatic, np.ndarray, np.ndarray]:
-    """Initialize the model with the England+Wales scenario."""
-    return
-
-
-def initialize_nigeria(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:
-    """Initialize the model with the England+Wales scenario."""
-    return
-
-
-def initialize_ccs(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:
-    """Initialize the model for CCS."""
-    nyears = np.int32(np.ceil(parameters.ticks / 365))
-    nnodes = parameters.nodes
-    print(f"Instantiating DemographicsByYears{(nyears, nnodes*nnodes)}...")
-    demographics = DemographicsByYear(nyears, nnodes * nnodes)
-    populations = np.zeros(nnodes * nnodes, dtype=np.int32)  # initial nodes populations (year 0)
-    for i, p in enumerate(np.linspace(4, 6, nnodes)):
-        for j in range(nnodes):
-            populations[i * nnodes + j] = np.int32(np.round(np.power(10, p)))
-    demographics.initialize(initial_population=populations, cbr=20.0, mortality=0.0, immigration=0.0)
-
-    initial = np.zeros((nnodes * nnodes, 4), dtype=np.uint32)  # S, E, I, R
-    initial[:, 0] = np.int32(np.round(populations / parameters.r_naught))  # S
-    initial[:, 1] = 15  # E
-    initial[:, 2] = 10  # I
-    initial[:, 3] = populations - initial[:, 0:3].sum(axis=1)  # R
-
-    network = np.zeros((nnodes * nnodes, nnodes * nnodes), dtype=np.float32)
-
-    max_capacity = demographics.population[0, :].sum() + demographics.births.sum() + demographics.immigrations.sum()
-    print(f"Initial population: {demographics.population[0, :].sum():>11,}")
-    print(f"Total births:       {demographics.births.sum():>11,}")
-    print(f"Total immigrations: {demographics.immigrations.sum():>11,}")
-    print(f"Max capacity:       {max_capacity:>11,}")
-
-    return (max_capacity, demographics, initial, network)
 
 
 def initialize_test(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:

@@ -11,12 +11,12 @@ import taichi as ti
 from tqdm import tqdm
 
 from idmlaser.numpynumba import Demographics
+from idmlaser.taichi import Population
 from idmlaser.utils import NumpyJSONEncoder
 
 from .model import DiseaseModel
-from .population import Population
 
-ti.init(arch=ti.gpu)
+ti.init(arch=ti.gpu)  # , kernel_profiler=True)
 
 
 class TaichiSpatialSEIR(DiseaseModel):
@@ -25,9 +25,10 @@ class TaichiSpatialSEIR(DiseaseModel):
     def __init__(self, parameters: dict):
         super().__init__()
         self.update_parameters(parameters)
+        self._demographics = None
         self._population = None
 
-        self._phases = [infection_update, incubation_update, transmission, report_update]
+        self._phases = [vital_dynamics, infection_update, incubation_update, transmission, report_update]
 
         return
 
@@ -97,15 +98,18 @@ class TaichiSpatialSEIR(DiseaseModel):
         initialize_population(
             offsets.astype(np.int32),
             initial.astype(np.int32),
-            self.population.susceptibility,
-            self.population.etimers,
-            self.population.itimers,
-            self.population.nodeids,
+            population.susceptibility,
+            population.etimers,
+            population.itimers,
+            population.nodeids,
             self.parameters.exp_std,
             self.parameters.exp_mean,
             self.parameters.inf_std,
             self.parameters.inf_mean,
         )
+
+        self._demographics = demographics
+        self._population = population
 
         self.report = ti.ndarray(dtype=ti.i32, shape=(self.parameters.ticks + 1, 4, num_pops))  # S, E, I, and R counts for each node
         self.contagion = ti.ndarray(dtype=ti.i32, shape=num_pops)  # buffer to hold the current contagion by node
@@ -119,6 +123,14 @@ class TaichiSpatialSEIR(DiseaseModel):
 
         return
 
+    @property
+    def demographics(self):
+        return self._demographics
+
+    @property
+    def population(self):
+        return self._population
+
     def run(self, ticks: int) -> None:
         """Run the model for a number of ticks."""
         start = datetime.now(timezone.utc)
@@ -126,6 +138,7 @@ class TaichiSpatialSEIR(DiseaseModel):
             self.step(tick, pbar)
         finish = datetime.now(timezone.utc)
         print(f"elapsed time: {finish - start}")
+        # ti.profiler.print_kernel_profiler_info()
 
         return
 
@@ -154,18 +167,14 @@ class TaichiSpatialSEIR(DiseaseModel):
         return
 
 
-def vital_dynamics(model: TaichiSpatialSEIR, tick: int) -> None:
-    return
-
-
 @ti.kernel
 def initialize_population(
-    offsets: ti.types.ndarray(ti.i32),
-    initial: ti.types.ndarray(ti.i32),
-    susceptibility: ti.types.ndarray(ti.u8),
-    etimers: ti.types.ndarray(ti.u8),
-    itimers: ti.types.ndarray(ti.u8),
-    nodeids: ti.types.ndarray(ti.u16),
+    offsets: ti.types.ndarray(ti.i32),  # type: ignore
+    initial: ti.types.ndarray(ti.i32),  # type: ignore
+    susceptibility: ti.types.ndarray(ti.u8),  # type: ignore
+    etimers: ti.types.ndarray(ti.u8),  # type: ignore
+    itimers: ti.types.ndarray(ti.u8),  # type: ignore
+    nodeids: ti.types.ndarray(ti.u16),  # type: ignore
     inc_std: ti.types.f32,
     inc_mean: ti.types.f32,
     inf_std: ti.types.f32,
@@ -206,49 +215,127 @@ def initialize_population(
 
 
 @ti.kernel
-def inf_update(f_itimers: ti.types.ndarray(ti.u8)):
-    for i in f_itimers:
-        if f_itimers[i] > 0:
-            tmp = f_itimers[i] - ti.cast(1, ti.u8)
-            f_itimers[i] = tmp
+def births_kernel(
+    first: ti.types.i32,
+    count: ti.types.i32,
+    nodeid: ti.types.u16,
+    susceptibility: ti.types.ndarray(ti.u8),  # type: ignore
+    nodeids: ti.types.ndarray(ti.u16),  # type: ignore
+):
+    for i in range(first, first + count):
+        susceptibility[i] = ti.cast(1, ti.u8)
+        nodeids[i] = nodeid
 
-
-def infection_update(model: TaichiSpatialSEIR, _t: int) -> None:
-    inf_update(model.f_itimers)
     return
 
 
 @ti.kernel
-def inc_update(f_etimers: ti.types.ndarray(ti.u8), f_itimers: ti.types.ndarray(ti.u8), inf_std: ti.types.f32, inf_mean: ti.types.f32):
-    for i in f_etimers:
-        if f_etimers[i] > 0:
-            tmp = f_etimers[i] - ti.cast(1, ti.u8)
-            f_etimers[i] = tmp
+def immigrations_kernel(
+    first: ti.types.i32,
+    count: ti.types.i32,
+    nodeid: ti.types.u16,
+    susceptibility: ti.types.ndarray(ti.u8),  # type: ignore
+    nodeids: ti.types.ndarray(ti.u16),  # type: ignore
+):
+    for i in range(first, first + count):
+        susceptibility[i] = ti.cast(0, ti.u8)
+        nodeids[i] = nodeid
+
+    return
+
+
+def vital_dynamics(model: TaichiSpatialSEIR, tick: int) -> None:
+    population = model.population
+    year = tick // 365
+    doy = (tick % 365) + 1
+
+    # Deactivate deaths_t agents
+
+    # Activate births_t agents as susceptible
+    annual_births = model.demographics.births[year]
+    todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
+    if (total_births := todays_births.sum()) > 0:
+        istart, _iend = population.add(total_births)
+        # population.dob[istart:iend] = tick
+        # population.states[istart:iend] = STATE_SUSCEPTIBLE
+        # population.susceptibility[istart:iend] = 1    # in births() kernel
+        index = istart
+        for nodeid, births in enumerate(todays_births):
+            if births > 0:
+                # population.nodeid[index : index + births] = nodeid  # assign newborns to their nodes
+                births_kernel(index, births, nodeid, population.susceptibility, population.nodeids)
+                index += births
+
+    # Activate immigrations_t agents as not-susceptible (recovered)
+    annual_immigrations = model.demographics.immigrations[year]
+    todays_immigrations = (annual_immigrations * doy // 365) - (annual_immigrations * (doy - 1) // 365)
+    if (total_immigrations := todays_immigrations.sum()) > 0:
+        istart, _iend = model.population.add(total_immigrations)
+        # population.states[istart:iend] = STATE_RECOVERED
+        # population.susceptibility[istart:iend] = 0    # in immigrations() kernel
+        index = istart
+        for nodeid, immigrations in enumerate(todays_immigrations):
+            if immigrations > 0:
+                # population.nodeid[index : index + immigrations] = nodeid  # assign immigrants to their nodes
+                immigrations_kernel(index, immigrations, nodeid, population.susceptibility, population.nodeids)
+                index += immigrations
+
+    return
+
+
+@ti.kernel
+def inf_update(count: ti.types.i32, itimers: ti.types.ndarray(ti.u8)):  # type: ignore
+    for i in range(count):
+        if itimers[i] > 0:
+            tmp = itimers[i] - ti.cast(1, ti.u8)
+            itimers[i] = tmp
+
+
+def infection_update(model: TaichiSpatialSEIR, _t: int) -> None:
+    inf_update(model.population.count, model.population.itimers)
+    return
+
+
+@ti.kernel
+def inc_update(
+    count: ti.types.i32,
+    etimers: ti.types.ndarray(ti.u8),  # type: ignore
+    itimers: ti.types.ndarray(ti.u8),  # type: ignore
+    inf_std: ti.types.f32,
+    inf_mean: ti.types.f32,
+):
+    for i in range(count):
+        if etimers[i] > 0:
+            tmp = etimers[i] - ti.cast(1, ti.u8)
+            etimers[i] = tmp
             if tmp == 0:
                 duration = ti.round(ti.randn() * inf_std + inf_mean)
                 if duration <= 0:
                     duration = 1
-                f_itimers[i] = ti.cast(duration, ti.u8)
+                itimers[i] = ti.cast(duration, ti.u8)
 
 
 def incubation_update(model: TaichiSpatialSEIR, _t: int) -> None:
-    inc_update(model.f_etimers, model.f_itimers, model.parameters.inf_std, model.parameters.inf_mean)
+    inc_update(
+        model.population.count, model.population.etimers, model.population.itimers, model.parameters.inf_std, model.parameters.inf_mean
+    )
     return
 
 
 @ti.kernel
 def tx_kernel(
-    tick: ti.i32,
-    contagion: ti.types.ndarray(ti.i32),
-    susceptibility: ti.types.ndarray(ti.u8),
-    itimers: ti.types.ndarray(ti.u8),
-    etimers: ti.types.ndarray(ti.u8),
-    nodeids: ti.types.ndarray(ti.u16),
-    network: ti.types.ndarray(ti.f32),
-    transfer: ti.types.ndarray(ti.i32),
-    axis_sums: ti.types.ndarray(ti.i32),
-    node_populations: ti.types.ndarray(ti.i32),
-    forces: ti.types.ndarray(ti.f32),
+    tick: ti.types.i32,
+    count: ti.types.i32,
+    contagion: ti.types.ndarray(ti.i32),  # type: ignore
+    susceptibility: ti.types.ndarray(ti.u8),  # type: ignore
+    itimers: ti.types.ndarray(ti.u8),  # type: ignore
+    etimers: ti.types.ndarray(ti.u8),  # type: ignore
+    nodeids: ti.types.ndarray(ti.u16),  # type: ignore
+    network: ti.types.ndarray(ti.f32),  # type: ignore
+    transfer: ti.types.ndarray(ti.i32),  # type: ignore
+    axis_sums: ti.types.ndarray(ti.i32),  # type: ignore
+    node_populations: ti.types.ndarray(ti.i32),  # type: ignore
+    forces: ti.types.ndarray(ti.f32),  # type: ignore
     beta: ti.f32,
     inc_std: ti.f32,
     inc_mean: ti.f32,
@@ -258,7 +345,7 @@ def tx_kernel(
         contagion[i] = 0
 
     # accumulate contagion for each node
-    for i in susceptibility:
+    for i in range(count):
         if (susceptibility[i] == 0) and (itimers[i] > 0):
             contagion[ti.cast(nodeids[i], ti.i32)] += 1
 
@@ -292,7 +379,7 @@ def tx_kernel(
         forces[i] = forces[i] / node_populations[year, i]
 
     # visit each individual determining transmision by node force of infection and individual susceptibility
-    for i in susceptibility:
+    for i in range(count):
         if ti.random() < (forces[ti.cast(nodeids[i], ti.i32)] * susceptibility[i]):
             susceptibility[i] = ti.cast(0, ti.u8)
             duration = ti.round(ti.randn() * inc_std + inc_mean)
@@ -304,11 +391,12 @@ def tx_kernel(
 def transmission(model: TaichiSpatialSEIR, tick: int) -> None:
     tx_kernel(
         tick,
+        model.population.count,
         model.contagion,
-        model._population.susceptibility,
-        model._population.itimers,
-        model._population.etimers,
-        model._population.nodeids,
+        model.population.susceptibility,
+        model.population.itimers,
+        model.population.etimers,
+        model.population.nodeids,
         model.network,
         model.transfer,
         model.axis_sums,
@@ -323,14 +411,15 @@ def transmission(model: TaichiSpatialSEIR, tick: int) -> None:
 
 @ti.kernel
 def report_kernel(
-    tick: ti.i32,
-    results: ti.types.ndarray(ti.i32),
-    susceptibility: ti.types.ndarray(ti.u8),
-    etimers: ti.types.ndarray(ti.u8),
-    itimers: ti.types.ndarray(ti.u8),
-    nodeids: ti.types.ndarray(ti.u16),
+    tick: ti.types.i32,
+    count: ti.types.i32,
+    results: ti.types.ndarray(ti.i32),  # type: ignore
+    susceptibility: ti.types.ndarray(ti.u8),  # type: ignore
+    etimers: ti.types.ndarray(ti.u8),  # type: ignore
+    itimers: ti.types.ndarray(ti.u8),  # type: ignore
+    nodeids: ti.types.ndarray(ti.u16),  # type: ignore
 ):
-    for i in susceptibility:
+    for i in range(count):
         nodeid = ti.cast(nodeids[i], ti.i32)
         if susceptibility[i] != 0:
             results[tick, 0, nodeid] += 1
@@ -339,14 +428,22 @@ def report_kernel(
                 results[tick, 1, nodeid] += 1
             elif itimers[i] != 0:
                 results[tick, 2, nodeid] += 1
-    #         else:
-    #             results[tick, 3, nodeid] += 1
+            else:
+                results[tick, 3, nodeid] += 1
 
     return
 
 
 def report_update(model: TaichiSpatialSEIR, tick: int) -> None:
-    report_kernel(tick + 1, model.report, model.f_susceptibility, model.f_etimers, model.f_itimers, model.f_nodeids)
+    report_kernel(
+        tick + 1,
+        model.population.count,
+        model.report,
+        model.population.susceptibility,
+        model.population.etimers,
+        model.population.itimers,
+        model.population.nodeids,
+    )
 
     return
 
