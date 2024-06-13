@@ -167,18 +167,13 @@ def load( pop_file ):
     """
     Load population from csv file as np arrays. Each property column is an np array.
     """
-    with gzip.open( pop_file ) as fp:
-        # Load the entire CSV file into a NumPy array
-        header_row = np.genfromtxt(fp, delimiter=',', dtype=str, max_rows=1)
+    with gzip.open(pop_file) as fp:
+        df = pd.read_csv(fp)
+        headers = df.columns.to_numpy()
+        data = np.array(df, copy=False)
 
-        # Load the remaining data as numerical values, skipping the header row
-        data = np.genfromtxt(fp, delimiter=',', dtype=float, skip_header=1)
-
-        # Extract headers from the header row
-        headers = header_row
-
-    settings.pop = len(data) # -unborn_end_idx 
-    print( f"Population={settings.pop}" )
+    #settings.pop = len(data) # -unborn_end_idx 
+    print( f"Modeled Population Size={len(data)}" )
 
     unborn = {header: [] for i, header in enumerate(headers)}
     global unborn_end_idx 
