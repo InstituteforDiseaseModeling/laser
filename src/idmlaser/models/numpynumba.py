@@ -5,6 +5,8 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Optional
+from typing import Tuple
+
 
 import numba as nb
 import numpy as np
@@ -194,24 +196,23 @@ class NumbaSpatialSEIR(DiseaseModel):
         for phase in self._phases:
             phase(self, tick)
 
-    def finalize(self, directory: Optional[Path] = None) -> None:
+    def finalize(self, directory: Optional[Path] = None) -> Tuple[Optional[Path], Path]:
         """Finalize the model."""
         directory = directory if directory else self.parameters.output
+        directory.mkdir(parents=True, exist_ok=True)
         prefix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         prefix += f"-{self.parameters.scenario}"
         try:
-            Path(directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
-            print(f"Wrote parameters to '{directory / (prefix + '-parameters.json')}'.")
+            Path(paramfile:= directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
+            print(f"Wrote parameters to '{paramfile}'.")
         except Exception as e:
             print(f"Error writing parameters: {e}")
+            paramfile = None
         prefix += f"-{self._demographics.nnodes}-{self.parameters.ticks}-"
-        np.save(filename := directory / (prefix + "spatial_seir.npy"), self.report)
-        print(f"Wrote SEIR channels, by node, to '{filename}'.")
-        # sdf = pl.DataFrame(data=self.cases, schema=[f"node{i}" for i in range(len(self._popcounts))])
-        # sdf.write_csv(filename := directory / "spatial_seir_cases.csv")
-        # print(f"Wrote spatial cases to '{filename}'.")
+        np.save(npyfile := directory / (prefix + "spatial_seir.npy"), self.report)
+        print(f"Wrote SEIR channels, by node, to '{npyfile}'.")
 
-        return
+        return (paramfile, npyfile)
 
     def run(self, ticks: int) -> None:
         """Run the model for a number of ticks."""

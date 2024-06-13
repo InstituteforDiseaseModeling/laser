@@ -13,10 +13,13 @@ Node = namedtuple("Node", ["name", "index", "population", "counts", "births", "i
 
 def initialize_engwal(model, parameters, num_nodes: int = 0) -> Tuple[int, DemographicsStatic, np.ndarray, np.ndarray]:
     """Initialize the model with the England+Wales scenario."""
-    from data.engwaldata import data
+    if Path.cwd().parts[-1] == "tests":
+        from data.engwaldata import data
+    else:   # guess that we are running from a notebook in the root of the project
+        from tests.data.engwaldata import data
 
     # get distances between nodes
-    distances = np.load(Path(__file__).parent / "data/engwaldist.npy")
+    distances = np.load(Path(__file__).parent / "data" / "engwaldist.npy")
 
     nodes = [
         Node(

@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import taichi as ti
@@ -150,21 +151,22 @@ class TaichiSpatialSEIR(DiseaseModel):
 
         return
 
-    def finalize(self, directory: Optional[Path] = None) -> None:
+    def finalize(self, directory: Optional[Path] = None) -> Tuple[Optional[Path], Path]:
         """Finalize the model."""
         directory = directory if directory else self.parameters.output
+        directory.mkdir(parents=True, exist_ok=True)
         prefix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         prefix += f"-{self.parameters.scenario}"
         try:
-            Path(directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
-            print(f"Wrote parameters to '{directory / (prefix + '-parameters.json')}'.")
+            Path(paramfile:= directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
+            print(f"Wrote parameters to '{paramfile}'.")
         except Exception as e:
             print(f"Error writing parameters: {e}")
         prefix += f"-{self._npatches}-{self.parameters.ticks}-"
-        np.save(filename := directory / (prefix + "spatial_seir.npy"), self.report.to_numpy())
-        print(f"Wrote SEIR channels, by node, to '{filename}'.")
+        np.save(npyfile := directory / (prefix + "spatial_seir.npy"), self.report.to_numpy())
+        print(f"Wrote SEIR channels, by node, to '{npyfile}'.")
 
-        return
+        return (paramfile, npyfile)
 
 
 @ti.kernel

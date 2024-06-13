@@ -2,35 +2,20 @@
 <img src="https://user-images.githubusercontent.com/10873335/283954768-97685a6d-7b86-4bba-a3e6-07ac22d5a2b3.png" alt="LASER logo" width="600px"/>
 </p>
 
-## Temporary README for `well-mixed-abc` Branch
+## Temporary README for `cleanup-for-merge` Branch
 
-- use `python3 -m pip install -e .` in the root to install the code<br>at the moment there is only a very little shared code in the poorly named `homogenous_abc.py` file
-- in the `tests` directory there are three sample models:
-  - `test_agentsir.py`
-  - `test_agentseir.py`
-  - `test_spatialseir.py`
-
-### `test_agentsir.py`
-
-Simulates a single well-mixed community with **_SIR_** infection dynamics.
-
-Use the `--help` option to see the command line parameters. The code will write a .CSV, `sir.csv`, to the script directory (`tests`).
-
-### `test_agentseir.py`
-
-Simulates a single well-mixed community with **_SEIR_** infection dynamics.
-
-Use the `--help` option to see the command line parameters. The code will write a .CSV, `seir.csv`, to the script directory (`tests`).
-
-### `test_spatialseir.py`
-
-Simulates a number of _connected communities_, each well-mixed and with **_SEIR_** infection dynamics.
-
-This model currently loads LGA, population, and connectivity data for 774 admin level 2 LGAs in Nigeria along with population data from 2015. The connectivity weights are from a gravity model.
-
-`load_population()` and `load_network()` are in their own functions now to make it easier to customize for another scenario (e.g., England/Wales).
-
-Use the `--help` option to see the command line parameters. The code will write two .CSV files, `spatial_seir.csv` and `spatial_seir_report.csv`, to the working directory. The former has aggregated S, E, I, and R populations at each timestep. The latter has a column for each community, at each timestep, with the number of infected agents in that community at that timestep.
+- use `python3 -m pip install -e .` in the root to install the code including the NumPy+Numba and Taichi (GPU) implementations of spatial SEIR.
+- in the `tests` directory there are command line scripts to run the two implementations:
+  - `run_numpyba.py`
+  - `run_taichi.py`
+- in the root directory there is a notebook, `start.ipynb`, which
+  - sets meta parameters
+  - sets disease parameters
+  - sets network parameters
+  - chooses a model implementation
+  - runs the model
+  - plots SEIR trajectories for a node
+  - plots a trajectory of %I vs. %S over time
 
 ----
 
@@ -38,16 +23,16 @@ Use the `--help` option to see the command line parameters. The code will write 
 
 ### First 30 Days (EOY 2023)
 
-- firm up team/stakeholders/advisory committee
+- <strike>firm up team/stakeholders/advisory committee</strike>
 - enumerate necessary features for reproducing/supporting previous and in-progress modeling efforts
-  - measles (kmccarthy)
+  - <strike>measles (kmccarthy)</strike>
   - malaria (cbever/pselvaraj)
-  - end-game/end-stage polio (¿kfrey?)
-- enumerate necessary features for outstanding questions and issues
+  - <strike>end-game/end-stage polio</strike>
+- <strike>enumerate necessary features for outstanding questions and issues</strike>
 
 ### First 60 Days (January 31, 2024)
 
-- "paper search" / investigate potential existing solutions
+- <strike>"paper search" / investigate potential existing solutions</strike>
 - capture development requirements
   - tools for preparing data (demographics, networks, etc.)
   - file formats
@@ -59,10 +44,10 @@ Use the `--help` option to see the command line parameters. The code will write 
     - community transmission dynamics
       - agents
       - cohorts
-      - \*Sim
-      - stochastic compartmental
-      - ODEs
-      - emulator
+      - <strike>\*Sim</strike>
+      - <strike>stochastic compartmental</strike>
+      - <strike>ODEs</strike>
+      - <strike>emulator</strike>
     - demographics
       - urban/rural
       - class/caste
@@ -73,16 +58,21 @@ Use the `--help` option to see the command line parameters. The code will write 
 
 ### First 120 Days (February 29, 2024)
 
-- technical considerations
-  - single laptop
-  - single laptop w/Nvidia GPU
-  - multicore
-    - single machine
-    - large machine (cloud)
-    - beyond?
-  - Numpy
+- <strike>technical considerations</strike>
+  - <strike>single laptop</strike>
+  - <strike>single laptop w/Nvidia GPU</strike>
+  - <strike>multicore</strike>
+    - <strike>single machine</strike>
+    - <strike>large machine (cloud)</strike>
+    - <strike>beyond?</strike>
+  - <strike>Numpy</strike>
+  - <strike>NumPy + Numba</strike>
+  - <strike>NumPy + Numba + CUDA</strike>
+- &rarr; best available implementation for hardware at hand:
   - NumPy + Numba
-  - NumPy + Numba + CUDA
+  - SSE/AVX2/AVX512
+  - OpenMP
+  - CUDA (Nvidia)/Metal (Apple)
 
 ## Problem Space
 
@@ -126,8 +116,8 @@ Are the individual communities well-mixed or should we also provide for explicit
 
 ## Notes
 
-- "light" : How light is "light"?
-- "agent" : Cohorts? Stochastic compartmental?
+- "light" : How light is "light"? &rarr; # agents * state/agent <= available RAM
+- "agent" : Cohorts? Stochastic compartmental? &rarr; individual agents
 - "spatial" : How good are the individual community models? Good enough for non-spatial questions?
-- dynamic properties (e.g. GPU flu simulation)
+- dynamic properties (e.g. GPU flu simulation) &rarr; ✅
 - ¿Ace/clorton-based state machines?

@@ -1,0 +1,1 @@
+{"exp_mean": 7.0, "exp_std": 1.0, "inf_mean": 7.0, "inf_std": 1.0, "r_naught": 14.0, "prng_seed": 995315, "ticks": 7300, "nodes": 1, "seed": 20240612, "output": "/workspaces/laser/outputs", "scenario": "engwal", "seasonality_factor": 0.10000000149011612, "seasonality_offset": 182, "beta": 2.0, "a": 1.0, "b": 1.0, "c": 2.0, "k": 500.0, "max_frac": 0.05000000074505806}

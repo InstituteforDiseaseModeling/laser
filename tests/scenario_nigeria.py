@@ -1,6 +1,7 @@
 """Load initial population, demographics, and network data for the Nigeria scenario."""
 
 from collections import namedtuple
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -12,8 +13,12 @@ Node = namedtuple("Node", ["name", "index", "population", "counts", "births", "i
 
 def initialize_nigeria(model, parameters, num_nodes: int = 0, level: int = 5) -> Tuple[int, DemographicsByYear, np.ndarray, np.ndarray]:
     """Initialize the model with the Nigeria scenario."""
-    from data.nigeria import gravity
-    from data.nigeria import lgas
+    if Path.cwd().parts[-1] == "tests":
+        from data.nigeria import gravity
+        from data.nigeria import lgas
+    else:   # guess that we are running from a notebook in the root of the project
+        from tests.data.nigeria import gravity
+        from tests.data.nigeria import lgas
 
     # Massage the data into the format expected by the model
     assert level == 5, f"Invalid level {level=} (We only have network data for level 5)"

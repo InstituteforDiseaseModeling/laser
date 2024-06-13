@@ -70,6 +70,7 @@ setup(
         "matplotlib",
         "pandas",
         "taichi",
+        "pytest",
     ],
     extras_require={
         # eg:
