@@ -35,7 +35,6 @@ def get_wavelet_power_peak():
     def get_cases(node_id=0):
         df = pd.read_csv('simulation_output.csv')
 
-        # Filter rows where Node is 507
         df_filtered = df[df['Node'] == node_id]
 
         # Calculate the week number based on Timestep
@@ -61,7 +60,7 @@ def get_wavelet_power_peak():
     widths = np.logspace(np.log10(1), np.log10(MAX_PERIOD), int(MAX_PERIOD))
     y = widths / 52
 
-    cases = get_cases(507)
+    cases = get_cases(0)
     log_cases = pad_data(log_transform(cases))
     cwt = signal.cwt(log_cases, wavelet, widths)  # (M x N)
     # Number of time steps in padded time series
@@ -181,7 +180,7 @@ def analyze():
     average_new_infections_per_year = total_new_infections / num_years
 
     # Filter the DataFrame to include only rows where Node is 507 (London)
-    df_london = df[df["Node"] == 507]
+    df_london = df[df["Node"] == 0]
 
     # Calculate the total number of new infections in London
     total_new_infections_london = df_london["New Infections"].sum()
@@ -189,7 +188,9 @@ def analyze():
     # Calculate the average number of new infections in London per year
     average_new_infections_per_year_london = total_new_infections_london / num_years
 
+    """
     ccs_bigcity_mean, ccs_median, sig_slope = analyze_ccs()
+    """
 
     # Create a DataFrame with the metric and its value
     data = {
@@ -204,9 +205,9 @@ def analyze():
         "value": [
             average_new_infections_per_year,
             average_new_infections_per_year_london,
-            ccs_bigcity_mean,
-            ccs_median,
-            sig_slope,
+            0,
+            0,
+            0,
             get_wavelet_power_peak()
         ]
     }
