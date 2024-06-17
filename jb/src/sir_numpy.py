@@ -93,7 +93,7 @@ def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
     settings.num_nodes = len(settings.nodes)
-    print( f"Nodes={settings.num_nodes}" )
+    #print( f"[sir_numpy] Nodes={settings.num_nodes}" )
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
 
     columns['id'] = np.concatenate((columns['id'], new_ids))

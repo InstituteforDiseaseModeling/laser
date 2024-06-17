@@ -3,7 +3,7 @@ import numpy as np
 import socket
 from sparklines import sparklines
 import time
-import pdb
+import os
 import settings
 import demographics_settings
 
@@ -27,12 +27,18 @@ def send_csv_data(socket_conn, data):
     for row in data:
         csvwriter.writerow(row)
 
+def is_running_in_notebook():
+    return 'JUPYTERHUB_API_TOKEN' in os.environ
+
 def init():
     csvwriter = None
     if write_report:
         # Create a CSV file for reporting
         # 2MB -> 396s. 8MB -> bad. 4MB -> 382 (1 time), 1MB -> 380, 0.5MB -> 480
-        csvfile = open( settings.report_filename, 'w', newline='', buffering=int(1024*1024))  
+        if is_running_in_notebook:
+            csvfile = open( settings.report_filename, 'w', newline='' ) 
+        else:
+            csvfile = open( settings.report_filename, 'w', newline='', buffering=int(1024*1024))  
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'New Infections', 'Recovered', 'Births'])
     if publish_report:
@@ -51,11 +57,13 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
         prev = infecteds/totals
         print( list( sparklines( prev ) ) )
     print( f"T={timestep}" )
-    show_sparklines()
+    if not os.getenv( "HEADLESS" ):
+        show_sparklines()
     # Write the counts to the CSV file
     #print( f"T={timestep},\nS={susceptible_counts},\nI={infected_counts},\nR={recovered_counts}" )
     if write_report and timestep >= settings.report_start:
         if csv_report:
+            #print( "Writing CSV report for timestep." )
             for node in demographics_settings.nodes:
                 csvwriter.writerow([timestep,
                     node,
@@ -97,8 +105,13 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
     wtr_time += time.time() - wtr_start
 
 def stop():
-    # Convert accumulated data to a NumPy array
-    data_array = np.array(binary_data_accumulator)
+    if binary_report:
+        # Convert accumulated data to a NumPy array
+        data_array = np.array(binary_data_accumulator)
 
-    # Save the array to a .npy file
-    np.save('simulation_output.npy', data_array)
+        # Save the array to a .npy file
+        np.save('simulation_output.npy', data_array)
+
+    if csv_report:
+        csvwriter.flush()
+        csvwriter.close()
