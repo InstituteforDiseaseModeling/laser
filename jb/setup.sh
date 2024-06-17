@@ -74,6 +74,7 @@ elif [[ -n $ccs ]]; then
     cp "$src_dir/model_sql/eula.py" model_sql/
     cp "$src_dir/demographics_settings_1node.py" ./demographics_settings.py
     cp "$src_dir/../Dockerfile_ccs" ./Dockerfile
+    cp "$src_dir/../QuickStart.ipynb" ./QuickStart.ipynb
     sed -i 's/migration_fraction=/migration_fraction=0#/g' settings.py
     make
 fi
