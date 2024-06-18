@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional
 from typing import Tuple
 
-
 import numba as nb
 import numpy as np
 from tqdm import tqdm
@@ -48,6 +47,8 @@ class NumbaSpatialSEIR(DiseaseModel):
         self._phases = [vital_dynamics, infection_update, incubation_update, transmission_update, report_update]
         self._demographics = None
         self._network = None
+
+        self._metrics = []
 
         self.prng = np.random.default_rng(seed=self.parameters.prng_seed)
         seed_numba(self.parameters.prng_seed)
@@ -193,8 +194,18 @@ class NumbaSpatialSEIR(DiseaseModel):
 
     def step(self, tick: int, pbar: tqdm) -> None:
         """Step the model by one tick."""
+        timings = [tick]
         for phase in self._phases:
+            t0 = datetime.now(tz=None)  # noqa: DTZ005
             phase(self, tick)
+            t1 = datetime.now(tz=None)  # noqa: DTZ005
+            delta = t1 - t0
+            timings.append(delta.seconds * 1_000_000 + delta.microseconds)
+        self._metrics.append(timings)
+
+    @property
+    def metrics(self):
+        return np.array(self._metrics)
 
     def finalize(self, directory: Optional[Path] = None) -> Tuple[Optional[Path], Path]:
         """Finalize the model."""
@@ -203,7 +214,7 @@ class NumbaSpatialSEIR(DiseaseModel):
         prefix = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         prefix += f"-{self.parameters.scenario}"
         try:
-            Path(paramfile:= directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
+            Path(paramfile := directory / (prefix + "-parameters.json")).write_text(json.dumps(vars(self.parameters), cls=NumpyJSONEncoder))
             print(f"Wrote parameters to '{paramfile}'.")
         except Exception as e:
             print(f"Error writing parameters: {e}")
