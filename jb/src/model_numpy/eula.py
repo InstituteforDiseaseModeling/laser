@@ -28,7 +28,9 @@ def count_by_node_and_age( nodes, ages ):
     return counts
 
 def init():
-    global eula_dict, next_eula_pops 
+    global eula_dict, next_eula_pops, timestep_abs 
+    next_eula_pops = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    timestep_abs = 0
 
     for node in range(settings.num_nodes):
         m, b = fits[node]
