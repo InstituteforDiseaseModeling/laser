@@ -9,7 +9,7 @@ input_file=sys.argv[1] if len(sys.argv)>1 else 'simulation_output.csv'
 df = pd.read_csv(input_file)
 
 # Set the parameters for the binomial distribution
-num_trials = df['New Infections']  # Number of trials (events)
+num_trials = df['New_Infections']  # Number of trials (events)
 prob_success = 0.5  # Probability of success (observation)
 
 # Generate the binomial distribution

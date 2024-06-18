@@ -9,7 +9,8 @@ import folium
 from folium.plugins import HeatMapWithTime
 
 # Connect to the SQLite database (or create it)
-conn = sqlite3.connect(':memory:')
+#conn = sqlite3.connect(':memory:')
+conn = sqlite3.connect('ew.db')
 cursor = conn.cursor()
 
 def preproc( sim_report_file ):
@@ -34,7 +35,7 @@ def preproc( sim_report_file ):
     # Create the view
     cursor.execute("""
     CREATE VIEW cases AS
-    SELECT Timestep, Node, Name, Latitude, Longitude, "New Infections"
+    SELECT Timestep, Node, Name, Latitude, Longitude, New_Infections
     FROM engwal, cities
     WHERE engwal.Node = cities.ID
     """)
@@ -48,7 +49,7 @@ def process( output_file ):
     m = folium.Map(location=(birmingham_location[0],birmingham_location[1]), zoom_start=8) # Create a list to store the data for HeatMapWithTime
 
     start_time=800
-    cursor.execute(f'SELECT CAST(Timestep AS INT), Latitude, Longitude, CAST("New Infections" AS INT) FROM cases WHERE (CAST(Timestep AS INT)>{start_time})')
+    cursor.execute(f'SELECT CAST(Timestep AS INT), Latitude, Longitude, CAST(New_Infections AS INT) FROM cases WHERE (CAST(Timestep AS INT)>{start_time})')
     raw_data = cursor.fetchall()
 
     # Group the data by timestep

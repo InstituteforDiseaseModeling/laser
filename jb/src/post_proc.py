@@ -40,9 +40,9 @@ def get_wavelet_power_peak():
         # Calculate the week number based on Timestep
         df_filtered['Week'] = df_filtered['Timestep'] // 7
 
-        # Group by Week and sum the New Infections for each week
-        weekly_new_infections = df_filtered.groupby('Week')['New Infections'].sum().reset_index()
-        return weekly_new_infections["New Infections"].to_numpy()
+        # Group by Week and sum the New_Infections for each week
+        weekly_new_infections = df_filtered.groupby('Week')['New_Infections'].sum().reset_index()
+        return weekly_new_infections["New_Infections"].to_numpy()
 
     def log_transform(x, debug=1):
         """
@@ -79,7 +79,7 @@ def analyze_ccs():
     cases_df = cases_df[cases_df["Timestep"] > burnin]
 
     # Set the parameters for the binomial distribution
-    num_trials = cases_df['New Infections']  # Number of trials (events)
+    num_trials = cases_df['New_Infections']  # Number of trials (events)
     prob_success = 0.5  # Probability of success (observation)
 
     cases_df['Observed Infections'] = binom.rvs(num_trials, prob_success)
@@ -171,7 +171,7 @@ def analyze():
     # 1) Total new infections per year...
 
     # Calculate the total number of new infections
-    total_new_infections = df["New Infections"].sum()
+    total_new_infections = df["New_Infections"].sum()
 
     # Calculate the number of years
     num_years = ( df["Timestep"].max()-burnin) / 365  # Assuming 365 timesteps per year
@@ -183,7 +183,7 @@ def analyze():
     df_london = df[df["Node"] == 0]
 
     # Calculate the total number of new infections in London
-    total_new_infections_london = df_london["New Infections"].sum()
+    total_new_infections_london = df_london["New_Infections"].sum()
 
     # Calculate the average number of new infections in London per year
     average_new_infections_per_year_london = total_new_infections_london / num_years

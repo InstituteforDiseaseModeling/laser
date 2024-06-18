@@ -412,7 +412,7 @@ def calculate_new_infections( data, inf, sus, totals ):
     ret_ni = np.zeros(settings.num_nodes).astype( np.uint32 )
     for node in range(settings.num_nodes):
         ret_ni[node] = int(sus[node]*inf[node]*settings.base_infectivity*totals[node])
-    #print( f"New Infections: {new_infections} = {np.array(sorted(sus.values()))} * {np.array(sorted(inf.values()))} * {settings.base_infectivity}" )
+    #print( f"New_Infections: {new_infections} = {np.array(sorted(sus.values()))} * {np.array(sorted(inf.values()))} * {settings.base_infectivity}" )
     return ret_ni
 
 def handle_transmission_by_node( data, new_infections, node=0 ):

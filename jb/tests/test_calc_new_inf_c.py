@@ -459,8 +459,8 @@ class TestHandleNewInfections(unittest.TestCase):
 
             # Compare with reference results
             #self.assert( new_infections_timestep == ref_results[timestep], f"Results mismatch at timestep {timestep}" )
-            #print( f"New Infections [test] @ {timestep} = {new_infections_timestep}\n" )
-            #print( f"New Infections [ref][ @ {timestep} = {NI[timestep]}\n" )
+            #print( f"New_Infections [test] @ {timestep} = {new_infections_timestep}\n" )
+            #print( f"New_Infections [ref][ @ {timestep} = {NI[timestep]}\n" )
             self.assertAlmostEqual( new_infections_timestep, NI[timestep], delta=10 ) # , "Results mismatch at timestep " + str(timestep)
 
         # Call run_ref_model to get reference results
@@ -505,8 +505,8 @@ class TestHandleNewInfections(unittest.TestCase):
 
             # Compare with reference results
             #self.assert( new_infections_timestep == ref_results[timestep], f"Results mismatch at timestep {timestep}" )
-            #print( f"New Infections [test] @ {timestep} = {new_infections_timestep}\n" )
-            #print( f"New Infections [ref][ @ {timestep} = {NI[timestep]}\n" )
+            #print( f"New_Infections [test] @ {timestep} = {new_infections_timestep}\n" )
+            #print( f"New_Infections [ref][ @ {timestep} = {NI[timestep]}\n" )
             self.assertAlmostEqual( new_infections_timestep, NI[timestep], delta=10 ) # , "Results mismatch at timestep " + str(timestep)
 
 

@@ -405,7 +405,7 @@ def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):
     return new_infections 
 
 def handle_transmission_by_node( data, new_infections, susceptible_counts, node=0 ):
-    # print( f"DEBUG: New Infections: {new_infections}" )
+    # print( f"DEBUG: New_Infections: {new_infections}" )
     # print( f"DEBUG: susceptible_counts: {susceptible_counts}" )
     if new_infections[node]>susceptible_counts[node]:
         raise ValueError( f"ERROR: Asked for {new_infections[node]} new infections but only {susceptible_counts[node]} susceptibles exist in node {node}." )
@@ -445,7 +445,7 @@ def handle_transmission_by_node( data, new_infections, susceptible_counts, node=
 
 def handle_transmission( data_in, new_infections_in, susceptible_counts ):
     # We want to do this in parallel;
-    #print( f"DEBUG: New Infections: {new_infections_in}" )
+    #print( f"DEBUG: New_Infections: {new_infections_in}" )
     update_ages_lib.handle_new_infections_mp(
         unborn_end_idx, # we waste a few cycles now coz the first block is immune from maternal immunity
         dynamic_eula_idx,

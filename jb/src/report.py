@@ -40,7 +40,7 @@ def init():
         else:
             csvfile = open( settings.report_filename, 'w', newline='', buffering=int(1024*1024))  
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'New Infections', 'Recovered', 'Births'])
+        csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'New_Infections', 'Recovered', 'Births'])
     if publish_report:
         global client_sock
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
