@@ -9,8 +9,8 @@ import folium
 from folium.plugins import HeatMapWithTime
 
 # Connect to the SQLite database (or create it)
-#conn = sqlite3.connect(':memory:')
-conn = sqlite3.connect('ew.db')
+conn = sqlite3.connect(':memory:')
+#conn = sqlite3.connect('ew.db')
 cursor = conn.cursor()
 
 def preproc( sim_report_file ):
@@ -97,16 +97,17 @@ def process( output_file ):
         )
     heat_map.add_to(m)
 
-
     # Save the map as an HTML file
     m.save( output_file )
+
+    print( f"File written: {output_file}" )
 
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Process simulation data.')
     parser.add_argument('-i', '--input', type=str, default='simulation_output.csv',
                         help='Input file name (default: simulation_output.csv)')
-    parser.add_argument('-o', '--output', type=str, default='sim_animation.html',
+    parser.add_argument('-o', '--output', type=str, default='html/sim_animation.html',
                         help='Output file name (default: sim_animation.html)')
     
     # Parse command-line arguments
@@ -118,3 +119,6 @@ if __name__ == "__main__":
     # Call the process function with the output file
     process(args.output)
 
+    print( "Either load the html file directory or serve it by entering" )
+    print( "python3 -m http.server --directory html 4444" )
+    print( "And entering 'http://localhost:4444/sim_animation.html' in a browser." )
