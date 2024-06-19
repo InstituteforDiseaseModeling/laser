@@ -4,7 +4,7 @@ import gzip
 import sys
 sys.path.append( "." )
 import demographics_settings as settings
-from sir_sql import initialize_database
+from ..sir_sql import initialize_database
 
 # 1) Create a full population in a SQLite db in memory
 print( f"Creating files to model population size {settings.pop} spread across {settings.num_nodes} nodes." )

@@ -289,7 +289,7 @@ void collect_report(
     int num_agents,
     int start_idx,
     int eula_idx,
-    uint32_t * node,
+    int32_t * node,
     bool * infected,
     bool * immunity,
     float * age,

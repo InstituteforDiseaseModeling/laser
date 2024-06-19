@@ -6,14 +6,14 @@ import concurrent.futures
 from functools import partial
 import ctypes
 import gzip
-import pdb
 import time
+import os
 
 import settings
 import demographics_settings
-import report
-from model_numpy import eula
-import sir_numpy
+from . import report
+from .model_numpy import eula
+from . import sir_numpy
 
 unborn_end_idx = 0
 #dynamic_eula_idx = None
@@ -58,8 +58,15 @@ def load_cbrs():
 
     return cbrs_dict
 
+# Get the directory where the current script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to the shared library in the same directory
+shared_lib_path = os.path.join(script_dir, 'update_ages.so')
+
 # Load the shared library
-update_ages_lib = ctypes.CDLL('./update_ages.so')
+update_ages_lib = ctypes.CDLL(shared_lib_path)
+
 # Define the function signature
 update_ages_lib.update_ages.argtypes = [
     ctypes.c_size_t,  # start_idx
@@ -82,13 +89,12 @@ update_ages_lib.progress_immunities.argtypes = [
     ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.int8, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
 ]
 update_ages_lib.calculate_new_infections.argtypes = [
     ctypes.c_size_t,  # n
     ctypes.c_size_t,  # n
     ctypes.c_size_t,  # starting index
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # nodes
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),  # nodes
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # inf_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # sus_counts
@@ -100,7 +106,7 @@ update_ages_lib.handle_new_infections_mp.argtypes = [
     ctypes.c_uint32, # num_agents
     ctypes.c_size_t,  # starting index
     ctypes.c_size_t,  # num_nodes
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'), # incubation_timer
@@ -114,7 +120,7 @@ update_ages_lib.migrate.argtypes = [
     ctypes.c_int, # stop_idx
     np.ctypeslib.ndpointer(dtype=bool, flags="C_CONTIGUOUS"),  # infected
     np.ctypeslib.ndpointer(dtype=np.uint8, flags="C_CONTIGUOUS"),  # incubation_timer
-    np.ctypeslib.ndpointer(ctypes.c_uint32, flags="C_CONTIGUOUS"),  # data_node
+    np.ctypeslib.ndpointer(ctypes.c_int32, flags="C_CONTIGUOUS"),  # data_node
     np.ctypeslib.ndpointer(ctypes.c_int32, flags="C_CONTIGUOUS"),  # data_home_node
     np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),  # attraction_probs
     ctypes.c_double,  # migration_fraction
@@ -124,7 +130,7 @@ update_ages_lib.collect_report.argtypes = [
     ctypes.c_uint32, # num_agents
     ctypes.c_size_t,  # starting index
     ctypes.c_size_t,  # eula index
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
@@ -159,7 +165,7 @@ update_ages_lib.reconstitute.argtypes = [
     ctypes.c_int32, # num_new_babies
     ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_nodes
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node array
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # node array
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
 ]
 
@@ -187,7 +193,7 @@ def load( pop_file ):
     data['id'] = np.concatenate( ( unborn['id'], data['id'] + len(unborn['id'])-1) )
     data['infected'] = np.concatenate( ( unborn['infected'], data['infected'] ) ).astype(bool)
     data['immunity'] = np.concatenate( ( unborn['immunity'], data['immunity'] ) ).astype(bool)
-    data['node'] = np.concatenate( [ unborn['node'], data['node'] ] ).astype(np.uint32)
+    data['node'] = np.concatenate( [ unborn['node'], data['node'] ] ).astype(np.int32)
     data['infection_timer'] = np.concatenate( [ unborn['infection_timer'], data['infection_timer'] ] ).astype(np.uint8)
     data['incubation_timer'] = np.concatenate( [ unborn['incubation_timer'], data['incubation_timer'] ] ).astype(np.uint8)
     data['immunity_timer'] = np.concatenate( [ unborn['immunity_timer'], data['immunity_timer'] ] ).astype(np.int8)
@@ -228,6 +234,7 @@ def load( pop_file ):
     return data
 
 def initialize_database():
+    print( f"Attempting to load {demographics_settings.pop_file} from {os.getcwd()}." )
     return load( demographics_settings.pop_file )
 
 def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
@@ -367,7 +374,7 @@ def progress_infections( data ):
 
 # Update immune agents
 def progress_immunities( data ):
-    update_ages_lib.progress_immunities(unborn_end_idx, dynamic_eula_idx, data['immunity_timer'], data['immunity'], data['node'])
+    update_ages_lib.progress_immunities(unborn_end_idx, dynamic_eula_idx, data['immunity_timer'], data['immunity'])
     return data
 
 def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):

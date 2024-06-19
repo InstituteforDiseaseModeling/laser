@@ -1,16 +1,14 @@
 import sys
 import os
 sys.path.insert(0, os.getcwd())
-
-import pdb
+import numpy as np
 
 # Import a model
-import sir_numpy_c as model
-import numpy as np
+from . import sir_numpy_c as model
 
 import settings
 import demographics_settings
-import report
+from . import report
 
 #report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 report_births = []
