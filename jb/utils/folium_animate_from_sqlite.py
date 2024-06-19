@@ -2,7 +2,8 @@ import csv
 import sqlite3
 import random
 import numpy as np
-import sys
+import requests
+import os
 import argparse
 import os
 
@@ -27,12 +28,27 @@ def preproc( sim_report_file ):
         cursor.executemany(f"INSERT INTO engwal VALUES ({', '.join(['?' for _ in headers])})", reader)
 
     # Import cities.csv into cities table
-    with open('cities.csv', 'r') as file:
-        reader = csv.reader(file)
+    if os.path.exists( 'cities.csv' ):
+        with open('cities.csv', 'r') as file:
+            reader = csv.reader(file)
+            headers = next(reader)
+            cursor.execute(f"CREATE TABLE cities ({', '.join(headers)})")
+            cursor.executemany(f"INSERT INTO cities VALUES ({', '.join(['?' for _ in headers])})", reader)
+    else:
+        url = 'https://packages.idmod.org:443/artifactory/idm-data/laser/cities.csv'
+
+        # Perform an HTTP GET request
+        response = requests.get(url)
+        response.raise_for_status()  # Check that the request was successful
+
+        # Process the CSV file directly from the response content
+        content = response.content.decode('utf-8').splitlines()
+        reader = csv.reader(content)
         headers = next(reader)
         cursor.execute(f"CREATE TABLE cities ({', '.join(headers)})")
         cursor.executemany(f"INSERT INTO cities VALUES ({', '.join(['?' for _ in headers])})", reader)
 
+    
     # Create the view
     cursor.execute("""
     CREATE VIEW cases AS
