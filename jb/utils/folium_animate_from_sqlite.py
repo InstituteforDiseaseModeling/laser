@@ -4,6 +4,7 @@ import random
 import numpy as np
 import sys
 import argparse
+import os
 
 import folium
 from folium.plugins import HeatMapWithTime
@@ -98,6 +99,8 @@ def process( output_file ):
     heat_map.add_to(m)
 
     # Save the map as an HTML file
+    if not os.path.exists( "html" ):
+        os.mkdir( "html" )
     m.save( output_file )
 
     print( f"File written: {output_file}" )
