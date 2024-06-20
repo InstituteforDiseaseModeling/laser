@@ -234,6 +234,9 @@ def load( pop_file ):
     return data
 
 def initialize_database():
+    if not os.path.exists( demographics_settings.pop_file ):
+        raise ValueError( f"File not found: {demographics_settings.pop_file}. Have you run the workflow to create the input model files?" )
+
     print( f"Attempting to load {demographics_settings.pop_file} from {os.getcwd()}." )
     return load( demographics_settings.pop_file )
 

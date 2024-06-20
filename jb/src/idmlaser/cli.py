@@ -5,7 +5,7 @@ def main():
     idmlaser - A description of your package.
 
     Usage:
-        python -m idmlaser
+        idmlaser
 
     This module provides the following functionality:
     - Feature 1: Description of feature 1

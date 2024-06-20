@@ -3,6 +3,11 @@ import os
 sys.path.insert(0, os.getcwd())
 import numpy as np
 
+if not os.path.exists( "settings.py" ):
+    raise ValueError( f"You will need to provide a settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
+if not os.path.exists( "demographics_settings.py" ):
+    raise ValueError( f"You will need to provide a demographics_settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
+
 # Import a model
 from . import sir_numpy_c as model
 

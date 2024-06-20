@@ -1,5 +1,6 @@
 import numpy as np
 from collections import defaultdict
+import os
 import settings
 import demographics_settings
 
@@ -11,6 +12,10 @@ gompertz_parameter = 0.05
 age_bins = np.arange(demographics_settings.eula_age, 102)
 probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
 #print( f"probability_of_dying = {probability_of_dying}" )
+
+if not os.path.exists( demographics_settings.eula_pop_fits ):
+    raise ValueError( f"File not found: {demographics_settings.eula_pop_fits}. Have you run the workflow to create the input model files?" )
+
 fits = np.load(demographics_settings.eula_pop_fits, allow_pickle=True).item()
 def calculate_y(x, m, b):
     return int(m * x + b)
