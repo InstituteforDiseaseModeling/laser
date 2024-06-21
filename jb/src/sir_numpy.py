@@ -75,7 +75,7 @@ def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
     num_slots = int(num_slots)
     print( f"Adding {num_slots} expansion slots for future babies." )
     new_ids = [ x for x in range( num_slots ) ]
-    new_nodes = np.ones( num_slots, dtype=np.uint32 )*-1
+    new_nodes = np.ones( num_slots, dtype=np.int32 )*-1
     new_ages = np.ones( num_slots, dtype=np.float32 )*-1
     new_infected = np.zeros( num_slots, dtype=bool )
 
