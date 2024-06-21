@@ -397,7 +397,8 @@ def tx_kernel(
 
     # accumulate contagion for each node
     for i in range(count):
-        if (susceptibility[i] == 0) and (itimers[i] > 0):
+        # if (susceptibility[i] == 0) and (itimers[i] > 0):
+        if states[i] == STATE_INFECTIOUS:
             contagion[ti.cast(nodeids[i], ti.i32)] += 1
 
     # multiple accumulated contagion by the network
@@ -473,6 +474,7 @@ def report_kernel(
     itimers: ti.types.ndarray(ti.u8),  # type: ignore
     nodeids: ti.types.ndarray(ti.u16),  # type: ignore
 ):
+    ti.loop_config(serialize=True)  # Testing
     for i in range(count):
         nodeid = ti.cast(nodeids[i], ti.i32)
         state = states[i]
