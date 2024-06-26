@@ -11,11 +11,7 @@ CFLAGS := -shared -fPIC -O3 -mavx2 -flto -fpermissive -fopenmp
 # neutral: -funroll-loops
 # NO: -ffast-math
 #CFLAGS := -shared -fPIC -O0 -g
-#DB_SCRIPT := python3 -m laser_numpy_model.csv_to_db
-DB_SCRIPT := python3 utils/csv_to_db.py
-PREPROC_SCRIPT := ./eula_preproc.sh
-#CREATE_POP_SCRIPT := python3 -m laser_numpy_model.create_pop_as_csv
-CREATE_POP_SCRIPT := python3 utils/create_pop_as_csv.py
+CREATE_POP_SCRIPT := python3 -m idmlaser.utils.create_pop_as_csv
 POP_SEEDED_CSV := pop_seeded.csv
 EULA_DB := eula.db
 UPDATE_AGES_SO := update_ages.so
@@ -34,14 +30,14 @@ $(MODELED_POP_CSV): demographics_settings.py
 
 eula_pops_20yr_noaging.csv: eula_binned.csv
 	# eula_binned.csv -> eula_pops_20yr_noaging.csv
-	$(PYTHON) utils/eula_precalc.py eula_pops_20yr_noaging.csv
+	$(PYTHON) -m idmlaser.utils.eula_precalc eula_pops_20yr_noaging.csv
 
 fits.npy: eula_pops_20yr_noaging.csv
 	# eula_pops_20yr_noaging.csv -> fits.npy
-	$(PYTHON) utils/fit_eula_pops.py eula_pops_20yr_noaging.csv
+	$(PYTHON) -m idmlaser.utils.fit_eula_pops eula_pops_20yr_noaging.csv
 
 run:
-	python3 measles.py
+	python3 -m idmlaser.measles
 
 setup:
 	./setup.sh

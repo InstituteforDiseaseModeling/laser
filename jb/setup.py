@@ -43,7 +43,7 @@ setup(
     author="Christopher Lorton",
     author_email="christopher.lorton@gatesfoundation.org",
     url="https://github.com/InstituteforDiseaseModeling/laser",
-    packages=["idmlaser","idmlaser/utils"],
+    packages=["idmlaser","idmlaser/utils","idmlaser/examples"],
     package_dir={"": "src"},
     py_modules=[path.stem for path in Path("src").glob("*.py")],  # Include all Python files in src as modules
     include_package_data=True,
