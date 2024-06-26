@@ -320,3 +320,19 @@ def predicted_day_of_death(age_days, max_year=100):
     dod = yod * 365 + doy
 
     return dod
+
+class GrabBag:
+    def __init__(self, *bags):
+        for bag in bags:
+            assert isinstance(bag, (type(self), dict))
+            for key, value in (bag.__dict__ if isinstance(bag, type(self)) else bag).items():
+                setattr(self, key, value)
+
+    def __add__(self, other):
+        return GrabBag(self, other)
+    
+    def __iadd__(self, other):
+        assert isinstance(other, (type(self), dict))
+        for key, value in (other.__dict__ if isinstance(other, type(self)) else other).items():
+            setattr(self, key, value)
+        return self

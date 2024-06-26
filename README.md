@@ -16,6 +16,9 @@
   - runs the model
   - plots SEIR trajectories for a node
   - plots a trajectory of %I vs. %S over time
+- note: the first time you run a cell in a Jupyter notebook in a Codespace, you will get some questions from VSCode in the command bar at the top of the window -
+  - "Select Kernel" &rarr; "Install/Enable suggested extensions Python + Jupyter"
+  - "Select Another Kernel" &rarr; "Python Environment" &rarr; "Python 3.10.13 ~/python/current/bin/python3" <br> (the version on the last one may change over time)
 
 ----
 
@@ -23,16 +26,16 @@
 
 ### First 30 Days (EOY 2023)
 
-- <strike>firm up team/stakeholders/advisory committee</strike>
+- <strike>firm up team/stakeholders/advisory committee</strike> ✅
 - enumerate necessary features for reproducing/supporting previous and in-progress modeling efforts
-  - <strike>measles (kmccarthy)</strike>
+  - <strike>measles (kmccarthy)</strike> ✅
   - malaria (cbever/pselvaraj)
-  - <strike>end-game/end-stage polio</strike>
-- <strike>enumerate necessary features for outstanding questions and issues</strike>
+  - <strike>end-game/end-stage polio</strike> ✅
+- <strike>enumerate necessary features for outstanding questions and issues</strike> ✅
 
 ### First 60 Days (January 31, 2024)
 
-- <strike>"paper search" / investigate potential existing solutions</strike>
+- <strike>"paper search" / investigate potential existing solutions</strike> ✅
 - capture development requirements
   - tools for preparing data (demographics, networks, etc.)
   - file formats
@@ -58,7 +61,7 @@
 
 ### First 120 Days (February 29, 2024)
 
-- <strike>technical considerations</strike>
+- <strike>technical considerations</strike> ✅
   - <strike>single laptop</strike>
   - <strike>single laptop w/Nvidia GPU</strike>
   - <strike>multicore</strike>
