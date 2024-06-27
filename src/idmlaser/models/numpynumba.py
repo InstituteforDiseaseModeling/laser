@@ -363,7 +363,8 @@ def transmission_update(model, tick) -> None:
     # model.cases[tick, :] = contagion  # contagion is a proxy for # of infected individual/prevalence
 
     forces = model._forces
-    np.multiply(contagion, model.parameters.beta, out=forces)  # pre-multiply by beta (scalar now, could be array)
+    beta_effective = model.parameters.beta + model.parameters.seasonality_factor * np.sin(2 * np.pi * (tick - model.parameters.seasonality_offset) / 365)
+    np.multiply(contagion, beta_effective, out=forces)  # pre-multiply by beta (scalar now, could be array)
     # np.divide(forces, model._popcounts, out=forces)  # divide by population (forces is now per-capita)
     np.divide(forces, model._demographics.population[tick // 365], out=forces)  # divide by population (forces is now per-capita)
 
