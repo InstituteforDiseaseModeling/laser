@@ -140,8 +140,9 @@ These are ultimately controlled by the code in the idmlaser.utils.create_pop_as_
 One can completely redesign the behavior of the model.  To modify the model behavior you can:
 - Add/remove properties.
 - Add/remove/modify code in update_ages.cpp (and recompile).
+- Add/remove/modify glue code in sir_numpy_c.
 
-If you wanted to do ages but a fixed date-of-birth and caclulate age on the fly by comparing to "now", you would need to create the model with a dob column and modify the step functions. 
+If, say, you wanted to model agents ages but use a fixed date-of-birth (dob) and caclulate age on-the-fly by comparing to "now", you would need to create the model with a dob column (and assign values during initialization and at birth) and also modify the step functions.
 
 I have made no attempt up to this point to create an infrastructure that is 100% agnostic or dynamic on model attributes (columns). Making the code more generic and abstracted will also make it a bit more complex. "There are no solutions, only tradeoffs".
 
