@@ -145,4 +145,21 @@ If you wanted to do ages but a fixed date-of-birth and caclulate age on the fly 
 
 I have made no attempt up to this point to create an infrastructure that is 100% agnostic or dynamic on model attributes (columns). Making the code more generic and abstracted will also make it a bit more complex. "There are no solutions, only tradeoffs".
 
+Let's consider all the places that the code currently "knows" that there is an "age" column, i.e., where it's hardcoded and would need to be changed if age was done differently:
+
+Init:
+- [Model dataframe initialization](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/utils/create_pop_as_csv.py#L27)
+- [Loading model dataframe into np array](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy.py#L49)
+- [Adding 'expansion slots'](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L200)
+ 
+Stepwise:
+- Age everyone (already born): [py](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L300) and [C](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/update_ages.cpp#L55)
+- Make newborns: [py](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L330) and [C](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/update_ages.cpp#L529)
+- RIA: [py](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L524) and [C](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/update_ages.cpp#L473)
+- SIA: [py](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L537) and [C](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/update_ages.cpp#L439)
+- Collect Report: [py](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/sir_numpy_c.py#L264) and [C](https://github.com/InstituteforDiseaseModeling/laser/blob/jb_modulify/jb/src/idmlaser/update_ages.cpp#L295)
+
+Each of the "stepwise" functions also have a argtype declaration at the top of sir_numpy_c.py which is aware of the age column.
+
+I shall not repeat that for each of the other attributes/properties (e.g., infected, incubation_timer).
 ## 
