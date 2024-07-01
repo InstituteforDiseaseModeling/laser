@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import pytest
 
+from idmlaser.utils import GrabBag
 from idmlaser.utils import PriorityQueue
 from idmlaser.utils import daily_births_deaths_from_annual
 from idmlaser.utils import pop_from_cbr_and_mortality
@@ -313,6 +314,119 @@ class TestPredictedDateOfDeath(unittest.TestCase):
             dod = predicted_day_of_death(age, max_year)
             assert dod // 365 == max_year + 1, f"Expected {dod} // 365 == {max_year + 1}"
             assert dod % 365 == 0, f"Expected {dod} % 365 == 364"  # "January 1st", so to speak
+
+
+class TestGrabBag(unittest.TestCase):
+    """Tests for the GrabBag class."""
+
+    # Test empty grabbag
+    def test_empty_grab_bag(self):
+        # assert that the grab bag is empty
+        gb = GrabBag()
+        assert len(gb) == 0
+
+    # Test initialization from a single dictionary
+    def test_single_dict_grab_bag(self):
+        # assert that the grab bag is initialized with a single dictionary
+        gb = GrabBag({"a": 1, "b": 2})
+        assert gb.a == 1
+        assert gb.b == 2
+
+    # Test inititalization from a single GrabBag
+    def test_single_grab_bag(self):
+        # assert that the grab bag is initialized with a single GrabBag
+        gb = GrabBag(GrabBag({"a": 1, "b": 2}))
+        assert gb.a == 1
+        assert gb.b == 2
+
+    # Test initialization from multiple dictionaries
+    def test_multiple_dict_grab_bag(self):
+        # assert that the grab bag is initialized with multiple dictionaries
+        gb = GrabBag({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        assert gb.a == 1
+        assert gb.b == 2
+        assert gb.c == 3
+        assert gb.d == 4
+
+    # Test initialization from multiple GrabBags
+    def test_multiple_grab_bag(self):
+        # assert that the grab bag is initialized with multiple GrabBags
+        gb = GrabBag(GrabBag({"a": 1, "b": 2}), GrabBag({"c": 3, "d": 4}))
+        assert gb.a == 1
+        assert gb.b == 2
+        assert gb.c == 3
+        assert gb.d == 4
+
+    # Test initialization from a mix of dictionaries and GrabBags
+    def test_mixed_grab_bag(self):
+        # assert that the grab bag is initialized with a mix of dictionaries and GrabBags
+        gb = GrabBag({"a": 1, "b": 2}, GrabBag({"c": 3, "d": 4}))
+        assert gb.a == 1
+        assert gb.b == 2
+        assert gb.c == 3
+        assert gb.d == 4
+
+    # Test adding a dictionary to an empty grab bag
+    def test_add_dict_empty_grab_bag(self):
+        # assert that a dictionary can be added to an empty grab bag
+        gb = GrabBag()
+        gb += {"a": 1, "b": 2}
+        assert gb.a == 1
+        assert gb.b == 2
+
+    # Test adding a GrabBag to an existing GrabBag
+    def test_add_grab_bag(self):
+        # assert that a GrabBag can be added to an existing GrabBag
+        gb = GrabBag({"a": 1, "b": 2})
+        gb += GrabBag({"c": 3, "d": 4})
+        assert gb.a == 1
+        assert gb.b == 2
+        assert gb.c == 3
+        assert gb.d == 4
+
+    # Test that adding a subsequent dictionary to a GrabBag overrides existing values
+    def test_add_dict_override(self):
+        # assert that adding a subsequent dictionary to a GrabBag overrides existing values
+        gb = GrabBag({"a": 1, "b": 2})
+        gb += {"b": 3, "c": 4}
+        assert gb.a == 1
+        assert gb.b == 3
+        assert gb.c == 4
+
+    # Test that adding a subsequent GrabBag to a GrabBag overrides existing values
+    def test_add_grab_bag_override(self):
+        # assert that adding a subsequent GrabBag to a GrabBag overrides existing values
+        gb = GrabBag({"a": 1, "b": 2})
+        gb += GrabBag({"b": 3, "c": 4})
+        assert gb.a == 1
+        assert gb.b == 3
+        assert gb.c == 4
+
+    # Test that GrabBag + GrabBag creates a new grab bag _and_ does not alter the existing grab bags
+    def test_add_grab_bag_new(self):
+        # assert that GrabBag + GrabBag creates a new grab bag _and_ does not alter the existing grab bags
+        gb1 = GrabBag({"a": 1, "b": 2})
+        gb2 = GrabBag({"b": 3, "c": 4})
+        gb3 = gb1 + gb2
+        assert gb1.a == 1
+        assert gb1.b == 2
+        assert gb2.b == 3
+        assert gb2.c == 4
+        assert gb3.a == 1
+        assert gb3.b == 3
+        assert gb3.c == 4
+
+    # Test the __str__ method of the GrabBag class
+    def test_str(self):
+        # assert that the __str__ method returns the expected string
+        gb = GrabBag({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        assert str(gb) == str({"a": 1, "b": 2, "c": 3, "d": 4})
+
+    # Test the __repr__ method of the GrabBag class
+    def test_repr(self):
+        # assert that the __repr__ method returns the expected string
+        gb = GrabBag({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        assert repr(gb) == f"GrabBag({ {'a': 1, 'b': 2, 'c': 3, 'd': 4}!s})"
 
 
 if __name__ == "__main__":

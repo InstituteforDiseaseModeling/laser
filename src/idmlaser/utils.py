@@ -321,6 +321,7 @@ def predicted_day_of_death(age_days, max_year=100):
 
     return dod
 
+
 class GrabBag:
     def __init__(self, *bags):
         for bag in bags:
@@ -330,9 +331,18 @@ class GrabBag:
 
     def __add__(self, other):
         return GrabBag(self, other)
-    
+
     def __iadd__(self, other):
         assert isinstance(other, (type(self), dict))
         for key, value in (other.__dict__ if isinstance(other, type(self)) else other).items():
             setattr(self, key, value)
         return self
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __str__(self) -> str:
+        return str(self.__dict__)
+
+    def __repr__(self) -> str:
+        return f"GrabBag({self.__dict__!s})"

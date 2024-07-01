@@ -363,7 +363,9 @@ def transmission_update(model, tick) -> None:
     # model.cases[tick, :] = contagion  # contagion is a proxy for # of infected individual/prevalence
 
     forces = model._forces
-    beta_effective = model.parameters.beta + model.parameters.seasonality_factor * np.sin(2 * np.pi * (tick - model.parameters.seasonality_offset) / 365)
+    beta_effective = model.parameters.beta + model.parameters.seasonality_factor * np.sin(
+        2 * np.pi * (tick - model.parameters.seasonality_offset) / 365
+    )
     np.multiply(contagion, beta_effective, out=forces)  # pre-multiply by beta (scalar now, could be array)
     # np.divide(forces, model._popcounts, out=forces)  # divide by population (forces is now per-capita)
     np.divide(forces, model._demographics.population[tick // 365], out=forces)  # divide by population (forces is now per-capita)
@@ -449,10 +451,10 @@ def report_update(model: NumbaSpatialSEIR, tick: int) -> None:
     # etimer = population.etimer[: population.count]
     # itimer = population.itimer[: population.count]
 
-    # np.add.at(results[tick, 0], nodeids[susceptibility > 0.0], 1)
-    # np.add.at(results[tick, 1], nodeids[etimer > 0], 1)
-    # np.add.at(results[tick, 2], nodeids[itimer > 0], 1)
-    # np.add.at(results[tick, 3], nodeids[(susceptibility == 0.0) & (etimer == 0) & (itimer == 0)], 1)
+    # np.add.at(results[tick + 1, 0], nodeids[susceptibility > 0.0], 1)
+    # np.add.at(results[tick + 1, 1], nodeids[etimer > 0], 1)
+    # np.add.at(results[tick + 1, 2], nodeids[itimer > 0], 1)
+    # np.add.at(results[tick + 1, 3], nodeids[(susceptibility == 0.0) & (etimer == 0) & (itimer == 0)], 1)
 
     global _scratch
     if _scratch is None:
