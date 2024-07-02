@@ -207,6 +207,7 @@ def load( pop_file ):
         data['infected'] = np.zeros( len( data['incubation_timer'] ) ).astype( bool )
     clear_init_prev()
 
+    # necessary still?
     settings.nodes = [ node for node in np.unique(data['node']) ]
     settings.nodes.pop(-1)
     settings.num_nodes = len(settings.nodes)
@@ -248,9 +249,11 @@ def collect_report( data ):
     """
     Report data to file for a given timestep.
     """
-    infected_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-    susceptible_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-    recovered_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
+    #import pdb
+    #pdb.set_trace()
+    infected_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    susceptible_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    recovered_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
 
     cr_start = time.time()
     #print( f"unborn_end_idx={unborn_end_idx}, dynamic_eula_idx={dynamic_eula_idx}." )
@@ -272,13 +275,13 @@ def collect_report( data ):
 
     eula_reco_start = time.time()
     #print( f"infected_counts_raw = {infected_counts_raw}" )
-    susceptible_counts = dict(zip(settings.nodes, susceptible_counts_raw))
-    infected_counts = dict(zip(settings.nodes, infected_counts_raw))
+    susceptible_counts = dict(zip(demographics_settings.nodes, susceptible_counts_raw))
+    infected_counts = dict(zip(demographics_settings.nodes, infected_counts_raw))
 
     recovered_counts = recovered_counts_raw + np.array( eula.get_recovereds_by_node_np() )
 
     totals = susceptible_counts_raw + infected_counts_raw + recovered_counts
-    recovered_counts = dict(zip(settings.nodes, recovered_counts))
+    recovered_counts = dict(zip(demographics_settings.nodes, recovered_counts))
 
     #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
 

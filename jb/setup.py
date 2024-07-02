@@ -33,7 +33,7 @@ def read(*names, **kwargs):
 # Setup function with all your project details
 setup(
     name="idmlaser",
-    version="0.0.1",
+    version="0.0.5",
     license="MIT",
     description="Light Agent Spatial modeling for ERadication.",
     long_description="{}\n{}".format(

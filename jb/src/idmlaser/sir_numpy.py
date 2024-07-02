@@ -97,7 +97,7 @@ def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
 
     columns['id'] = np.concatenate((columns['id'], new_ids))
-    columns['node'] = np.concatenate((columns['node'], new_nodes)).astype( np.uint32 )
+    columns['node'] = np.concatenate((columns['node'], new_nodes)).astype( np.int32 )
     columns['age'] = np.concatenate((columns['age'], new_ages))
     columns['infected'] = np.concatenate((columns['infected'], new_infected))
     columns['infection_timer'] = np.concatenate((columns['infection_timer'], new_infection_timer))

@@ -3,9 +3,14 @@ import os
 sys.path.insert(0, os.getcwd())
 import numpy as np
 
-if not os.path.exists( "settings.py" ):
+input_root="."
+if os.getenv( "INPUT_ROOT" ):
+    input_root=os.getenv( "INPUT_ROOT" )
+    sys.path.append( input_root )
+
+if not os.path.exists( os.path.join( input_root, "settings.py" ) ):
     raise ValueError( f"You will need to provide a settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
-if not os.path.exists( "demographics_settings.py" ):
+if not os.path.exists( os.path.join( input_root, "demographics_settings.py" ) ):
     raise ValueError( f"You will need to provide a demographics_settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
 
 # Import a model
