@@ -7,6 +7,7 @@ class DiseaseModel:
     """Base class for all disease models."""
 
     def __init__(self):
+        self._tick = 0
         return
 
     def initialize(self) -> None:
@@ -19,8 +20,9 @@ class DiseaseModel:
         raise NotImplementedError
 
     def run(self, ticks: int) -> None:
-        for tick in (pbar := tqdm(range(ticks))):
-            self.step(tick, pbar)
+        for _tick in (pbar := tqdm(range(ticks))):
+            self.step(self._tick, pbar)
+            self._tick += 1
         return
 
     def serialize(self, filename: str) -> None:

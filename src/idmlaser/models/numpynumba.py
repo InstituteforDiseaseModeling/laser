@@ -19,11 +19,11 @@ from .model import DiseaseModel
 
 _STATES_TYPE_NP = np.uint8  # S=0, E=1, I=2, R=3, ACTIVE=0x80, DECEASED=0x40
 # _STATES_TYPE_NB = nb.uint8    # not used, yet
-STATE_SUSCEPTIBLE = np.uint8(0)
-STATE_EXPOSED = np.uint8(1)
-STATE_INFECTIOUS = np.uint8(2)
-STATE_RECOVERED = np.uint8(3)
 STATE_ACTIVE = np.uint8(0x80)  # bit flag for active state
+STATE_SUSCEPTIBLE = STATE_ACTIVE | np.uint8(0)
+STATE_EXPOSED = STATE_ACTIVE | np.uint8(1)
+STATE_INFECTIOUS = STATE_ACTIVE | np.uint8(2)
+STATE_RECOVERED = STATE_ACTIVE | np.uint8(3)
 STATE_DECEASED = np.uint8(0x40)  # bit flag for deceased state
 
 _DOB_TYPE_NP = np.int16  # measured in days anchored at t=0, so all initial DoBs are negative
@@ -52,6 +52,7 @@ class NumbaSpatialSEIR(DiseaseModel):
 
         self.prng = np.random.default_rng(seed=self.parameters.prng_seed)
         seed_numba(self.parameters.prng_seed)
+        # print(f"Threading layer chosen: {nb.threading_layer()}")
 
         return
 
@@ -122,6 +123,7 @@ class NumbaSpatialSEIR(DiseaseModel):
 
         # iterate through population setting nodeid = i for next pops[i] individuals
         nodeidx = 0
+        states = population.states
         susceptibilities = population.susceptibility  # pre-fetch for speed
         etimers = population.etimer  # pre-fetch for speed
         itimers = population.itimer  # pre-fetch for speed
@@ -141,21 +143,27 @@ class NumbaSpatialSEIR(DiseaseModel):
             assert j == nodeidx + popcount, "Population index mismatch"
             nodeids[i:j] = c  # assign new individuals to this node
             # susceptible individuals
-            nodeidx += initial[c, ISUS]  # nothing to do here, already set
+            numsus = initial[c, ISUS]
+            states[nodeidx : nodeidx + numsus] = STATE_SUSCEPTIBLE
+            # susceptibilities[nodeidx : nodeidx + numrec] = 1    # unnecessary
+            nodeidx += numsus
             # incubating individuals
             numinc = initial[c, IINC]
+            states[nodeidx : nodeidx + numinc] = STATE_EXPOSED
             etimers[nodeidx : nodeidx + numinc] = (
                 self.prng.normal(self.parameters.exp_mean, self.parameters.exp_std, size=numinc).round().astype(_ITIMER_TYPE_NP)
             ) + 1
             nodeidx += numinc
             # infectious individuals
             numinf = initial[c, IINF]
+            states[nodeidx : nodeidx + numinf] = STATE_INFECTIOUS
             itimers[nodeidx : nodeidx + numinf] = (
                 self.prng.normal(self.parameters.inf_mean, self.parameters.inf_std, size=numinf).round().astype(_ITIMER_TYPE_NP)
             ) + 1
             nodeidx += numinf
             # recovered individuals
             numrec = initial[c, IREC]
+            states[nodeidx : nodeidx + numrec] = STATE_RECOVERED
             susceptibilities[nodeidx : nodeidx + numrec] = 0
             nodeidx += numrec
             # nodeidx += popcount
@@ -391,43 +399,43 @@ def transmission_update(model, tick) -> None:
 )
 def report_parallel(susceptibilities, etimers, itimers, nodeids, results, scratch):
     # results indexed by state (SEIR) and node
-    # scratch indexed by core and node
+    # scratch indexed by thread and node
 
     num_agents = susceptibilities.shape[0]
-    num_cores = scratch.shape[0]
-    per_core = (num_agents + num_cores - 1) // num_cores
+    num_threads = scratch.shape[0]  # should be equivalent to nb.get_num_threads() - see calling function
+    per_thread = (num_agents + num_threads - 1) // num_threads
     # susceptible count
     scratch.fill(0)
-    for c in nb.prange(num_cores):
-        start = c * per_core
-        end = min((c + 1) * per_core, num_agents)
+    for c in nb.prange(num_threads):
+        start = c * per_thread
+        end = min((c + 1) * per_thread, num_agents)
         for i in range(start, end):
             if susceptibilities[i] > 0.0:
                 scratch[c, nodeids[i]] += 1
     results[0] = scratch.sum(axis=0)
     # exposed count
     scratch.fill(0)
-    for c in nb.prange(num_cores):
-        start = c * per_core
-        end = min((c + 1) * per_core, num_agents)
+    for c in nb.prange(num_threads):
+        start = c * per_thread
+        end = min((c + 1) * per_thread, num_agents)
         for i in range(start, end):
             if etimers[i] > 0:
                 scratch[c, nodeids[i]] += 1
     results[1] = scratch.sum(axis=0)
     # infectious count
     scratch.fill(0)
-    for c in nb.prange(num_cores):
-        start = c * per_core
-        end = min((c + 1) * per_core, num_agents)
+    for c in nb.prange(num_threads):
+        start = c * per_thread
+        end = min((c + 1) * per_thread, num_agents)
         for i in range(start, end):
             if itimers[i] > 0:
                 scratch[c, nodeids[i]] += 1
     results[2] = scratch.sum(axis=0)
     # recovered count
     scratch.fill(0)
-    for c in nb.prange(num_cores):
-        start = c * per_core
-        end = min((c + 1) * per_core, num_agents)
+    for c in nb.prange(num_threads):
+        start = c * per_thread
+        end = min((c + 1) * per_thread, num_agents)
         for i in range(start, end):
             if (susceptibilities[i] == 0.0) & (etimers[i] == 0) & (itimers[i] == 0):
                 scratch[c, nodeids[i]] += 1
@@ -458,7 +466,7 @@ def report_update(model: NumbaSpatialSEIR, tick: int) -> None:
 
     global _scratch
     if _scratch is None:
-        _scratch = np.zeros((32, model._demographics.nnodes), dtype=np.uint32)
+        _scratch = np.zeros((nb.get_num_threads(), model._demographics.nnodes), dtype=np.uint32)
     report_parallel(
         population.susceptibility[: population.count],
         population.etimer[: population.count],
@@ -473,6 +481,9 @@ def report_update(model: NumbaSpatialSEIR, tick: int) -> None:
 
 @nb.njit
 def seed_numba(a):
-    # seed the Numba random number generator (even though it says "np.random")
-    np.random.seed(a)
+    num_threads = nb.get_num_threads()
+    # print(f"Seeding Numba random number generator with {num_threads} threads")
+    for _i in nb.prange(num_threads):
+        # seed the Numba random number generator (even though it says "np.random")
+        np.random.seed(a + nb.get_thread_id())
     return

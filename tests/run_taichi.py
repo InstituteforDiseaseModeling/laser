@@ -7,7 +7,7 @@ from typing import Tuple
 
 import numpy as np
 
-from idmlaser.models import TaichiSpatialSEIR
+from idmlaser.models.taichi import TaichiSpatialSEIR
 from idmlaser.numpynumba import DemographicsByYear
 
 

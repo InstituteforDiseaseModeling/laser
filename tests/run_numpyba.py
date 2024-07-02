@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from idmlaser.models import NumbaSpatialSEIR
+from idmlaser.models.numpynumba import NumbaSpatialSEIR
 
 
 def main(parameters):
