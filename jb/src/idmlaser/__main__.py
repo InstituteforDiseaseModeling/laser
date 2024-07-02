@@ -2,17 +2,12 @@
 
 def main():
     help_text = """
-    idmlaser - A description of your package.
+    idmlaser - Light Agent Spatial for Eradication.
 
     Usage:
-        python -m idmlaser
+        python3 -m idmlaser.measles
 
-    This module provides the following functionality:
-    - Feature 1: Description of feature 1
-    - Feature 2: Description of feature 2
-    - ...
-
-    For more information, visit: https://your.package.url
+    For more information, visit: https://github.com/InstituteforDiseaseModeling/laser
     """
     print(help_text)
 
