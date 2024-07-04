@@ -27,6 +27,11 @@ if os.path.exists(sandbox_dir):
     if not input(f"The directory '{sandbox_dir}' already exists. Do you want to overwrite it? (yes/no): ").strip().lower() in {'y', 'yes'}:
         print("Exiting script. No changes were made.")
         exit()
+    else:
+        # Remove the directory and its contents
+        shutil.rmtree(sandbox_dir)
+        print(f"The directory '{sandbox_dir}' and its contents have been removed.")
+
 
 # Prompt the user to choose between England & Wales and CCS
 options = ["England & Wales", "CCS"]
@@ -65,14 +70,15 @@ if chosen_option == "England & Wales":
         "https://packages.idmod.org:443/artifactory/idm-data/laser/engwal_modeled.csv.gz",
         "https://packages.idmod.org:443/artifactory/idm-data/laser/attraction_probabilities.csv.gz",
         "https://packages.idmod.org:443/artifactory/idm-data/laser/cities.csv",
-        "https://packages.idmod.org:443/artifactory/idm-data/laser/cbrs_ew.csv"
+        "https://packages.idmod.org:443/artifactory/idm-data/laser/cbrs_ew.csv",
+        "https://packages.idmod.org:443/artifactory/idm-data/laser/fits_ew.npy"
     ]
     for url in urls:
         subprocess.run(['wget', url])
     
     subprocess.run(['gunzip', 'attraction_probabilities.csv.gz'])
     shutil.copy(os.path.join(src_dir, 'demographics_settings_ew.py'), './demographics_settings.py')
-    #subprocess.run(['cp', os.path.join(src_dir, '../Dockerfile_ew'), './Dockerfile'])
+    shutil.copy(os.path.join('./fits_ew.npy'), './fits.npy')
 else:
     shutil.copy(os.path.join(src_dir, 'demographics_settings_1node.py'), './demographics_settings.py')
     #subprocess.run(['cp', os.path.join(src_dir, '../Dockerfile_ccs'), './Dockerfile'])
