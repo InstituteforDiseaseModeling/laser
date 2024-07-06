@@ -16,7 +16,6 @@ from .model_numpy import eula
 from . import sir_numpy
 
 unborn_end_idx = 0
-#dynamic_eula_idx = None
 ninemo_tracker_idx = None
 attraction_probs = None
 cbrs = None
@@ -212,11 +211,9 @@ def load( pop_file ):
     settings.nodes.pop(-1)
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
-    global dynamic_eula_idx, ninemo_tracker_idx, inf_sus_idx, high_infected_idx 
-    dynamic_eula_idx = len(data['id'])-1
-    ninemo_tracker_idx = dynamic_eula_idx 
-    inf_sus_idx = dynamic_eula_idx 
-    high_infected_idx = dynamic_eula_idx 
+    global ninemo_tracker_idx, dynamic_eula_idx
+    ninemo_tracker_idx = len(data['id'])-1
+    dynamic_eula_idx = ninemo_tracker_idx 
 
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
 
@@ -398,7 +395,7 @@ def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):
         bi = kwargs.get('base_infectivity')
         #print( f"inf_multiplier = {inf_multiplier}" )
         update_ages_lib.calculate_new_infections(
-                inf_sus_idx, # unborn_end_idx,
+                unborn_end_idx,
                 dynamic_eula_idx,
                 len( inf ),
                 data['node'],
