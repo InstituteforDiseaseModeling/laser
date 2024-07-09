@@ -53,6 +53,9 @@ void update_ages_vanilla(unsigned long int start_idx, unsigned long int stop_idx
 
 // avxv2
 void update_ages(unsigned long int start_idx, unsigned long int stop_idx, float *ages) {
+    // Note that we could make sure not to increase ages of agents who have already exceeded
+    // their expected lifespan, but it's probably more expensive to check the expected_lifespan
+    // of each agent first, compare to age, than just unconditionally add to everyone.
     #pragma omp parallel for
     for (size_t i = start_idx; i <= stop_idx; i += 8) {
         // Load age values into SIMD registers
@@ -89,6 +92,7 @@ void progress_infections(
     signed char * immunity_timer,
     bool* immunity
 ) {
+    // It doesn't really matter if we progress infections or immunities of dead people.
 #pragma omp parallel
     {
 
