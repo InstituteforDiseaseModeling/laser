@@ -91,10 +91,7 @@ update_ages_lib.progress_immunities.argtypes = [
 ]
 update_ages_lib.calculate_new_infections.argtypes = [
     ctypes.c_size_t,  # n
-    ctypes.c_size_t,  # n
-    ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),  # nodes
-    np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # inf_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # sus_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # tot_counts
@@ -131,10 +128,12 @@ update_ages_lib.collect_report.argtypes = [
     ctypes.c_size_t,  # eula index
     np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
+    np.ctypeslib.ndpointer(dtype=np.uint8, flags="C_CONTIGUOUS"),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # expected_lifespan
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # infection_count_out
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # incubation_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # susceptible_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # recovered_count_out
 ]
@@ -246,9 +245,8 @@ def collect_report( data ):
     """
     Report data to file for a given timestep.
     """
-    #import pdb
-    #pdb.set_trace()
-    infected_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    infectious_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    incubating_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
     susceptible_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
     recovered_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
 
@@ -260,10 +258,12 @@ def collect_report( data ):
             dynamic_eula_idx,
             data['node'],
             data['infected'],
+            data['incubation_timer'],
             data['immunity'],
             data['age'],
             data['expected_lifespan'],
-            infected_counts_raw,
+            infectious_counts_raw,
+            incubating_counts_raw,
             susceptible_counts_raw,
             recovered_counts_raw
     )
@@ -271,21 +271,21 @@ def collect_report( data ):
     cr_time += time.time() - cr_start
 
     eula_reco_start = time.time()
-    #print( f"infected_counts_raw = {infected_counts_raw}" )
     susceptible_counts = dict(zip(demographics_settings.nodes, susceptible_counts_raw))
-    infected_counts = dict(zip(demographics_settings.nodes, infected_counts_raw))
+    infectious_counts = dict(zip(demographics_settings.nodes, infectious_counts_raw))
+    incubating_counts = dict(zip(demographics_settings.nodes, incubating_counts_raw))
 
     recovered_counts = recovered_counts_raw + np.array( eula.get_recovereds_by_node_np() )
 
-    totals = susceptible_counts_raw + infected_counts_raw + recovered_counts
+    totals = susceptible_counts_raw + infectious_counts_raw + incubating_counts_raw + recovered_counts
     recovered_counts = dict(zip(demographics_settings.nodes, recovered_counts))
 
-    #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
+    #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infectious_counts}, and\n{recovered_counts}." )
 
     global eula_reco_time
     eula_reco_time += time.time() - eula_reco_start
 
-    return infected_counts, susceptible_counts, recovered_counts, totals
+    return infectious_counts, incubating_counts, susceptible_counts, recovered_counts, totals
     
 
 def update_ages( data, totals, timestep ):
@@ -394,12 +394,10 @@ def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):
         inf_multiplier = max(0, 1 + sm * settings.infectivity_multiplier[ min((timestep%365) // 7, 51) ] )
         bi = kwargs.get('base_infectivity')
         #print( f"inf_multiplier = {inf_multiplier}" )
+        #print( "Calculating new infections from idx {unborn_end_idx} to {dynamic_eula_idx}." )
         update_ages_lib.calculate_new_infections(
-                unborn_end_idx,
-                dynamic_eula_idx,
                 len( inf ),
                 data['node'],
-                data['incubation_timer'],
                 # counts
                 inf_np,
                 sus_np,

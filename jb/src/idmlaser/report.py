@@ -40,27 +40,27 @@ def init():
         else:
             csvfile = open( settings.report_filename, 'w', newline='', buffering=int(1024*1024))  
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Infected', 'New_Infections', 'Recovered', 'Births'])
+        csvwriter.writerow(['Timestep', 'Node', 'Susceptible', 'Exposed', 'Infectious', 'New_Infections', 'Recovered', 'Births'])
     if publish_report:
         global client_sock
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_sock.connect((HOST, PORT))
     return csvwriter
 
-def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_counts, recovered_counts, new_births ):
+def write_timestep_report( csvwriter, timestep, infectious_counts, incubating_counts, susceptible_counts, recovered_counts, new_births ):
     wtr_start = time.time()
     # This function is model agnostic
     def show_sparklines():
-        infecteds = np.array([infected_counts[key] for key in sorted(infected_counts.keys(), reverse=True)])
-        total = {key: susceptible_counts.get(key, 0) + infected_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
+        infectiouss = np.array([infectious_counts[key] for key in sorted(infectious_counts.keys(), reverse=True)])
+        total = {key: susceptible_counts.get(key, 0) + infectious_counts.get(key, 0) + recovered_counts.get(key, 0) for key in susceptible_counts.keys()}
         totals = np.array([total[key] for key in sorted(total.keys(), reverse=True)])
-        prev = infecteds/totals
+        prev = infectiouss/totals
         print( list( sparklines( prev ) ) )
     print( f"T={timestep}" )
     if not os.getenv( "HEADLESS" ):
         show_sparklines()
     # Write the counts to the CSV file
-    #print( f"T={timestep},\nS={susceptible_counts},\nI={infected_counts},\nR={recovered_counts}" )
+    #print( f"T={timestep},\nS={susceptible_counts},\nI={infectious_counts},\nR={recovered_counts}" )
     if write_report and timestep >= settings.report_start:
         if csv_report:
             #print( "Writing CSV report for timestep." )
@@ -68,7 +68,8 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
                 csvwriter.writerow([timestep,
                     node,
                     susceptible_counts[node] if node in susceptible_counts else 0,
-                    infected_counts[node] if node in infected_counts else 0,
+                    incubating_counts[node] if node in incubating_counts else 0,
+                    infectious_counts[node] if node in infectious_counts else 0,
                     new_infections[node],
                     recovered_counts[node] if node in recovered_counts else 0,
                     new_births[node],
@@ -80,7 +81,8 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
                     [timestep,
                         node,
                         susceptible_counts[node] if node in susceptible_counts else 0,
-                        infected_counts[node] if node in infected_counts else 0,
+                        incubating_counts[node] if node in incubating_counts else 0,
+                        infectious_counts[node] if node in infectious_counts else 0,
                         new_infections[node],
                         recovered_counts[node] if node in recovered_counts else 0,
                         new_births[node] if node in new_births else 0,
@@ -94,7 +96,8 @@ def write_timestep_report( csvwriter, timestep, infected_counts, susceptible_cou
                 timestep,
                 node,
                 susceptible_counts[node] if node in susceptible_counts else 0,
-                infected_counts[node] if node in infected_counts else 0,
+                incubating_counts[node] if node in incubating_counts else 0,
+                infectious_counts[node] if node in infectious_counts else 0,
                 new_infections[node],
                 recovered_counts[node] if node in recovered_counts else 0,
                 new_births[node] if node in new_births else 0,

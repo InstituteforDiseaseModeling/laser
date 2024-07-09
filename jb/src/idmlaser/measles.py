@@ -28,16 +28,17 @@ for i in range(demographics_settings.num_nodes):
     new_infections_empty[ i ] = 0
 
 def collect_and_report(csvwriter, timestep, ctx):
-    currently_infectious, currently_sus, cur_reco, totals = model.collect_report( ctx )
+    currently_infectious, currently_incubating, currently_sus, cur_reco, totals = model.collect_report( ctx )
     counts = {
             "S": currently_sus,
+            "E": currently_incubating,
             "I": currently_infectious,
             "R": cur_reco 
         }
     #print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
 
     try:
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["E"], counts["S"], counts["R"], new_births=report_births )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, totals
@@ -79,7 +80,7 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
             ctx = model.migrate( ctx, timestep, migration_fraction=mf )
 
         # if we have had total fade-out, inject imports
-        if timestep>settings.burnin_delay and sum(counts["I"].values()) == 0 and settings.import_cases > 0:
+        if timestep>settings.burnin_delay and (sum(counts["I"].values())+sum(counts["E"].values())) == 0 and settings.import_cases > 0:
             def divide_and_round(susceptibles):
                 for node, count in susceptibles.items():
                     susceptibles[node] = round(count / 80)
