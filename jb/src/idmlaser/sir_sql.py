@@ -4,9 +4,12 @@ import csv
 import concurrent.futures
 import numpy as np # not for modeling
 from scipy.stats import beta
+import json
 import pdb
 import sys
 import os
+import importlib.resources as pkg_resources
+import idmlaser # seems odd and circular
 
 
 # We'll fix this settings stuff up soon.
@@ -162,6 +165,41 @@ def eula_init( cursor, age_threshold_yrs = 5, eula_strategy="from_db" ):
         raise ValueError( f"Unknown eula strategy: {eula_strategy}." )
     return cursor
 
+
+# Function to map JSON schema types to SQLite types
+def map_json_type_to_sqlite(json_type):
+    if json_type == 'integer':
+        return 'INTEGER'
+    elif json_type == 'number':
+        return 'REAL'
+    elif json_type == 'boolean':
+        return 'BOOLEAN'
+    else:
+        raise ValueError(f"Unsupported JSON type: {json_type}")
+
+# Construct the CREATE TABLE SQL statement
+def construct_create_table_sql(schema):
+    table_name = schema['title']
+    columns = schema['properties']
+    required = schema.get('required', [])
+
+    column_defs = []
+    for column_name, column_info in columns.items():
+        column_type = map_json_type_to_sqlite(column_info['type'])
+        if column_name == 'id':
+            column_def = f"{column_name} {column_type} PRIMARY KEY AUTOINCREMENT"
+        else:
+            column_def = f"{column_name} {column_type}"
+            if column_name in required:
+                column_def += " NOT NULL"
+        column_defs.append(column_def)
+
+    column_defs_str = ",\n    ".join(column_defs)
+    create_table_sql = f"CREATE TABLE {table_name} (\n    {column_defs_str}\n);"
+
+    return create_table_sql
+
+
 # Function to initialize the SQLite database
 def initialize_database( conn=None, from_file=True ):
     # TBD: Make programmatic option to init db instead of load from csv.
@@ -174,6 +212,20 @@ def initialize_database( conn=None, from_file=True ):
         conn = sql.connect(":memory:")  # Use in-memory database for simplicity
     cursor = conn.cursor()
 
+    # Load schema.json
+    #with open('schema.json', 'r') as file:
+    with pkg_resources.open_text(idmlaser, 'schema.json') as file:
+        schema = json.load(file)
+    
+    # Create the table
+    create_table_sql = construct_create_table_sql(schema)
+    #print(create_table_sql)  # Print the SQL statement for debugging purposes
+    with conn:
+        conn.execute(create_table_sql)
+
+    #print("Table created successfully.")
+
+    """
     # Create agents table
     cursor.execute('''
         CREATE TABLE agents (
@@ -196,7 +248,7 @@ def initialize_database( conn=None, from_file=True ):
     #cursor.execute( "CREATE INDEX idx_agents_node ON agents(id, node)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_infected ON agents(node, infected)" )
     #cursor.execute( "CREATE INDEX idx_agents_node_immunity ON agents(node, immunity)" )
-                
+    """
 
     # Insert 10,000 agents with random age and all initially uninfected
     #agents_data = [(i, random.randint(0, num_nodes-1), random.randint(0, 100), False, 0, 0, False, 0) for i in range(1, pop)]

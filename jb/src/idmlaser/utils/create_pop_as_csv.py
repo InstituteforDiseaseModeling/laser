@@ -14,17 +14,20 @@ initialize_database( conn, from_file=False )
 # 2) Convert the modeled population into a csv file
 print( f"Writing population file out out to csv: {settings.pop_file}." )
 cursor = conn.cursor()
-get_all_query = f"SELECT * FROM agents WHERE age<{settings.eula_age} ORDER BY age"
+cursor.execute('PRAGMA table_info(agents)')
+columns = [col[1] for col in cursor.fetchall()]
 
+get_all_query = f"SELECT * FROM agents WHERE age<{settings.eula_age} ORDER BY age"
 cursor.execute( get_all_query )
 rows = cursor.fetchall()
 
 print( f"Modeled population size = {len(rows)}" )
 
+# Don't hard-code column names. Get them from db source same as data.
 csv_output_file = settings.pop_file.strip( ".gz" )
 with open( csv_output_file , "w", newline='' ) as csvfile:
     csv_writer = csv.writer( csvfile )
-    csv_writer.writerow( ['id', 'node', 'age', 'infected', 'infection_timer', 'incubation_timer', 'immunity', 'immunity_timer', 'expected_lifespan' ] )
+    csv_writer.writerow( columns )
     csv_writer.writerows( rows )
 
 print( f"Wrote uncompressed modeled population file as {csv_output_file}. Compressing..." )
