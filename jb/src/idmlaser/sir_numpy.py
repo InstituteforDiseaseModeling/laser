@@ -9,46 +9,7 @@ import pdb
 import settings
 from . import report
 from .model_numpy import eula
-
-def _get_beta_samples(number):
-    """
-    Generate a list of expected lifespans using a beta distribution.
-
-    This function uses a beta distribution to generate a specified number of
-    samples representing the expected lifespans of individuals. The parameters
-    of the beta distribution are chosen to produce a plausible distribution of
-    lifespans centered around a mean value of 75 years, with a maximum possible
-    lifespan of 110 years. The samples are scaled and shifted to fit within
-    this range.
-
-    Args:
-        number (int): The number of lifespan samples to generate.
-
-    Returns:
-        np.ndarray: An array of lifespan samples.
-
-    Example:
-        lifespans = _get_beta_samples(100)
-        print(lifespans)  # Array of 100 expected lifespan values.
-
-    Notes:
-        - The beta distribution is parameterized with alpha = 4 and beta = 2,
-          which produces a distribution with a higher concentration of values
-          around the lower end of the scale.
-        - The generated samples are scaled to fit the range of 1 to 110 years.
-    """
-
-    from scipy.stats import beta
-    # Define parameters
-    lifespan_mean = 75
-    lifespan_max_value = 110
-
-    # Scale and shift parameters to fit beta distribution
-    alpha = 4  # Adjust this parameter to increase lower spread
-    beta_ = 2
-    samples = beta.rvs(alpha, beta_, size=number)
-    scaled_samples = samples * (lifespan_max_value - 1) + 1
-    return scaled_samples 
+from .sir_sql import get_beta_samples
 
 def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
     """
@@ -112,7 +73,7 @@ def add_expansion_slots( columns, num_slots=settings.expansion_slots ):
 
     new_infection_timer = np.zeros( num_slots ).astype( np.float32 )
     new_incubation_timer = np.zeros( num_slots ).astype( np.float32 )
-    lifespan_samples = _get_beta_samples( num_slots )
+    lifespan_samples = get_beta_samples( num_slots )
     new_expected_lifespan = np.array( lifespan_samples ).astype( dtype=np.float32 )
 
     settings.nodes = [ node for node in np.unique(columns['node']) ]
