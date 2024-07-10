@@ -80,7 +80,7 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
             ctx = model.migrate( ctx, timestep, migration_fraction=mf )
 
         # if we have had total fade-out, inject imports
-        if timestep>settings.burnin_delay and (sum(counts["I"].values())+sum(counts["E"].values())) == 0 and settings.import_cases > 0:
+        if timestep>settings.burnin_delay and (sum(counts["I"].values())+sum(counts["E"].values())) == 0 and timestep<=settings.dont_import_after:
             def divide_and_round(susceptibles):
                 for node, count in susceptibles.items():
                     susceptibles[node] = round(count / 80)

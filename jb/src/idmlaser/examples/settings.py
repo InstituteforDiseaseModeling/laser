@@ -24,7 +24,6 @@ mortality_interval=1 # 30
 fertility_interval=1 # 7
 ria_interval=700000
 burnin_delay=30 # 365*1
-import_cases=3000
 dont_import_after=365*4
 
 #import numpy as np
