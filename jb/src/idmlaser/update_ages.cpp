@@ -199,7 +199,8 @@ void handle_new_infections_mp(
     unsigned char  * incubation_timer,
     unsigned char  * infection_timer,
     int * new_infections_array,
-    int * num_eligible_agents_array
+    int * num_eligible_agents_array,
+    unsigned char incubation_period_constant = 7
 ) {
     //printf( "handle_new_infections_mp: start_idx=%ld, end_idx=%ld.\n", start_idx, end_idx );
     std::unordered_map<int, std::vector<int>> node2sus;
@@ -247,8 +248,8 @@ void handle_new_infections_mp(
                 unsigned long int selected_id = susceptible_indices[i];
                 //printf( "Infecting %ld\n", selected_id );
                 infected[selected_id] = true;
-                incubation_timer[selected_id] = 7;
-                infection_timer[selected_id] = 14 + rand() % 2;
+                incubation_timer[selected_id] = incubation_period_constant;
+                infection_timer[selected_id] = incubation_period_constant + 7 + rand() % 2;
                 selected_count++;
             }
         }
@@ -331,33 +332,6 @@ void collect_report(
         free(local_susceptible_count);
     }
 }
-
-#if 0
-const int max_node_id = 953;
-void migrate( int num_agents, int start_idx, int end_idx, bool * infected, uint32_t * node ) {
-    // This is just a very simplistic one-way linear type of infection migration
-    // I prefer to hard code a few values for this function rather than add parameters
-    // since it's most a test function.
-    int fraction = (int)(0.02*1000); // this fraction of infecteds migrate
-    unsigned long int counter = 0;
-    #pragma omp parallel for
-    for (int i = start_idx; i < num_agents; ++i) {
-        if( i != end_idx ) {
-            if( infected[ i ] && rand()%1000 < fraction )
-            {
-                if( node[ i ] > 0 )
-                {
-                    node[ i ] --;
-                }
-                else
-                {
-                    node[ i ] = max_node_id; // this should be param
-                }
-            }
-        }
-    }
-}
-#endif
 
 //////////////////////////////////////////////////////////////////////
 // Helper function to select destination
