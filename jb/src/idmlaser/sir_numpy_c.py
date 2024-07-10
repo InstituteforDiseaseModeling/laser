@@ -28,6 +28,15 @@ birth_time = 0
 funeral_time = 0
 age_time = 0
 
+# Possible put in calibratables class?
+_incubation_period = 7
+
+def get_incubation_duration():
+    return _incubation_period
+
+def set_incubation_duration( new_incubation_period ):
+    _incubation_period = new_incubation_period 
+
 # optional function to dump data to disk at any point. A sort-of serialization.
 def dump():
     import pandas as pd
@@ -108,8 +117,8 @@ update_ages_lib.handle_new_infections_mp.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'), # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'), # infection_timer
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # array of no. new infections to create by node
-    #np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new infected ids
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # array of no. susceptibles by node
+    ctypes.c_uint8
 ]
 update_ages_lib.migrate.argtypes = [
     ctypes.c_int, # start_idx
@@ -454,6 +463,7 @@ def handle_transmission_by_node( data, new_infections, susceptible_counts, node=
 def handle_transmission( data_in, new_infections_in, susceptible_counts ):
     # We want to do this in parallel;
     #print( f"DEBUG: New_Infections: {new_infections_in}" )
+    
     update_ages_lib.handle_new_infections_mp(
         unborn_end_idx, # we waste a few cycles now coz the first block is immune from maternal immunity
         dynamic_eula_idx,
@@ -464,7 +474,8 @@ def handle_transmission( data_in, new_infections_in, susceptible_counts ):
         data_in['incubation_timer'],
         data_in['infection_timer'],
         new_infections_in,
-        np.array(list(susceptible_counts.values())).astype( np.uint32 )
+        np.array(list(susceptible_counts.values())).astype( np.uint32 ),
+        get_incubation_duration()
     )
 
     return data_in

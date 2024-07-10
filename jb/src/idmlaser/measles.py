@@ -51,6 +51,8 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
         bi = settings.base_infectivity
     if mf==-1:
         mf = settings.migration_fraction
+    # different way of using defaults
+    model.set_incubation_duration( settings.incubation_duration )
 
     for timestep in range(1, num_timesteps + 1):
         # We should always be in a low prev setting so this should only really ever operate

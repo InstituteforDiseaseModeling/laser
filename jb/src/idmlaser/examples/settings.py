@@ -25,6 +25,7 @@ fertility_interval=1 # 7
 ria_interval=700000
 burnin_delay=30 # 365*1
 dont_import_after=365*4
+incubation_duration=7
 
 #import numpy as np
 #infectivity_multiplier = np.concatenate( (np.linspace( 1,2,366//2), np.linspace( 2,1,366//2)) )
