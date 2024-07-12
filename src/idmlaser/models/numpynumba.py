@@ -18,7 +18,7 @@ from idmlaser.utils import NumpyJSONEncoder
 from .model import DiseaseModel
 
 _STATES_TYPE_NP = np.uint8  # S=0, E=1, I=2, R=3, ACTIVE=0x80, DECEASED=0x40
-# _STATES_TYPE_NB = nb.uint8    # not used, yet
+_STATES_TYPE_NB = nb.uint8
 STATE_ACTIVE = np.uint8(0x80)  # bit flag for active state
 STATE_SUSCEPTIBLE = STATE_ACTIVE | np.uint8(0)
 STATE_EXPOSED = STATE_ACTIVE | np.uint8(1)
@@ -26,13 +26,13 @@ STATE_INFECTIOUS = STATE_ACTIVE | np.uint8(2)
 STATE_RECOVERED = STATE_ACTIVE | np.uint8(3)
 STATE_DECEASED = np.uint8(0x40)  # bit flag for deceased state
 
-_DOB_TYPE_NP = np.int16  # measured in days anchored at t=0, so all initial DoBs are negative
+_DOB_TYPE_NP = np.int32  # measured in days anchored at t=0, so all initial DoBs are negative
 _SUSCEPTIBILITY_TYPE_NP = np.uint8  # currently just 1|0
 _SUSCEPTIBILITY_TYPE_NB = nb.uint8
 _ITIMER_TYPE_NP = np.uint8  # don't need more than 255 days of infectiousness at this point
 _ITIMER_TYPE_NB = nb.uint8
 _NODEID_TYPE_NP = np.uint16  # don't need more than 65,535 nodes
-_NODEID_TYPE_NB = nb.uint16  # not used, yet
+_NODEID_TYPE_NB = nb.uint16
 
 
 class NumbaSpatialSEIR(DiseaseModel):
@@ -118,9 +118,6 @@ class NumbaSpatialSEIR(DiseaseModel):
         population.add_property("itimer", dtype=_ITIMER_TYPE_NP, default=0)
         population.add_property("nodeid", dtype=_NODEID_TYPE_NP, default=0)
 
-        # TODO? add dob property and initialize
-        # node.add_property("dob", dtype=DOB_TYPE_NP, default=0)
-
         # iterate through population setting nodeid = i for next pops[i] individuals
         nodeidx = 0
         states = population.states
@@ -177,9 +174,9 @@ class NumbaSpatialSEIR(DiseaseModel):
         self._forces = np.zeros(demographics.nnodes, dtype=np.float32)
 
         # ticks+1 here for room to capture the initial state
-        # 3 dimensions: time (tick), state (S:0, E:1, I:2, R:3), node (0..nnodes-1)
-        # 4 columns: susceptible, exposed, infected, recovered - timestep is implied
-        self.report = np.zeros((self.parameters.ticks + 1, 4, demographics.nnodes), dtype=np.uint32)
+        # 3 dimensions: time (tick), state (S:0, E:1, I:2, R:3, D:4), node (0..nnodes-1)
+        # 5 columns: susceptible, exposed, infected, recovered, deceased - timestep is implied
+        self.report = np.zeros((self.parameters.ticks + 1, 5, demographics.nnodes), dtype=np.uint32)
 
         # self._contagion = np.zeros(demographics.nnodes, dtype=np.uint32)
         self.cases = np.zeros((self.parameters.ticks, demographics.nnodes), dtype=np.uint32)
@@ -299,11 +296,15 @@ def vital_dynamics(model: NumbaSpatialSEIR, tick: int) -> None:
     return
 
 
-@nb.njit((_ITIMER_TYPE_NB[:], nb.uint32), parallel=True, nogil=True, cache=True)
-def infection_update_inner(timers, count):
+@nb.njit((_STATES_TYPE_NB[:], _ITIMER_TYPE_NB[:], nb.uint32), parallel=True, nogil=True, cache=True)
+def infection_update_inner(states, timers, count):
     for i in nb.prange(count):
-        if timers[i] > 0:
-            timers[i] -= 1
+        t = timers[i]
+        if t > 0:
+            t -= 1
+            timers[i] = t
+            if t == 0:
+                states[i] = STATE_RECOVERED
             # No other processing, susceptibility is already set to 0 in the transmission phase
     return
 
@@ -311,19 +312,24 @@ def infection_update_inner(timers, count):
 def infection_update(model: NumbaSpatialSEIR, _tick: int) -> None:
     """Update the infection timer for each individual in the population."""
 
-    infection_update_inner(model.population.itimer, model.population.count)
+    infection_update_inner(model.population.states, model.population.itimer, model.population.count)
 
     return
 
 
-@nb.njit((_ITIMER_TYPE_NB[:], _ITIMER_TYPE_NB[:], nb.uint32, nb.float32, nb.float32), parallel=True, nogil=True, cache=True)
-def incubation_update_inner(etimers, itimers, count, inf_mean, inf_std):
+@nb.njit(
+    (_STATES_TYPE_NB[:], _ITIMER_TYPE_NB[:], _ITIMER_TYPE_NB[:], nb.uint32, nb.float32, nb.float32), parallel=True, nogil=True, cache=True
+)
+def incubation_update_inner(states, etimers, itimers, count, inf_mean, inf_std):
     for i in nb.prange(count):
-        if etimers[i] > 0:  # if you have an active exposure timer...
-            etimers[i] -= 1  # ...decrement it
-            if etimers[i] == 0:  # if it has reached 0...
+        t = etimers[i]
+        if t > 0:  # if you have an active exposure timer...
+            t -= 1
+            etimers[i] = t  # ...decrement it
+            if t == 0:  # if it has reached 0...
                 # set your infection timer to a draw from a normal distribution
                 itimers[i] = _ITIMER_TYPE_NP(np.round(np.random.normal(inf_mean, inf_std)))
+                states[i] = STATE_INFECTIOUS  # ...and set your state to infectious
     return
 
 
@@ -331,24 +337,31 @@ def incubation_update(model, _tick):
     """Update the incubation timer for each individual in the population."""
 
     incubation_update_inner(
-        model.population.etimer, model.population.itimer, model.population.count, model.parameters.inf_mean, model.parameters.inf_std
+        model.population.states,
+        model.population.etimer,
+        model.population.itimer,
+        model.population.count,
+        model.parameters.inf_mean,
+        model.parameters.inf_std,
     )
     return
 
 
 @nb.njit(
-    (_SUSCEPTIBILITY_TYPE_NB[:], nb.uint16[:], nb.float32[:], _ITIMER_TYPE_NB[:], nb.uint32, nb.float32, nb.float32),
+    (_STATES_TYPE_NB[:], _SUSCEPTIBILITY_TYPE_NB[:], nb.uint16[:], nb.float32[:], _ITIMER_TYPE_NB[:], nb.uint32, nb.float32, nb.float32),
     parallel=True,
     nogil=True,
     cache=True,
 )
-def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std):
+def tx_inner(states, susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std):
     for i in nb.prange(count):
-        force = susceptibilities[i] * forces[nodeids[i]]  # force of infection attenuated by personal susceptibility
-        if (force > 0) and (np.random.random_sample() < force):  # draw random number < force means infection
-            susceptibilities[i] = 0.0  # set susceptibility to 0.0
-            # set exposure timer for newly infected individuals to a draw from a normal distribution
-            etimers[i] = _ITIMER_TYPE_NP(np.round(np.random.normal(exp_mean, exp_std)))
+        if states[i] == STATE_SUSCEPTIBLE:
+            force = susceptibilities[i] * forces[nodeids[i]]  # force of infection attenuated by personal susceptibility
+            if (force > 0) and (np.random.random_sample() < force):  # draw random number < force means infection
+                susceptibilities[i] = 0.0  # set susceptibility to 0.0
+                # set exposure timer for newly infected individuals to a draw from a normal distribution
+                etimers[i] = _ITIMER_TYPE_NP(np.round(np.random.normal(exp_mean, exp_std)))
+                states[i] = STATE_EXPOSED  # set state to exposed
     return
 
 
@@ -360,8 +373,8 @@ def transmission_update(model, tick) -> None:
     # contagion = model._contagion
     contagion = model.cases[tick, :]
     nodeids = population.nodeid[: population.count]
-    itimers = population.itimer[: population.count]
-    np.add.at(contagion, nodeids[itimers != 0], 1)  # accumulate contagion by node, 1 unit per infected individual
+    states = population.states[: population.count]
+    np.add.at(contagion, nodeids[states == STATE_INFECTIOUS], 1)  # accumulate contagion by node, 1 unit per infected individual
 
     network = model._network
     transfer = (contagion * network).round().astype(np.uint32)  # contagion * network = transfer
@@ -379,6 +392,7 @@ def transmission_update(model, tick) -> None:
     np.divide(forces, model._demographics.population[tick // 365], out=forces)  # divide by population (forces is now per-capita)
 
     tx_inner(
+        population.states,
         population.susceptibility,
         population.nodeid,
         forces,
@@ -392,54 +406,43 @@ def transmission_update(model, tick) -> None:
 
 
 @nb.njit(
-    (_SUSCEPTIBILITY_TYPE_NB[:], _ITIMER_TYPE_NB[:], _ITIMER_TYPE_NB[:], _NODEID_TYPE_NB[:], nb.uint32[:, :], nb.uint32[:, :]),
+    (
+        _STATES_TYPE_NB[:],  # states    - state of each individual
+        _SUSCEPTIBILITY_TYPE_NB[:],  # susceptibilities - susceptibility of each individual
+        _ITIMER_TYPE_NB[:],  # etimers   - exposure timers of each individual
+        _ITIMER_TYPE_NB[:],  # itimers   - infection timers of each individual
+        _NODEID_TYPE_NB[:],  # nodeids   - node id of each individual
+        nb.uint32[:, :],  # results   - results array[channels, nodes]
+        nb.uint32[:, :, :],  # scratch   - scratch array[threads, channels, nodes]
+    ),
     parallel=True,
     nogil=True,
     cache=True,
 )
-def report_parallel(susceptibilities, etimers, itimers, nodeids, results, scratch):
+def report_parallel(states, susceptibilities, etimers, itimers, nodeids, results, scratch):
     # results indexed by state (SEIR) and node
     # scratch indexed by thread and node
 
     num_agents = susceptibilities.shape[0]
     num_threads = scratch.shape[0]  # should be equivalent to nb.get_num_threads() - see calling function
     per_thread = (num_agents + num_threads - 1) // num_threads
-    # susceptible count
     scratch.fill(0)
     for c in nb.prange(num_threads):
         start = c * per_thread
         end = min((c + 1) * per_thread, num_agents)
         for i in range(start, end):
-            if susceptibilities[i] > 0.0:
-                scratch[c, nodeids[i]] += 1
-    results[0] = scratch.sum(axis=0)
-    # exposed count
-    scratch.fill(0)
-    for c in nb.prange(num_threads):
-        start = c * per_thread
-        end = min((c + 1) * per_thread, num_agents)
-        for i in range(start, end):
-            if etimers[i] > 0:
-                scratch[c, nodeids[i]] += 1
-    results[1] = scratch.sum(axis=0)
-    # infectious count
-    scratch.fill(0)
-    for c in nb.prange(num_threads):
-        start = c * per_thread
-        end = min((c + 1) * per_thread, num_agents)
-        for i in range(start, end):
-            if itimers[i] > 0:
-                scratch[c, nodeids[i]] += 1
-    results[2] = scratch.sum(axis=0)
-    # recovered count
-    scratch.fill(0)
-    for c in nb.prange(num_threads):
-        start = c * per_thread
-        end = min((c + 1) * per_thread, num_agents)
-        for i in range(start, end):
-            if (susceptibilities[i] == 0.0) & (etimers[i] == 0) & (itimers[i] == 0):
-                scratch[c, nodeids[i]] += 1
-    results[3] = scratch.sum(axis=0)
+            s = states[i]
+            if s == STATE_SUSCEPTIBLE:
+                scratch[c, 0, nodeids[i]] += 1
+            elif s == STATE_EXPOSED:
+                scratch[c, 1, nodeids[i]] += 1
+            elif s == STATE_INFECTIOUS:
+                scratch[c, 2, nodeids[i]] += 1
+            elif s == STATE_RECOVERED:
+                scratch[c, 3, nodeids[i]] += 1
+            elif (s & STATE_ACTIVE) == 0:
+                scratch[c, 4, nodeids[i]] += 1
+    results[:, :] = scratch.sum(axis=0)
 
     return
 
@@ -466,8 +469,10 @@ def report_update(model: NumbaSpatialSEIR, tick: int) -> None:
 
     global _scratch
     if _scratch is None:
-        _scratch = np.zeros((nb.get_num_threads(), model._demographics.nnodes), dtype=np.uint32)
+        # 5 = S, E, I, R, D
+        _scratch = np.zeros((nb.get_num_threads(), 5, model._demographics.nnodes), dtype=np.uint32)
     report_parallel(
+        population.states[: population.count],
         population.susceptibility[: population.count],
         population.etimer[: population.count],
         population.itimer[: population.count],
