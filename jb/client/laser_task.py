@@ -1,7 +1,9 @@
-"""idmtools json configured python task.
-
-Copyright 2021, Bill & Melinda Gates Foundation. All rights reserved.
 """
+IDMTools JSON configured Python task.
+
+Copyright 2024, Bill Gates Foundation. All rights reserved.
+"""
+
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Type, Union, TYPE_CHECKING
@@ -18,26 +20,54 @@ if TYPE_CHECKING:  # pragma: no cover
 @dataclass
 class PyConfiguredSingularityTask(CommandTask):
     """
-    PyConfiguredSingularityTask extends CommandTask to store and pass the parameters as a settings.py file.
+    Extends CommandTask to store and pass parameters as a settings.py file.
 
-    Notes:
-        - TODO Add examples here
+    Attributes:
+        configfile_argument (Optional[str]): Argument for the configuration file, default is "--config".
 
-    See Also:
-        :class:`idmtools_models.json_configured_task.JSONConfiguredTask`
-        :class:`idmtools_models.python.python_task.PythonTask`
+    Methods:
+        __init__(command): Initializes the task with a command and loads base settings.
+        __post_init__(): Post-initialization.
+        _load_settings(file_path): Loads settings from a file.
+        _process_settings(): Processes settings to replace values as per the configuration.
+        set_parameter(name, value): Sets a parameter in the configuration.
+        gather_common_assets(): Gathers common assets for the task.
+        gather_transient_assets(): Gathers transient assets, primarily the settings.py file.
+        reload_from_simulation(simulation, **kwargs): Reloads the task from a simulation.
+        pre_creation(parent, platform): Pre-creation hook.
+        post_creation(parent, platform): Post-creation hook.
     """
+
     configfile_argument: Optional[str] = field(default="--config")
+
     def __init__(self, command):
+        """
+        Initializes the task with a command and loads base settings.
+
+        Args:
+            command (str): Command to execute.
+        """
         self.config = dict()
         self.base_settings = self._load_settings("settings.py")
         CommandTask.__init__(self, command)
 
     def __post_init__(self):
-        """Constructor."""
+        """Post-initialization to call parent class's post_init."""
         CommandTask.__post_init__(self)
 
     def _load_settings(self, file_path):
+        """
+        Loads settings from a given file path.
+
+        Args:
+            file_path (str): Path to the settings file.
+
+        Returns:
+            list: List of settings lines.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
         if not os.path.isfile(file_path):
             raise FileNotFoundError(f"{file_path} does not exist")
 
@@ -46,19 +76,21 @@ class PyConfiguredSingularityTask(CommandTask):
         return settings
 
     def _process_settings(self):
+        """
+        Processes the settings by replacing values based on the current configuration.
+
+        Returns:
+            str: Processed settings as a string.
+        """
         processed_settings = []
 
         for line in self.base_settings:
-            # Split the line into key and value assuming the format is "key = value"
             if '=' in line:
                 key, value = map(str.strip, line.split('=', 1))
-                # Replace value if key is in self.config
                 if key in self.config:
-                    print( f"Setting {key}." )
                     value = str(self.config[key])
                     processed_settings.append(f"{key} = {value} # SET IN SCRIPT")
                 else:
-                    #print( f"Didn't find key {key} in {self.config.keys()}." )
                     processed_settings.append(f"{key} = {value}")
             else:
                 processed_settings.append(line)  # Handle lines without '='
@@ -66,114 +98,107 @@ class PyConfiguredSingularityTask(CommandTask):
         return "\n".join(processed_settings)
 
     def set_parameter(self, name: str, value: any) -> dict:
-        self.config[name]=value
+        """
+        Sets a parameter in the configuration.
+
+        Args:
+            name (str): Parameter name.
+            value (any): Parameter value.
+
+        Returns:
+            dict: Updated configuration.
+        """
+        self.config[name] = value
         return {name: value}
 
     def gather_common_assets(self):
         """
-        Return the common assets for a JSON Configured Task a derived class.
+        Gathers common assets for the task.
 
         Returns:
-            Assets
+            AssetCollection: Common assets.
         """
         return CommandTask.gather_common_assets(self)
 
     def gather_transient_assets(self) -> AssetCollection:
         """
-        Get Transient assets. This should general be the config.json.
+        Gathers transient assets, primarily the settings.py file.
 
         Returns:
-            Transient assets
+            AssetCollection: Transient assets.
         """
-        # print( f"I think this is where we'd create a new settings.py out of {self.config} and assetize it." )
         self.transient_assets.add_or_replace_asset(Asset(filename="settings.py", content=self._process_settings()))
         return CommandTask.gather_transient_assets(self)
 
     def reload_from_simulation(self, simulation: Simulation, **kwargs):
         """
-        Reload the task from a simulation.
+        Reloads the task from a simulation.
 
         Args:
-            simulation: Simulation to reload from
-            **kwargs:
-
-        Returns:
-            None
-
-        See Also
-            :meth:`idmtools_models.json_configured_task.JSONConfiguredTask.reload_from_simulation`
-            :meth:`idmtools_models.python.python_task.PythonTask.reload_from_simulation`
+            simulation (Simulation): Simulation to reload from.
+            **kwargs: Additional arguments.
         """
         CommandTask.reload_from_simulation(self, simulation, **kwargs)
 
     def pre_creation(self, parent: Union[Simulation, IWorkflowItem], platform: 'IPlatform'):
         """
-        Pre-creation.
+        Pre-creation hook.
 
         Args:
-            parent: Parent of task
-            platform: Platform Python Script is being executed on
-
-        Returns:
-            None
-        See Also
-            :meth:`idmtools_models.json_configured_task.JSONConfiguredTask.pre_creation`
-            :meth:`idmtools_models.python.python_task.PythonTask.pre_creation`
+            parent (Union[Simulation, IWorkflowItem]): Parent of the task.
+            platform ('IPlatform'): Platform the task is being executed on.
         """
         CommandTask.pre_creation(self, parent, platform)
 
     def post_creation(self, parent: Union[Simulation, IWorkflowItem], platform: 'IPlatform'):
         """
-        Post-creation.
-
-        For us, we proxy the underlying JSONConfiguredTask and PythonTask/
+        Post-creation hook.
 
         Args:
-            parent: Parent
-            platform: Platform Python Script is being executed on
-
-        Returns:
-            None
-
-        See Also
-            :meth:`idmtools_models.json_configured_task.JSONConfiguredTask.post_creation`
-            :meth:`idmtools_models.python.python_task.PythonTask.post_creation`
+            parent (Union[Simulation, IWorkflowItem]): Parent of the task.
+            platform ('IPlatform'): Platform the task is being executed on.
         """
         CommandTask.post_creation(self, parent, platform)
 
 
 class PyConfiguredSingularityTaskSpecification(TaskSpecification):
     """
-    PyConfiguredSingularityTaskSpecification provides the plugin info for PyConfiguredSingularityTask.
+    Provides the plugin information for PyConfiguredSingularityTask.
+
+    Methods:
+        get(configuration): Returns an instance of PyConfiguredSingularityTask with the given configuration.
+        get_description(): Returns the description for the plugin.
+        get_type(): Returns the type of the plugin.
+        get_version(): Returns the version of the plugin.
     """
 
     def get(self, configuration: dict) -> PyConfiguredSingularityTask:
         """
-        Get  instance of PyConfiguredSingularityTask with configuration.
+        Returns an instance of PyConfiguredSingularityTask with the given configuration.
 
         Args:
-            configuration: Configuration for task
+            configuration (dict): Configuration for the task.
 
         Returns:
-            PyConfiguredSingularityTask with configuration
+            PyConfiguredSingularityTask: Configured task instance.
         """
         return PyConfiguredSingularityTask(**configuration)
 
     def get_description(self) -> str:
         """
-        Get description for plugin.
+        Returns the description for the plugin.
 
         Returns:
-            Plugin Description
+            str: Plugin description.
         """
-        return "Defines a python script that has a single JSON config file"
+        return "Defines a Python script that has a single JSON config file"
 
     def get_type(self) -> Type[PyConfiguredSingularityTask]:
         """
-        Get Type for Plugin.
+        Returns the type for the plugin.
 
         Returns:
-            PyConfiguredSingularityTask
+            Type[PyConfiguredSingularityTask]: Task type.
         """
         return PyConfiguredSingularityTask
 
@@ -182,7 +207,8 @@ class PyConfiguredSingularityTaskSpecification(TaskSpecification):
         Returns the version of the plugin.
 
         Returns:
-            Plugin Version
+            str: Plugin version.
         """
         from idmtools_models import __version__
         return __version__
+
