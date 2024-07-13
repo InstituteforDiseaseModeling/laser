@@ -1,6 +1,5 @@
 import os
 import sys
-
 from idmtools.assets import AssetCollection
 from idmtools.core.platform_factory import Platform
 from idmtools.entities import CommandLine
@@ -10,8 +9,6 @@ from idmtools.entities.experiment import Experiment
 from idmtools.entities.templated_simulation import TemplatedSimulations
 from laser_task import PyConfiguredSingularityTask as PCST
 from idmtools_platform_comps.utils.scheduling import add_schedule_config
-
-#from idmtools_models.python.json_python_task import JSONConfiguredPythonTask
 
 def update_parameter_callback(simulation, incubation_duration, base_infectivity, seasonal_multiplier, migration_fraction):
     simulation.task.set_parameter("incubation_duration", incubation_duration)
@@ -26,7 +23,6 @@ if __name__ == "__main__":
     here = os.path.dirname(__file__)
 
     # Create a platform to run the workitem
-    #platform = Platform("CALCULON", NodeGroupName="idm_abcd", NumCores=16, NumNodes=1)
     platform = Platform("CALCULON")
 
     # create commandline input for the task
@@ -43,22 +39,15 @@ if __name__ == "__main__":
     sb = SimulationBuilder()
     sb.add_multiple_parameter_sweep_definition(
             update_parameter_callback,
-            incubation_duration=[6,6,8],
+            incubation_duration=[6,7,8],
             base_infectivity=[3.9,4.0,4.1],
             seasonal_multiplier=[0.55, 0.60, 0.65],
             migration_fraction=[0.03, 0.04, 0.05]
         )
     
-    """
-    experiment = Experiment.from_task(
-        task,
-        name=os.path.split(sys.argv[0])[1],
-        tags=dict(type='singularity', description='laser')
-    )
-    """
     ts.add_builder(sb)
-    #add_schedule_config(ts, command=f"singularity exec ./Assets/laser.sif python3 -m idmlaser.measles", num_cores=8, NumNodes=1, node_group_name="idm_abcd")
-    add_schedule_config(ts, command=f"singularity exec ./Assets/laser.sif env python3 -m idmlaser.measles", NumNodes=1, num_cores=24, node_group_name="idm_abcd", Environment={"OMP_NUM_THREADS":"24"} )
+    num_threads = 24
+    add_schedule_config(ts, command=cmdline, NumNodes=1, num_cores=num_threads, node_group_name="idm_abcd", Environment={"OMP_NUM_THREADS":str(num_threads)} )
     experiment = Experiment.from_template(ts, name=os.path.split(sys.argv[0])[1])
     experiment.run(wait_until_done=True, scheduling=True)
     if experiment.succeeded:
