@@ -181,7 +181,7 @@ void calculate_new_infections(
     // new infections = Infected frac * infectivity * susceptible frac * pop
     #pragma omp parallel for
     for (int i = 0; i < num_nodes; ++i) {
-        float infectious_count = infectious_counts[ i ]; // - exposed_counts_by_bin[ i ];
+        unsigned int infectious_count = infectious_counts[ i ];
         float foi = infectious_count * base_inf;
         new_infs_out[ i ] = (int)round( foi * susceptible_counts[ i ] / totals[i] );
         //printf( "DEBUG: new infs[node=%d] = infected_counts(%d) * base_inf(%f) * susceptible_counts(%d) / pop(%d) = %d.\n",
