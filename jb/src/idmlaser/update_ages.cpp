@@ -505,44 +505,4 @@ void reconstitute(
     abort();
 }
 
-double random_double() {
-    return (double) rand() / RAND_MAX;
-}
-
-// Function to generate a binomial random variable
-int binomial(int n, double p) {
-    int successes = 0;
-    for (int i = 0; i < n; ++i) {
-        if (random_double() < p) {
-            successes++;
-        }
-    }
-    return successes;
-}
-
-/*
- * Need access to the eula map/dict. Probably should pass in the sorted values as an array
- */
-void progress_natural_mortality_binned(
-    int* eula, // sorted values as an array
-    int num_nodes,
-    int num_age_bins,  // size of eula array
-    float* probs,
-    int timesteps_elapsed // how many timesteps are we covering
-) {
-    // Iterate over nodes and age bins
-    for (int node = 0; node < num_nodes; ++node) {
-        for (int age_bin = 0; age_bin < num_age_bins; ++age_bin) {
-            // Compute expected deaths
-            float prob = probs[age_bin]; // Implement this function as needed
-            int count = eula[node * num_age_bins + age_bin];
-            int expected_deaths = 0;
-            for (int i = 0; i < timesteps_elapsed; ++i) {
-                expected_deaths += binomial(count, prob); // Implement binomial function as needed
-            }
-            eula[node * num_age_bins + age_bin] -= expected_deaths;
-        }
-    }
-}
-
 }
