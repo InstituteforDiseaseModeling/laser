@@ -1,29 +1,53 @@
 #!/usr/bin/env python
 import re
 import os
+import shutil
 from pathlib import Path
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
 from setuptools.command.install_lib import install_lib
+from setuptools.command.build_ext import build_ext
+from setuptools.command.develop import develop
+from setuptools.command.install import install
 import subprocess
 
+# Custom build_ext command to build the .so file
+class CustomBuildExtCommand(build_ext):
+    def run(self):
+        self.build_shared_library()
+        build_ext.run(self)
+
+    def build_shared_library(self):
+        # Path to the source file
+        cpp_source = 'src/idmlaser/update_ages.cpp'
+        # Path to the output shared library
+        output_so = os.path.join(self.build_lib, 'idmlaser/update_ages.so')
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(output_so), exist_ok=True)
+        # Compile the shared library
+        cmdline = f"g++ -shared -fPIC -O3 -march=native -flto -fpermissive -fopenmp -ffast-math {cpp_source} -o {output_so}"
+        subprocess.check_call(cmdline.split())
+        if self.inplace:
+            dest_so = os.path.join(os.path.dirname(__file__), 'src/idmlaser/update_ages.so')
+            self.copy_file(output_so, dest_so)
+
+# Custom develop command to ensure the .so is built during develop
+class CustomDevelopCommand(develop):
+    def run(self):
+        self.run_command('build_ext')
+        develop.run(self)
+
+# Custom install command to ensure the .so is built during install
+class CustomInstallCommand(install):
+    def run(self):
+        self.run_command('build_ext')
+        install.run(self)
+
+# Custom build_py command to ensure the .so is included in the build
 class CustomBuildCommand(build_py):
     def run(self):
+        self.run_command('build_ext')
         build_py.run(self)
-
-class CustomInstallCommand(install_lib):
-    def run(self):
-        install_lib.run(self)
-        original_dir = os.getcwd()
-        try:
-            os.chdir(self.get_finalized_command('install').install_lib)
-            cmdline = "g++ -shared -fPIC -O3 -march=native -flto -fpermissive -fopenmp -ffast-math idmlaser/update_ages.cpp -o idmlaser/update_ages.so"
-            subprocess.check_call(cmdline.split())
-        except Exception as ex:
-            print( "Exception building update_ages.so." )
-            print( str( ex ) )
-        finally:
-            os.chdir(original_dir)
 
 # Function to read files
 def read(*names, **kwargs):
@@ -48,27 +72,9 @@ setup(
     package_data={
         "idmlaser.model_numpy": ["*.py"],  # Include all Python files in idmlaser.model_code
         "idmlaser.model_sql": ["*.py"],  # Include all Python files in idmlaser.model_code
+        "idmlaser": ["update_ages.so"],  # Include the .so file
     },
     zip_safe=False,
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: Unix",
-        "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Programming Language :: Python :: Implementation :: PyPy",
-        "Topic :: Utilities",
-    ],
     project_urls={
         "Documentation": "https://laser.readthedocs.io/",
         "Changelog": "https://laser.readthedocs.io/en/latest/changelog.html",
@@ -92,7 +98,9 @@ setup(
     },
     cmdclass={
         'build_py': CustomBuildCommand,
-        'install_lib': CustomInstallCommand
+        'install': CustomInstallCommand,
+        'build_ext': CustomBuildExtCommand,
+        'develop': CustomDevelopCommand,
     },
 )
 
