@@ -1,0 +1,29 @@
+Bootstrap: docker
+From: rockylinux:9
+
+%post
+    dnf -y install python3-pip
+    dnf -y install gcc-c++
+    dnf -y install sudo
+    dnf -y install epel-release
+    dnf clean all
+
+    python3 -m pip install pip --upgrade
+    python3 -m pip install idmlaser -i https://packages.idmod.org/api/pypi/pypi-production/simple
+
+%runscript
+
+
+%environment 
+    export INPUT_ROOT=Assets
+    export HEADLESS=1
+
+%test
+
+
+%labels
+    Author jonathan.bloedow@gatesfoundation.org
+
+%help
+    Container for running LASER prototype on COMPS
+

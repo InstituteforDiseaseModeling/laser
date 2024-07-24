@@ -1,16 +1,24 @@
 import sys
 import os
 sys.path.insert(0, os.getcwd())
+import numpy as np
 
-import pdb
+input_root="."
+if os.getenv( "INPUT_ROOT" ):
+    input_root=os.getenv( "INPUT_ROOT" )
+    sys.path.append( input_root )
+
+#if not os.path.exists( os.path.join( input_root, "settings.py" ) ):
+#    raise ValueError( f"You will need to provide a settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
+if not os.path.exists( os.path.join( input_root, "demographics_settings.py" ) ):
+    raise ValueError( f"You will need to provide a demographics_settings.py file. If running for first time, use: python3 -m idmlaser.utils.build_template_workspace" )
 
 # Import a model
-import sir_numpy_c as model
-import numpy as np
+from . import sir_numpy_c as model
 
 import settings
 import demographics_settings
-import report
+from . import report
 
 #report.write_report = True # sometimes we want to turn this off to check for non-reporting bottlenecks
 report_births = []
@@ -20,16 +28,17 @@ for i in range(demographics_settings.num_nodes):
     new_infections_empty[ i ] = 0
 
 def collect_and_report(csvwriter, timestep, ctx):
-    currently_infectious, currently_sus, cur_reco, totals = model.collect_report( ctx )
+    currently_infectious, currently_incubating, currently_sus, cur_reco, totals = model.collect_report( ctx )
     counts = {
             "S": currently_sus,
+            "E": currently_incubating,
             "I": currently_infectious,
             "R": cur_reco 
         }
     #print( f"Counts =\nS:{counts['S']}\nI:{counts['I']}\nR:{counts['R']}" )
 
     try:
-        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["S"], counts["R"], new_births=report_births )
+        report.write_timestep_report( csvwriter, timestep, counts["I"], counts["E"], counts["S"], counts["R"], new_births=report_births )
     except Exception as ex:
         raise ValueError( f"Exception {ex} at timestep {timestep} and counts {counts['I']}, {counts['S']}, {counts['R']}" )
     return counts, totals
@@ -42,6 +51,8 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
         bi = settings.base_infectivity
     if mf==-1:
         mf = settings.migration_fraction
+    # different way of using defaults
+    model.set_incubation_duration( settings.incubation_duration )
 
     for timestep in range(1, num_timesteps + 1):
         # We should always be in a low prev setting so this should only really ever operate
@@ -71,7 +82,7 @@ def run_simulation(ctx, csvwriter, num_timesteps, sm=-1, bi=-1, mf=-1):
             ctx = model.migrate( ctx, timestep, migration_fraction=mf )
 
         # if we have had total fade-out, inject imports
-        if timestep>settings.burnin_delay and sum(counts["I"].values()) == 0 and settings.import_cases > 0:
+        if timestep>settings.burnin_delay and (sum(counts["I"].values())+sum(counts["E"].values())) == 0 and timestep<=settings.dont_import_after:
             def divide_and_round(susceptibles):
                 for node, count in susceptibles.items():
                     susceptibles[node] = round(count / 80)

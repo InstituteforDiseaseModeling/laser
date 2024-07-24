@@ -6,17 +6,16 @@ import concurrent.futures
 from functools import partial
 import ctypes
 import gzip
-import pdb
 import time
+import os
 
 import settings
 import demographics_settings
-import report
-from model_numpy import eula
-import sir_numpy
+from . import report
+from .model_numpy import eula
+from . import sir_numpy
 
 unborn_end_idx = 0
-#dynamic_eula_idx = None
 ninemo_tracker_idx = None
 attraction_probs = None
 cbrs = None
@@ -28,6 +27,15 @@ eula_reco_time = 0
 birth_time = 0
 funeral_time = 0
 age_time = 0
+
+# Possible put in calibratables class?
+_incubation_period = 7
+
+def get_incubation_duration():
+    return _incubation_period
+
+def set_incubation_duration( new_incubation_period ):
+    _incubation_period = new_incubation_period 
 
 # optional function to dump data to disk at any point. A sort-of serialization.
 def dump():
@@ -58,8 +66,15 @@ def load_cbrs():
 
     return cbrs_dict
 
+# Get the directory where the current script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to the shared library in the same directory
+shared_lib_path = os.path.join(script_dir, 'update_ages.so')
+
 # Load the shared library
-update_ages_lib = ctypes.CDLL('./update_ages.so')
+update_ages_lib = ctypes.CDLL(shared_lib_path)
+
 # Define the function signature
 update_ages_lib.update_ages.argtypes = [
     ctypes.c_size_t,  # start_idx
@@ -82,14 +97,10 @@ update_ages_lib.progress_immunities.argtypes = [
     ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.int8, flags='C_CONTIGUOUS'),  # immunity_timer
     np.ctypeslib.ndpointer(dtype=bool, flags='C_CONTIGUOUS'),  # immunity
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # node
 ]
 update_ages_lib.calculate_new_infections.argtypes = [
     ctypes.c_size_t,  # n
-    ctypes.c_size_t,  # n
-    ctypes.c_size_t,  # starting index
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # nodes
-    np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),  # incubation_timer
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),  # nodes
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # inf_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # sus_counts
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),  # tot_counts
@@ -100,21 +111,21 @@ update_ages_lib.handle_new_infections_mp.argtypes = [
     ctypes.c_uint32, # num_agents
     ctypes.c_size_t,  # starting index
     ctypes.c_size_t,  # num_nodes
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'), # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'), # infection_timer
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # array of no. new infections to create by node
-    #np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new infected ids
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # array of no. susceptibles by node
+    ctypes.c_uint8
 ]
 update_ages_lib.migrate.argtypes = [
     ctypes.c_int, # start_idx
     ctypes.c_int, # stop_idx
     np.ctypeslib.ndpointer(dtype=bool, flags="C_CONTIGUOUS"),  # infected
     np.ctypeslib.ndpointer(dtype=np.uint8, flags="C_CONTIGUOUS"),  # incubation_timer
-    np.ctypeslib.ndpointer(ctypes.c_uint32, flags="C_CONTIGUOUS"),  # data_node
+    np.ctypeslib.ndpointer(ctypes.c_int32, flags="C_CONTIGUOUS"),  # data_node
     np.ctypeslib.ndpointer(ctypes.c_int32, flags="C_CONTIGUOUS"),  # data_home_node
     np.ctypeslib.ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),  # attraction_probs
     ctypes.c_double,  # migration_fraction
@@ -124,12 +135,14 @@ update_ages_lib.collect_report.argtypes = [
     ctypes.c_uint32, # num_agents
     ctypes.c_size_t,  # starting index
     ctypes.c_size_t,  # eula index
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # nodes
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # nodes
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # infected
+    np.ctypeslib.ndpointer(dtype=np.uint8, flags="C_CONTIGUOUS"),  # incubation_timer
     np.ctypeslib.ndpointer(dtype=np.bool_, flags='C_CONTIGUOUS'),  # immunity
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # expected_lifespan
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # infection_count_out
+    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # incubation_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # susceptible_count_out
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # recovered_count_out
 ]
@@ -159,7 +172,7 @@ update_ages_lib.reconstitute.argtypes = [
     ctypes.c_int32, # num_new_babies
     ctypes.c_size_t,  # starting index
     np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # new_nodes
-    np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'), # node array
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'), # node array
     np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS'), # age
 ]
 
@@ -187,7 +200,7 @@ def load( pop_file ):
     data['id'] = np.concatenate( ( unborn['id'], data['id'] + len(unborn['id'])-1) )
     data['infected'] = np.concatenate( ( unborn['infected'], data['infected'] ) ).astype(bool)
     data['immunity'] = np.concatenate( ( unborn['immunity'], data['immunity'] ) ).astype(bool)
-    data['node'] = np.concatenate( [ unborn['node'], data['node'] ] ).astype(np.uint32)
+    data['node'] = np.concatenate( [ unborn['node'], data['node'] ] ).astype(np.int32)
     data['infection_timer'] = np.concatenate( [ unborn['infection_timer'], data['infection_timer'] ] ).astype(np.uint8)
     data['incubation_timer'] = np.concatenate( [ unborn['incubation_timer'], data['incubation_timer'] ] ).astype(np.uint8)
     data['immunity_timer'] = np.concatenate( [ unborn['immunity_timer'], data['immunity_timer'] ] ).astype(np.int8)
@@ -201,15 +214,14 @@ def load( pop_file ):
         data['infected'] = np.zeros( len( data['incubation_timer'] ) ).astype( bool )
     clear_init_prev()
 
+    # necessary still?
     settings.nodes = [ node for node in np.unique(data['node']) ]
     settings.nodes.pop(-1)
     settings.num_nodes = len(settings.nodes)
     print( f"Nodes={settings.num_nodes}" )
-    global dynamic_eula_idx, ninemo_tracker_idx, inf_sus_idx, high_infected_idx 
-    dynamic_eula_idx = len(data['id'])-1
-    ninemo_tracker_idx = dynamic_eula_idx 
-    inf_sus_idx = dynamic_eula_idx 
-    high_infected_idx = dynamic_eula_idx 
+    global ninemo_tracker_idx, dynamic_eula_idx
+    ninemo_tracker_idx = len(data['id'])-1
+    dynamic_eula_idx = ninemo_tracker_idx 
 
     # Now 'columns' is a dictionary where keys are column headers and values are NumPy arrays
 
@@ -228,6 +240,10 @@ def load( pop_file ):
     return data
 
 def initialize_database():
+    if not os.path.exists( demographics_settings.pop_file ):
+        raise ValueError( f"File not found: {demographics_settings.pop_file}. Have you run the workflow to create the input model files?" )
+
+    print( f"Attempting to load {demographics_settings.pop_file} from {os.getcwd()}." )
     return load( demographics_settings.pop_file )
 
 def eula_init( df, age_threshold_yrs = 5, eula_strategy=None ):
@@ -238,9 +254,10 @@ def collect_report( data ):
     """
     Report data to file for a given timestep.
     """
-    infected_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-    susceptible_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
-    recovered_counts_raw = np.zeros( settings.num_nodes ).astype( np.uint32 )
+    infectious_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    incubating_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    susceptible_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
+    recovered_counts_raw = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
 
     cr_start = time.time()
     #print( f"unborn_end_idx={unborn_end_idx}, dynamic_eula_idx={dynamic_eula_idx}." )
@@ -250,10 +267,12 @@ def collect_report( data ):
             dynamic_eula_idx,
             data['node'],
             data['infected'],
+            data['incubation_timer'],
             data['immunity'],
             data['age'],
             data['expected_lifespan'],
-            infected_counts_raw,
+            infectious_counts_raw,
+            incubating_counts_raw,
             susceptible_counts_raw,
             recovered_counts_raw
     )
@@ -261,21 +280,21 @@ def collect_report( data ):
     cr_time += time.time() - cr_start
 
     eula_reco_start = time.time()
-    #print( f"infected_counts_raw = {infected_counts_raw}" )
-    susceptible_counts = dict(zip(settings.nodes, susceptible_counts_raw))
-    infected_counts = dict(zip(settings.nodes, infected_counts_raw))
+    susceptible_counts = dict(zip(demographics_settings.nodes, susceptible_counts_raw))
+    infectious_counts = dict(zip(demographics_settings.nodes, infectious_counts_raw))
+    incubating_counts = dict(zip(demographics_settings.nodes, incubating_counts_raw))
 
     recovered_counts = recovered_counts_raw + np.array( eula.get_recovereds_by_node_np() )
 
-    totals = susceptible_counts_raw + infected_counts_raw + recovered_counts
-    recovered_counts = dict(zip(settings.nodes, recovered_counts))
+    totals = susceptible_counts_raw + infectious_counts_raw + incubating_counts_raw + recovered_counts
+    recovered_counts = dict(zip(demographics_settings.nodes, recovered_counts))
 
-    #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infected_counts}, and\n{recovered_counts}." )
+    #print( f"Reporting back SIR counts of\n{susceptible_counts},\n{infectious_counts}, and\n{recovered_counts}." )
 
     global eula_reco_time
     eula_reco_time += time.time() - eula_reco_start
 
-    return infected_counts, susceptible_counts, recovered_counts, totals
+    return infectious_counts, incubating_counts, susceptible_counts, recovered_counts, totals
     
 
 def update_ages( data, totals, timestep ):
@@ -367,7 +386,7 @@ def progress_infections( data ):
 
 # Update immune agents
 def progress_immunities( data ):
-    update_ages_lib.progress_immunities(unborn_end_idx, dynamic_eula_idx, data['immunity_timer'], data['immunity'], data['node'])
+    update_ages_lib.progress_immunities(unborn_end_idx, dynamic_eula_idx, data['immunity_timer'], data['immunity'])
     return data
 
 def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):
@@ -384,12 +403,10 @@ def calculate_new_infections( data, inf, sus, totals, timestep, **kwargs ):
         inf_multiplier = max(0, 1 + sm * settings.infectivity_multiplier[ min((timestep%365) // 7, 51) ] )
         bi = kwargs.get('base_infectivity')
         #print( f"inf_multiplier = {inf_multiplier}" )
+        #print( "Calculating new infections from idx {unborn_end_idx} to {dynamic_eula_idx}." )
         update_ages_lib.calculate_new_infections(
-                inf_sus_idx, # unborn_end_idx,
-                dynamic_eula_idx,
                 len( inf ),
                 data['node'],
-                data['incubation_timer'],
                 # counts
                 inf_np,
                 sus_np,
@@ -446,6 +463,7 @@ def handle_transmission_by_node( data, new_infections, susceptible_counts, node=
 def handle_transmission( data_in, new_infections_in, susceptible_counts ):
     # We want to do this in parallel;
     #print( f"DEBUG: New_Infections: {new_infections_in}" )
+    
     update_ages_lib.handle_new_infections_mp(
         unborn_end_idx, # we waste a few cycles now coz the first block is immune from maternal immunity
         dynamic_eula_idx,
@@ -456,7 +474,8 @@ def handle_transmission( data_in, new_infections_in, susceptible_counts ):
         data_in['incubation_timer'],
         data_in['infection_timer'],
         new_infections_in,
-        np.array(list(susceptible_counts.values())).astype( np.uint32 )
+        np.array(list(susceptible_counts.values())).astype( np.uint32 ),
+        get_incubation_duration()
     )
 
     return data_in

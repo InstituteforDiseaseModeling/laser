@@ -1,5 +1,6 @@
 import numpy as np
 from collections import defaultdict
+import os
 import settings
 import demographics_settings
 
@@ -11,7 +12,14 @@ gompertz_parameter = 0.05
 age_bins = np.arange(demographics_settings.eula_age, 102)
 probability_of_dying = 2.74e-6 * ( makeham_parameter + np.exp(gompertz_parameter * (age_bins - age_bins[0])) )
 #print( f"probability_of_dying = {probability_of_dying}" )
-fits = np.load(demographics_settings.eula_pop_fits, allow_pickle=True).item()
+
+#if not os.path.exists( demographics_settings.eula_pop_fits ):
+#    raise ValueError( f"File not found: {demographics_settings.eula_pop_fits}. Have you run the workflow to create the input model files?" )
+
+fits = None
+if os.path.exists( demographics_settings.eula_pop_fits ):
+    fits = np.load(demographics_settings.eula_pop_fits, allow_pickle=True).item()
+
 def calculate_y(x, m, b):
     return int(m * x + b)
 
@@ -28,6 +36,9 @@ def count_by_node_and_age( nodes, ages ):
     return counts
 
 def init():
+    if not fits:
+        # user didn't provide fits.npy file with EULA populations over time. That's OK.
+        return
     global eula_dict, next_eula_pops, timestep_abs 
     next_eula_pops = np.zeros( demographics_settings.num_nodes ).astype( np.uint32 )
     timestep_abs = 0
@@ -45,6 +56,8 @@ def progress_natural_mortality( timesteps ):
 
     def from_lut():
         # Calculate y values using the fit parameters and x values
+        if not fits:
+            return
         global next_eula_pops 
         for node in range(settings.num_nodes):
             m, b = fits[node]

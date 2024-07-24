@@ -1,0 +1,6 @@
+include src/idmlaser/model_numpy/*.py
+include src/idmlaser/model_sql/*.py
+include src/idmlaser/update_ages.cpp
+include src/idmlaser/makefile
+include src/idmlaser/examples/QuickStart.ipynb
+include src/idmlaser/schema.json

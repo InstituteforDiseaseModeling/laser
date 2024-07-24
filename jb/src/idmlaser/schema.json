@@ -1,0 +1,44 @@
+{
+  "title": "Agents",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Primary key, auto-incremented"
+    },
+    "node": {
+      "type": "integer",
+      "description": "Node identifier"
+    },
+    "age": {
+      "type": "number",
+      "description": "Age of the agent"
+    },
+    "infected": {
+      "type": "boolean",
+      "description": "Infection status of the agent"
+    },
+    "infection_timer": {
+      "type": "integer",
+      "description": "Timer for infection duration"
+    },
+    "incubation_timer": {
+      "type": "integer",
+      "description": "Timer for incubation period"
+    },
+    "immunity": {
+      "type": "boolean",
+      "description": "Immunity status of the agent"
+    },
+    "immunity_timer": {
+      "type": "integer",
+      "description": "Timer for immunity duration"
+    },
+    "expected_lifespan": {
+      "type": "integer",
+      "description": "Expected lifespan of the agent"
+    }
+  },
+  "required": ["id", "node", "age", "infected", "infection_timer", "incubation_timer", "immunity", "immunity_timer", "expected_lifespan"]
+}
+
