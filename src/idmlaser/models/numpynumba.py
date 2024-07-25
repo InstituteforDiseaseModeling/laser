@@ -9,6 +9,7 @@ from typing import Tuple
 
 import numba as nb
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from idmlaser.numpynumba import Demographics
@@ -210,7 +211,7 @@ class NumbaSpatialSEIR(DiseaseModel):
 
     @property
     def metrics(self):
-        return np.array(self._metrics)
+        return pd.DataFrame(data=self._metrics, columns=["tick"] + [fn.__name__ for fn in self._phases])  # np.array(self._metrics)
 
     def finalize(self, directory: Optional[Path] = None) -> Tuple[Optional[Path], Path]:
         """Finalize the model."""

@@ -1,116 +1,17 @@
 """Tests for the utils module."""
 
+import heapq
 import unittest
 
 import numpy as np
 import pytest
 
-from idmlaser.utils import PriorityQueue
-from idmlaser.utils import PriorityQueueNB
-from idmlaser.utils import PriorityQueueNP
+from idmlaser.utils import PriorityQueuePy
 from idmlaser.utils import PropertySet
 from idmlaser.utils import daily_births_deaths_from_annual
 from idmlaser.utils import pop_from_cbr_and_mortality
 from idmlaser.utils import predicted_day_of_death
 from idmlaser.utils import predicted_year_of_death
-
-
-class TestPriorityQueue(unittest.TestCase):
-    """Tests for the PriorityQueue class."""
-
-    def setUp(self):
-        self.pq = PriorityQueue(3)
-
-    def test_push_pop(self):
-        """Test pushing and popping elements from the priority queue."""
-        self.pq.push(1, 2)
-        self.pq.push(2, 1)
-        self.pq.push(3, 3)
-
-        assert self.pq.pop() == (2, 1)
-        assert self.pq.pop() == (1, 2)
-        assert self.pq.pop() == (3, 3)
-
-    def test_push_pop_random(self):
-        """Test pushing and popping random elements from the priority queue."""
-        values = np.random.randint(0, 100, 1024, dtype=np.uint32)
-        self.pq = PriorityQueue(len(values))
-        for i in values:
-            self.pq.push(i, i)
-        minimum = 0
-        while len(self.pq) > 0:
-            value, _ = self.pq.pop()
-            assert value >= minimum
-            minimum = value
-
-    def test_peek(self):
-        """Test peeking at the top element of the priority queue."""
-        self.pq.push(1, 2)
-        self.pq.push(2, 1)
-        self.pq.push(3, 3)
-
-        assert self.pq.peek() == (2, 1)
-
-    def test_empty_peek(self):
-        """Test peeking at the top element of an empty priority queue. Should raise an IndexError."""
-        with pytest.raises(IndexError):
-            _ = self.pq.peek()
-
-    def test_peek_random(self):
-        """Test peeking at the top element of the priority queue with random values."""
-        values = np.random.randint(0, 100, 1024, dtype=np.uint32)
-        self.pq = PriorityQueue(len(values))
-        for i in values:
-            self.pq.push(i, i)
-        minimum = values.min()
-        assert self.pq.peek() == (minimum, minimum)
-
-    def test_empty_pop(self):
-        """Test popping from an empty priority queue. Should raise an IndexError."""
-        with pytest.raises(IndexError):
-            self.pq.pop()
-
-    def test_full_push(self):
-        """Test pushing to a full priority queue. Should raise an IndexError."""
-        self.pq.push(1, 2)
-        self.pq.push(2, 1)
-        self.pq.push(3, 3)
-
-        with pytest.raises(IndexError):
-            self.pq.push(4, 4)
-
-    def test_push_timing(self):
-        """Test the timing of the push method."""
-        import timeit
-
-        np.random.seed(20240701)
-        count = 1 << 20
-        values = np.random.randint(0, 100, count, dtype=np.int32)
-        self.pq = PriorityQueue(len(values))
-        elapsed = timeit.timeit(
-            "for i, value in enumerate(values): self.pq.push(i, value)", globals={"values": values, "self": self}, number=1
-        )
-        print(
-            f"\n PriorityQueue.push() timing:   {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
-        )
-
-        # print(timeit.timeit("self.pq.pop()", globals=globals(), number=1024))
-
-    def test_pop_timing(self):
-        """Test the timing of the pop method."""
-        import timeit
-
-        np.random.seed(20240701)
-        count = 1 << 16
-        values = np.random.randint(0, 100, count, dtype=np.int32)
-        self.pq = PriorityQueue(len(values))
-        for i, value in enumerate(values):
-            self.pq.push(i, value)
-
-        elapsed = timeit.timeit("while len(self.pq): self.pq.pop()", globals={"self": self}, number=1)
-        print(
-            f"\n PriorityQueue.pop() timing:    {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
-        )
 
 
 class TestPopFromCbrAndMortality(unittest.TestCase):
@@ -536,127 +437,12 @@ class TestPropertySet(unittest.TestCase):
         assert repr(gb) == f"PropertySet({ {'a': 1, 'b': 2, 'c': 3, 'd': 4}!s})"
 
 
-class TestPriorityQueueNP(unittest.TestCase):
-    """Tests for the PriorityQueueNP class."""
+class TestPriorityQueuePy(unittest.TestCase):
+    """Tests for the PriorityQueuePy class."""
 
     def setUp(self):
         # 31 41 59 26 53 58 97
-        self.pq = PriorityQueueNP(7, np.array([31, 41, 59, 26, 53, 58, 97]))
-
-    def test_push_pop(self):
-        """Test pushing and popping elements from the priority queue."""
-        self.pq.push(0)
-        self.pq.push(1)
-        self.pq.push(2)
-        self.pq.push(3)
-        self.pq.push(4)
-        self.pq.push(5)
-        self.pq.push(6)
-
-        assert self.pq.popiv() == (3, 26)
-        assert self.pq.popiv() == (0, 31)
-        assert self.pq.popiv() == (1, 41)
-        assert self.pq.popiv() == (4, 53)
-        assert self.pq.popiv() == (5, 58)
-        assert self.pq.popiv() == (2, 59)
-        assert self.pq.popiv() == (6, 97)
-
-    def test_push_pop_random(self):
-        """Test pushing and popping random values from the priority queue."""
-        values = np.random.randint(0, 100, 1024, dtype=np.uint32)
-        self.pq = PriorityQueueNP(len(values), values)
-        for i in range(len(values)):
-            self.pq.push(i)
-        minimum = 0
-        while len(self.pq) > 0:
-            value = self.pq.popv()
-            assert value >= minimum
-            minimum = value
-
-    def test_peek(self):
-        """Test peeking at the top element of the priority queue."""
-        self.pq.push(0)
-        self.pq.push(1)
-        self.pq.push(2)
-        self.pq.push(3)
-        self.pq.push(4)
-        self.pq.push(5)
-        self.pq.push(6)
-
-        assert self.pq.peekiv() == (3, 26)
-
-    def test_empty_peek(self):
-        """Test peeking at the top element of an empty priority queue. Should raise an IndexError."""
-        with pytest.raises(IndexError):
-            _ = self.pq.peekiv()
-
-    def test_peek_random(self):
-        """Test peeking at the top element of the priority queue with random values."""
-        values = np.random.randint(0, 100, 1024, dtype=np.uint32)
-        self.pq = PriorityQueueNP(len(values), values)
-        for i in range(len(values)):
-            self.pq.push(i)
-        minimum = values.min()
-        assert self.pq.peekv() == minimum
-
-    def test_empty_pop(self):
-        """Test popping from an empty priority queue. Should raise an IndexError."""
-        with pytest.raises(IndexError):
-            self.pq.pop()
-
-    def test_full_push(self):
-        """Test pushing to a full priority queue. Should raise an IndexError."""
-        self.pq.push(0)
-        self.pq.push(1)
-        self.pq.push(2)
-        self.pq.push(3)
-        self.pq.push(4)
-        self.pq.push(5)
-        self.pq.push(6)
-
-        with pytest.raises(IndexError):
-            self.pq.push(7)
-
-    def test_push_timing(self):
-        """Test the timing of the push method."""
-        import timeit
-
-        np.random.seed(20240701)
-        count = 1 << 20
-        values = np.random.randint(0, 100, count, dtype=np.uint32)
-        self.pq = PriorityQueueNP(len(values), values)
-        self.pq.push(0)  # in case we need to compile the push method
-        self.pq.pop()  # in case we need to compile the pop method
-        elapsed = timeit.timeit("for i in range(len(values)): self.pq.push(i)", globals={"values": values, "self": self}, number=1)
-        print(
-            f"\n PriorityQueueNP.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
-        )
-
-    def test_pop_timing(self):
-        """Test the timing of the pop method."""
-        import timeit
-
-        np.random.seed(20240701)
-        count = 1 << 16
-        values = np.random.randint(0, 100, count, dtype=np.uint32)
-        self.pq = PriorityQueueNP(len(values), values)
-        self.pq.push(0)  # in case we need to compile the push method
-        self.pq.pop()  # in case we need to compile the pop method
-        for i in range(len(values)):
-            self.pq.push(i)
-
-        elapsed = timeit.timeit("while len(self.pq): self.pq.popv()", globals={"self": self}, number=1)
-        print(
-            f"\n PriorityQueueNP.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
-        )
-
-
-class TestPriorityQueueNB(unittest.TestCase):
-    """Tests for the PriorityQueueNB class."""
-
-    def setUp(self):
-        # 31 41 59 26 53 58 97
-        self.pq = PriorityQueueNB(7, np.array([31, 41, 59, 26, 53, 58, 97], dtype=np.int32))
+        self.pq = PriorityQueuePy(7, np.array([31, 41, 59, 26, 53, 58, 97], dtype=np.int32))
 
     def test_push_pop(self):
         """Test pushing and popping elements from the priority queue."""
@@ -679,7 +465,7 @@ class TestPriorityQueueNB(unittest.TestCase):
     def test_push_pop_random(self):
         """Test pushing and popping random values from the priority queue."""
         values = np.random.randint(0, 100, 1024, dtype=np.int32)
-        self.pq = PriorityQueueNB(len(values), values)
+        self.pq = PriorityQueuePy(len(values), values)
         for i in range(len(values)):
             self.pq.push(i)
         minimum = 0
@@ -708,7 +494,7 @@ class TestPriorityQueueNB(unittest.TestCase):
     def test_peek_random(self):
         """Test peeking at the top element of the priority queue with random values."""
         values = np.random.randint(0, 100, 1024, dtype=np.int32)
-        self.pq = PriorityQueueNB(len(values), values)
+        self.pq = PriorityQueuePy(len(values), values)
         for i in range(len(values)):
             self.pq.push(i)
         minimum = values.min()
@@ -739,10 +525,10 @@ class TestPriorityQueueNB(unittest.TestCase):
         np.random.seed(20240701)
         count = 1 << 20
         values = np.random.randint(0, 100, count, dtype=np.int32)
-        self.pq = PriorityQueueNB(len(values), values)
+        self.pq = PriorityQueuePy(len(values), values)
         elapsed = timeit.timeit("for i in range(len(values)): self.pq.push(i)", globals={"values": values, "self": self}, number=1)
         print(
-            f"\n PriorityQueueNB.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+            f"\n PriorityQueuePy.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
         # print(timeit.timeit("self.pq.popv()", globals=globals(), number=1024))
@@ -754,13 +540,52 @@ class TestPriorityQueueNB(unittest.TestCase):
         np.random.seed(20240701)
         count = 1 << 20
         values = np.random.randint(0, 100, count, dtype=np.int32)
-        self.pq = PriorityQueueNB(len(values), values)
+        self.pq = PriorityQueuePy(len(values), values)
         for i in range(len(values)):
             self.pq.push(i)
 
         elapsed = timeit.timeit("while len(self.pq): self.pq.popv()", globals={"self": self}, number=1)
         print(
-            f"\n PriorityQueueNB.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+            f"\n PriorityQueuePy.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        )
+
+
+class TestPythonHeapQ(unittest.TestCase):
+    """Tests for the Python heapq class."""
+
+    def test_push_timing(self):
+        """Test the timing of the push method."""
+        import timeit
+
+        np.random.seed(20240701)
+        count = 1 << 20
+        values = np.random.randint(0, 100, count, dtype=np.int32)
+        heap = []
+        elapsed = timeit.timeit(
+            "for i in range(len(values)): heapq.heappush(heap, (values[i], i))",
+            globals={"values": values, "heap": heap, "heapq": heapq},
+            number=1,
+        )
+        print(
+            f"\n heapq.heappush() timing:       {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        )
+
+        # print(timeit.timeit("self.pq.popv()", globals=globals(), number=1024))
+
+    def test_pop_timing(self):
+        """Test the timing of the pop method."""
+        import timeit
+
+        np.random.seed(20240701)
+        count = 1 << 20
+        values = np.random.randint(0, 100, count, dtype=np.int32)
+        heap = []
+        for i in range(len(values)):
+            heapq.heappush(heap, i)
+
+        elapsed = timeit.timeit("while len(heap): heapq.heappop(heap)", globals={"heap": heap, "heapq": heapq}, number=1)
+        print(
+            f"\n heapq.heappop() timing:        {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
 

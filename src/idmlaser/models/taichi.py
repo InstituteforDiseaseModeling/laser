@@ -8,6 +8,7 @@ from typing import Optional
 from typing import Tuple
 
 import numpy as np
+import pandas as pd
 import taichi as ti
 from tqdm import tqdm
 
@@ -155,7 +156,9 @@ class TaichiSpatialSEIR(DiseaseModel):
             self.step(tick, pbar)
         finish = datetime.now(timezone.utc)
         print(f"elapsed time: {finish - start}")
-        # ti.profiler.print_kernel_profiler_info()
+
+        # ti.profiler.print_kernel_profiler_info()  # defaults to "count"
+        # ti.profiler.print_kernel_profiler_info("trace")
 
         return
 
@@ -173,7 +176,7 @@ class TaichiSpatialSEIR(DiseaseModel):
 
     @property
     def metrics(self):
-        return np.array(self._metrics)
+        return pd.DataFrame(data=self._metrics, columns=["tick"] + [fn.__name__ for fn in self._phases])  # np.array(self._metrics)
 
     def finalize(self, directory: Optional[Path] = None) -> Tuple[Optional[Path], Path]:
         """Finalize the model."""
@@ -474,7 +477,6 @@ def report_kernel(
     itimers: ti.types.ndarray(ti.u8),  # type: ignore
     nodeids: ti.types.ndarray(ti.u16),  # type: ignore
 ):
-    ti.loop_config(serialize=True)  # Testing
     for i in range(count):
         nodeid = ti.cast(nodeids[i], ti.i32)
         state = states[i]

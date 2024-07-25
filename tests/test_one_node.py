@@ -7,7 +7,7 @@ import idmlaser.kmcurve as kmcurve
 import idmlaser.pyramid as pyramid
 from idmlaser.models.numpynumba import NumbaSpatialSEIR
 from idmlaser.numpynumba import DemographicsByYear
-from idmlaser.utils import PriorityQueueNB
+from idmlaser.utils import PriorityQueuePy
 from idmlaser.utils import PropertySet
 
 SCRIPT_PATH = Path(__file__).parent.absolute()
@@ -76,7 +76,7 @@ init_dobs_dods(
 )  # 2023 is the most recent year of data
 
 print(f"Pushing {model.population.dod.shape[0]} agents onto the priority queue...")
-pq = PriorityQueueNB(model.population.dod.shape[0], model.population.dod)
+pq = PriorityQueuePy(model.population.dod.shape[0], model.population.dod)
 for i in tqdm(range(model.population.dod.shape[0])):
     pq.push(i)
 
@@ -109,12 +109,14 @@ model.run(params.ticks)
 print(model.report.shape)
 print(model.report[30:50, :, 0])
 
-metrics = np.array(model.metrics)
-for c in range(metrics.shape[1]):
-    if c == 0:
-        continue
-    print(f"{model._phases[c-1].__name__:20}: {metrics[:,c].sum():11,} μs")
+metrics = model.metrics
+columns = metrics.columns[1:]
+cumulative = 0
+for column in columns:
+    total = metrics[column].sum()
+    print(f"{column:20}: {total:11,} μs")
+    cumulative += total
 print("====================================")
-print(f"total               : {metrics[:, 1:].sum():,} μs")
+print(f"total               : {cumulative:11,} μs")
 
 print("Goodbye [cruel], world!")

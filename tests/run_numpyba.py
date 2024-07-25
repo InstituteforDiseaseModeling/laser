@@ -33,14 +33,15 @@ def main(parameters):
     model.run(parameters.ticks)
     model.finalize()
 
-    metrics = np.array(model.metrics)
-
-    for c in range(metrics.shape[1]):
-        if c == 0:
-            continue  # Skip the first column, "ticks"
-        print(f"{model._phases[c-1].__name__:20}: {metrics[:,c].sum():13,} μsec")
-    print("----------------------------------------")
-    print(f"total runtime       : {metrics[:, 1:].sum():13,} μsec")
+    metrics = model.metrics
+    columns = metrics.columns[1:]
+    cumulative = 0
+    for column in columns:
+        total = metrics[column].sum()
+        print(f"{column:20}: {total:11,} μs")
+        cumulative += total
+    print("====================================")
+    print(f"total               : {cumulative:11,} μs")
 
     return
 

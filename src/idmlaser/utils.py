@@ -11,82 +11,6 @@ import numba as nb
 import numpy as np
 
 
-class PriorityQueue:
-    """A priority queue implemented using a heap."""
-
-    def __init__(self, capacity, dtype=np.uint32):
-        self.payloads = np.zeros(capacity, dtype=dtype)
-        self.priority = np.zeros(capacity, dtype=np.uint32)
-        self.size = 0
-
-    def push(self, payload, priority):
-        _pq_push(self, payload, priority)
-
-    def peek(self) -> Tuple[Any, np.uint32]:
-        if self.size == 0:
-            raise IndexError("Priority queue is empty")
-        return (self.payloads[0], self.priority[0])
-
-    def pop(self) -> Tuple[Any, np.uint32]:
-        return _pq_pop(self)
-
-    def __len__(self):
-        return self.size
-
-
-def _pq_push(pq: PriorityQueue, payload: Any, priority: np.uint32):
-    """Push an item with a priority into the priority queue."""
-    if pq.size >= len(pq.payloads):
-        raise IndexError("Priority queue is full")
-    pq.payloads[pq.size] = payload
-    pq.priority[pq.size] = priority
-    index = pq.size
-    pq.size += 1
-    while index > 0:
-        parent_index = (index - 1) // 2
-        if pq.priority[index] < pq.priority[parent_index]:
-            pq.payloads[index], pq.payloads[parent_index] = pq.payloads[parent_index], pq.payloads[index]
-            pq.priority[index], pq.priority[parent_index] = pq.priority[parent_index], pq.priority[index]
-            index = parent_index
-        else:
-            break
-
-    return
-
-
-def _pq_pop(pq: PriorityQueue) -> Tuple[Any, np.uint32]:
-    """Remove the item with the highest priority from the priority queue."""
-    if pq.size == 0:
-        raise IndexError("Priority queue is empty")
-
-    payload, priority = pq.peek()
-
-    pq.size -= 1
-    pq.payloads[0] = pq.payloads[pq.size]
-    pq.priority[0] = pq.priority[pq.size]
-
-    index = 0
-    while index < pq.size:
-        left_child_index = 2 * index + 1
-        right_child_index = 2 * index + 2
-        smallest = index
-
-        if left_child_index < pq.size and pq.priority[left_child_index] < pq.priority[smallest]:
-            smallest = left_child_index
-
-        if right_child_index < pq.size and pq.priority[right_child_index] < pq.priority[smallest]:
-            smallest = right_child_index
-
-        if smallest != index:
-            pq.payloads[index], pq.payloads[smallest] = pq.payloads[smallest], pq.payloads[index]
-            pq.priority[index], pq.priority[smallest] = pq.priority[smallest], pq.priority[index]
-            index = smallest
-        else:
-            break
-
-    return payload, priority
-
-
 def pop_from_cbr_and_mortality(
     initial: Union[int, np.integer],
     cbr: Union[Iterable[Union[int, float, np.number]], Union[int, float, np.number]],
@@ -349,147 +273,17 @@ class PropertySet:
         return f"PropertySet({self.__dict__!s})"
 
 
-class PriorityQueueNP:
-    """
-    A priority queue implemented using NumPy arrays.
-    __init__ with an existing array of priority values
-    __push__ with an index into priority values
-    __pop__ returns the index of the highest priority value and its value
-    """
-
-    def __init__(self, capacity: int, values: np.ndarray):
-        self.indices = np.zeros(capacity, dtype=np.uint32)
-        self.values = values
-        self.size = 0
-
-    def push(self, index):
-        _pq_push_np(self, index)
-
-    def peeki(self) -> np.uint32:
-        if self.size == 0:
-            raise IndexError("Priority queue is empty")
-        return self.indices[0]
-
-    def peekv(self) -> Any:
-        if self.size == 0:
-            raise IndexError("Priority queue is empty")
-        return self.values[self.indices[0]]
-
-    def peekiv(self) -> Tuple[np.uint32, Any]:
-        if self.size == 0:
-            raise IndexError("Priority queue is empty")
-        return (self.indices[0], self.values[self.indices[0]])
-
-    def popi(self) -> np.uint32:
-        return _pq_popi_np(self)
-
-    def popv(self) -> Any:
-        return _pq_popv_np(self)
-
-    def popiv(self) -> Tuple[np.uint32, Any]:
-        return _pq_popiv_np(self)
-
-    def pop(self) -> None:
-        _pq_pop_np(self)
-        return
-
-    def __len__(self):
-        return self.size
-
-
-def _pq_push_np(pq: PriorityQueueNP, index: np.uint32):
-    """Push a new index into the priority queue."""
-    if pq.size >= len(pq.indices):
-        raise IndexError("Priority queue is full")
-    pq.indices[pq.size] = index
-    test_pos = pq.size
-    pq.size += 1
-    while test_pos > 0:
-        parent_pos = (test_pos - 1) // 2
-        if pq.values[pq.indices[test_pos]] < pq.values[pq.indices[parent_pos]]:
-            pq.indices[test_pos], pq.indices[parent_pos] = pq.indices[parent_pos], pq.indices[test_pos]
-            test_pos = parent_pos
-        else:
-            break
-
-    return
-
-
-def _pq_popi_np(pq: PriorityQueueNP) -> np.uint32:
-    """Remove the item with the highest priority from the priority queue."""
-    # peeki() and _pq_pop_np() check this
-    # if pq.size == 0:
-    #     raise IndexError("Priority queue is empty")
-
-    index = pq.peeki()
-
-    _pq_pop_np(pq)
-
-    return index
-
-
-def _pq_popv_np(pq: PriorityQueueNP) -> Any:
-    """Remove the item with the highest priority from the priority queue."""
-    # peekv() and _pq_pop_np() check this
-    # if pq.size == 0:
-    #     raise IndexError("Priority queue is empty")
-
-    value = pq.peekv()
-
-    _pq_pop_np(pq)
-
-    return value
-
-
-def _pq_popiv_np(pq: PriorityQueueNP) -> Tuple[np.uint32, Any]:
-    """Remove the item with the highest priority from the priority queue."""
-    # peekiv() and _pq_pop_np() check this
-    # if pq.size == 0:
-    #     raise IndexError("Priority queue is empty")
-
-    ivtuple = pq.peekiv()
-
-    _pq_pop_np(pq)
-
-    return ivtuple
-
-
-def _pq_pop_np(pq: PriorityQueueNP) -> None:
-    """Remove the item with the highest priority from the priority queue."""
-    if pq.size == 0:
-        raise IndexError("Priority queue is empty")
-
-    pq.size -= 1
-    pq.indices[0] = pq.indices[pq.size]
-
-    test_pos = 0
-    while test_pos < pq.size:
-        left_child_index = 2 * test_pos + 1
-        right_child_index = 2 * test_pos + 2
-        smallest = test_pos
-
-        if left_child_index < pq.size and pq.values[pq.indices[left_child_index]] < pq.values[pq.indices[smallest]]:
-            smallest = left_child_index
-
-        if right_child_index < pq.size and pq.values[pq.indices[right_child_index]] < pq.values[pq.indices[smallest]]:
-            smallest = right_child_index
-
-        if smallest != test_pos:
-            pq.indices[test_pos], pq.indices[smallest] = pq.indices[smallest], pq.indices[test_pos]
-            test_pos = smallest
-        else:
-            break
-
-    return
-
-
-class PriorityQueueNB:
+class PriorityQueuePy:
     """
     A priority queue implemented using NumPy arrays and sped-up with Numba.
+    Using the algorithm from the Python heapq module.
     __init__ with an existing array of priority values
     __push__ with an index into priority values
     __pop__ returns the index of the highest priority value and its value
     """
+
+    # https://github.com/python/cpython/blob/5592399313c963c110280a7c98de974889e1d353/Modules/_heapqmodule.c
+    # https://github.com/python/cpython/blob/5592399313c963c110280a7c98de974889e1d353/Lib/heapq.py
 
     def __init__(self, capacity: int, values: np.ndarray):
         self.indices = np.zeros(capacity, dtype=np.uint32)
@@ -501,7 +295,9 @@ class PriorityQueueNB:
     def push(self, index) -> None:
         if self.size >= len(self.indices):
             raise IndexError("Priority queue is full")
-        self.size = _pq_push_nb(np.uint32(index), np.uint32(self.size), self.indices, self.values)
+        self.indices[self.size] = index
+        _siftdown(self.indices, self.values, 0, self.size)
+        self.size += 1
         return
 
     def peeki(self) -> np.uint32:
@@ -521,78 +317,83 @@ class PriorityQueueNB:
 
     def popi(self) -> np.uint32:
         index = self.peeki()
-
-        self.size = _pq_pop_nb(np.uint32(self.size), self.indices, self.values)
+        self.pop()
 
         return index
 
     def popv(self) -> Any:
         value = self.peekv()
-
-        self.size = _pq_pop_nb(np.uint32(self.size), self.indices, self.values)
+        self.pop()
 
         return value
 
     def popiv(self) -> Tuple[np.uint32, Any]:
         ivtuple = self.peekiv()
-
-        self.size = _pq_pop_nb(np.uint32(self.size), self.indices, self.values)
+        self.pop()
 
         return ivtuple
 
     def pop(self) -> None:
         if self.size == 0:
             raise IndexError("Priority queue is empty")
-        self.size = _pq_pop_nb(np.uint32(self.size), self.indices, self.values)
+        self.size -= 1
+        self.indices[0] = self.indices[self.size]
+        _siftup(self.indices, self.values, 0, self.size)
         return
 
     def __len__(self):
         return self.size
 
 
-@nb.njit((nb.uint32, nb.uint32, nb.uint32[:], nb.int32[:]), nogil=True)
-def _pq_push_nb(index, size, indices, values) -> np.uint32:
-    """Push a new index into the priority queue."""
-    indices[size] = index
-    test_pos = size
-    size += 1
-    while test_pos > 0:
-        parent_pos = (test_pos - 1) // 2
-        if values[indices[test_pos]] < values[indices[parent_pos]]:
-            indices[test_pos], indices[parent_pos] = indices[parent_pos], indices[test_pos]
-            test_pos = parent_pos
-        else:
-            break
+@nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
+def _siftdown(indices, values, startpos, pos):
+    inewitem = indices[pos]
+    vnewitem = values[inewitem]
+    # Follow the path to the root, moving parents down until finding a place newitem fits.
+    while pos > startpos:
+        parentpos = (pos - 1) >> 1
+        iparent = indices[parentpos]
+        vparent = values[iparent]
+        if vnewitem < vparent:
+            indices[pos] = iparent
+            pos = parentpos
+            continue
+        break
+    indices[pos] = inewitem
 
-    return size
+    return
 
 
-@nb.njit((nb.uint32, nb.uint32[:], nb.int32[:]), nogil=True)
-def _pq_pop_nb(size, indices, values) -> None:
-    """Remove the item with the highest priority from the priority queue."""
+@nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
+def _siftup(indices, values, pos, size):
+    endpos = size
+    startpos = pos
+    inewitem = indices[pos]
+    # Bubble up the smaller child until hitting a leaf.
+    childpos = 2 * pos + 1  # leftmost child position
+    while childpos < endpos:
+        # Set childpos to index of smaller child.
+        rightpos = childpos + 1
+        if rightpos < endpos and not values[indices[childpos]] < values[indices[rightpos]]:
+            childpos = rightpos
+        # Move the smaller child up.
+        indices[pos] = indices[childpos]
+        pos = childpos
+        childpos = 2 * pos + 1
+    # The leaf at pos is empty now.  Put newitem there, and bubble it up
+    # to its final resting place (by sifting its parents down).
+    indices[pos] = inewitem
+    _siftdown(indices, values, startpos, pos)
+    return
 
-    size -= 1
-    indices[0] = indices[size]
 
-    test_pos = 0
-    while test_pos < size:
-        left_child_index = 2 * test_pos + 1
-        right_child_index = 2 * test_pos + 2
-        smallest = test_pos
-
-        if left_child_index < size and values[indices[left_child_index]] < values[indices[smallest]]:
-            smallest = left_child_index
-
-        if right_child_index < size and values[indices[right_child_index]] < values[indices[smallest]]:
-            smallest = right_child_index
-
-        if smallest != test_pos:
-            # indices[test_pos], indices[smallest] = indices[smallest], indices[test_pos]
-            temp = indices[smallest]
-            indices[smallest] = indices[test_pos]
-            indices[test_pos] = temp
-            test_pos = smallest
-        else:
-            break
-
-    return size
+# """
+# push/pop elements/sec for various priority queue implementations
+# |impl|push()|pop()|
+# |----|:----:|:---:|
+# |PriorityQueue  |  725,450|   82,340|
+# |PriorityQueueNP|  815,173|   80,183|
+# |PriorityQueueNB|1,096,055|  847,965|
+# |PriorityQueuePy|1,865,557|  934,897|
+# |PythonHeapQ    |5,581,031|3,202,212|
+# """
