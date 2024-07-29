@@ -1,5 +1,6 @@
 """Draw for date of death based on current age and the Kaplan-Meier curve."""
 
+import numba as nb
 import numpy as np
 
 # Derived from table 1 of "National Vital Statistics Reports Volume 54, Number 14 United States Life Tables, 2003" (see README.md)
@@ -111,6 +112,37 @@ cumulative_deaths = [
 __cdnp = np.array(cumulative_deaths)
 
 
+@nb.njit((nb.int32[:], nb.uint32), parallel=True)
+def pysod(ages_years: np.ndarray, max_year: np.uint32 = 100):
+    """
+    Calculate the predicted year of death based on the given ages in years.
+
+    Parameters:
+    - ages_years (np.ndarray): The ages of the individuals in years.
+    - max_year (int): The maximum year to consider for calculating the predicted year of death. Default is 100.
+
+    Returns:
+    - ysod (np.ndarray): The predicted years of death.
+
+    Example:
+    >>> pyod(np.array([40, 50, 60]), max_year=80)
+    array([62, 72, 82])
+    """
+
+    n = ages_years.shape[0]
+    ysod = np.empty(n, dtype=np.int32)
+
+    for i in nb.prange(n):
+        age_years = ages_years[i]
+        total_deaths = __cdnp[max_year + 1]
+        already_deceased = __cdnp[age_years]
+        draw = np.random.randint(already_deceased + 1, total_deaths + 1)
+        yod = np.searchsorted(__cdnp, draw, side="left") - 1
+        ysod[i] = yod
+
+    return ysod
+
+
 def predicted_year_of_death(age_years, max_year=100):
     """
     Calculates the predicted year of death based on the given age in years.
@@ -137,6 +169,55 @@ def predicted_year_of_death(age_years, max_year=100):
     yod = np.searchsorted(__cdnp, draw, side="left") - 1
 
     return yod
+
+
+@nb.njit((nb.int32[:], nb.int32[:], nb.int32[:]), parallel=True)
+def _pdsod(ages_days: np.ndarray, ysod: np.ndarray, dods: np.ndarray):
+    n = ages_days.shape[0]
+    for i in nb.prange(n):
+        age_days = ages_days[i]
+        if age_days // 365 < ysod[i]:
+            # pick any day in the year of death
+            dods[i] = np.random.randint(365)
+        else:
+            age_doy = age_days % 365
+            if age_doy < 364:
+                # pick any day between current day and end of year
+                dods[i] = np.random.randint(age_doy + 1, 365)
+            else:
+                # birthday is tomorrow, January 1st of next year
+                ysod[i] += 1
+                dods[1] = 0
+
+    return
+
+
+def pdsod(ages_days: np.ndarray, max_year: np.uint32 = 100):
+    """
+    Calculate the predicted day of death based on the given ages in days.
+
+    Parameters:
+    - ages_days (np.ndarray): The ages of the individuals in days.
+    - max_year (int): The maximum year to consider for calculating the predicted year of death. Default is 100.
+
+    Returns:
+    - dods (np.ndarray): The predicted days of death.
+
+    Example:
+    >>> pdod(np.array([40*365, 50*365, 60*365]), max_year=80)
+    array([22732, 26297, 29862])
+    """
+
+    n = ages_days.shape[0]
+    dods = np.empty(n, dtype=np.int32)
+    ysod = pysod(np.floor_divide(ages_days, 365, dtype=np.int32), max_year)
+
+    _pdsod(ages_days, ysod, dods)
+
+    # doy is now in dods, add in the year
+    dods += ysod * 365
+
+    return dods
 
 
 def predicted_day_of_death(age_days, max_year=100):

@@ -24,10 +24,12 @@ class Population:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+        self.add_property = self.add_scalar_property  # alias
+
         return
 
     # dynamically add a property to the class
-    def add_property(self, name: str, dtype=np.uint32, default=0) -> None:
+    def add_scalar_property(self, name: str, dtype=np.uint32, default=0) -> None:
         """Add a scalar property to the class"""
         # initialize the property to a NumPy array with of size self._count, dtype, and default value
         setattr(self, name, np.full(self._capacity, default, dtype=dtype))
