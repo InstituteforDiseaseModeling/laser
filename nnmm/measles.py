@@ -176,6 +176,8 @@ from idmlaser.kmcurve import pdsod
 model.nodes.add_vector_property("births", (model.params.ticks + 364) // 365)    # births per year
 
 # Adding ri_timer here since it's referred to in do_births.
+import ri
+import maternal_immunity as mi
 model.population.add_scalar_property("ri_timer", np.uint16)
 
 def do_births(model, tick):
@@ -195,17 +197,7 @@ def do_births(model, tick):
     model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
     model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
 
-    # Randomly set ri_timer for coverage fraction of agents to a value between 8.5*30.5 and 9.5*30.5 days
-    # change these numbers or parameterize as needed
-    ri_timer_values = np.random.uniform(8.5 * 30.5, 9.5 * 30.5, count_births).astype(np.uint16)
-
-    # Create a mask to select coverage fraction of agents
-    # Do coverage by node, not same for every node
-    # I don't think agents have node ids yet?
-    mask = np.random.rand(count_births) < (model.nodes.ri_coverages[model.population.nodeid[istart:iend]])
-
-    # Set ri_timer values for the selected agents
-    model.population.ri_timer[istart:iend][mask] = ri_timer_values[mask]
+    ri.add( model, count_births, istart, iend )
 
     index = istart
     nodeids = model.population.nodeid   # grab this once for efficiency
@@ -220,9 +212,7 @@ def do_births(model, tick):
         index += births
     model.nodes.population[:,tick+1] += todays_births
 
-    # enable this after adding susceptibility property to the population (see cells below)
-    model.population.susceptibility[istart:iend] = 0 # newborns have maternal immunity
-    model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months
+    mi.add( model, istart, iend )
 
     return
 
@@ -429,36 +419,13 @@ initialize_susceptibility(model.population.count, model.population.dob, model.po
 # In[555]:
 
 
-# Define the function to decrement ri_timer and update susceptibility
-@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:]), parallel=True)
-def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility):
-    for i in nb.prange(count):
-        if ri_timer[i] > 0:
-            ri_timer[i] -= 1
-            # TBD: It's perfectly possible that the individual got infected (or recovered) while this timer
-            # was counting down and we might want to abort the timer.
-            if ri_timer[i] == 0:
-                susceptibility[i] = 0
-
-# Example usage
-#update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
-
 def do_ri(model, tick):
-    _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
+    ri._update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
     return
 
 
-# Define the function to decrement susceptibility_timer and update susceptibility
-@nb.njit((nb.uint32, nb.uint8[:], nb.uint8[:]), parallel=True)
-def _update_susceptibility_based_on_sus_timer(count, susceptibility_timer, susceptibility):
-    for i in nb.prange(count):
-        if susceptibility_timer[i] > 0:
-            susceptibility_timer[i] -= 1
-            if susceptibility_timer[i] == 0:
-                susceptibility[i] = 1
-
 def do_susceptibility_decay(model, tick):
-    _update_susceptibility_based_on_sus_timer(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
+    mi._update_susceptibility_based_on_sus_timer(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
     return
 
 
