@@ -13,6 +13,7 @@ class Model:
 
 model = Model()
 
+total_births = 0
 
 # ## Source Demographics Data
 # 
@@ -191,13 +192,16 @@ def do_births(model, tick):
     annual_births = model.nodes.births[:, year]
     todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
     count_births = todays_births.sum()
+
+    global total_births
+    total_births += count_births
+
     istart, iend = model.population.add(count_births)   # add count_births agents to the population, get the indices of the new agents
 
     # enable this after loading the aliased distribution and dod and dob properties (see cells below)
     model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
     model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
 
-    ri.add( model, count_births, istart, iend )
 
     index = istart
     nodeids = model.population.nodeid   # grab this once for efficiency
@@ -212,8 +216,11 @@ def do_births(model, tick):
         index += births
     model.nodes.population[:,tick+1] += todays_births
 
+    import access_groups as ag
+    ag.set_accessibility( model, istart, iend )
+    # accessibility ust be set before ri, since currently ri uses accessibility
+    ri.add_with_ips( model, count_births, istart, iend )
     mi.add( model, istart, iend )
-
     return
 
 
@@ -251,6 +258,13 @@ for i in tqdm(range(len(age_distribution))):
     # draw uniformly between the start and end of the age group bucket
     population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
 
+# Initialize everyone with Accessibility 'IP'. Values are 0 (High), 1 (Medium) or 2 (Low), with probability 0.85, 0.14, 0.01 conditioned on node-based coverage.
+model.population.add_scalar_property("accessibility", np.uint8)
+
+import numpy as np
+
+# In theory we want to set access group "IPs" for folks already born. But doesn't matter yet.
+#set_accessibility(model,0,count_active)
 
 # ## Non-Disease Mortality Part II
 # 
@@ -420,7 +434,7 @@ initialize_susceptibility(model.population.count, model.population.dob, model.po
 
 
 def do_ri(model, tick):
-    ri._update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
+    ri._update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.age_at_vax, model.population.dob, tick)
     return
 
 
@@ -660,6 +674,8 @@ from datetime import datetime
 
 from tqdm import tqdm
 
+population.add_scalar_property("age_at_vax", np.uint16)
+#population.add_scalar_property("age_at_inf", np.uint16)
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     metrics = [tick]
@@ -669,6 +685,8 @@ for tick in tqdm(range(model.params.ticks)):
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
+        if tick == 365*5:
+            model.population.save(filename="pop_5yrs.csv", tail_number=total_births)
     model.metrics.append(metrics)
 
 
