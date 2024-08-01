@@ -59,3 +59,21 @@ class Population:
 
     def __len__(self) -> int:
         return self._count
+
+    def save(self, filename: str, tail_number=0 ) -> None:
+        """Save the population properties to a CSV file"""
+        data = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, np.ndarray):
+                #data[key] = value[:self._count]  # Only save up to the current count
+                if tail_number > 0:
+                    print( f"Saving population of just {tail_number} agents born during sim." )
+                    data[key] = value[self._count - tail_number:self._count]  # Save only the last additions elements
+                else:
+                    data[key] = value[:self._count]
+
+        import pandas as pd
+        df = pd.DataFrame(data)
+        df.to_csv(filename, index=False)
+        print(f"Population data saved to {filename}")
+
