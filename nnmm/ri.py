@@ -1,5 +1,19 @@
 import numpy as np
 import numba as nb
+import ctypes
+
+lib = ctypes.CDLL('./libri.so')
+
+# Define the argument types for the C function
+lib.update_susceptibility_based_on_ri_timer.argtypes = [
+    ctypes.c_uint32,                  # count
+    np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
+    np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
+    np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
+    np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
+    ctypes.c_int64                    # tick
+]
+
 
 def add(model, count_births, istart, iend):
     # Randomly set ri_timer for coverage fraction of agents to a value between 8.5*30.5 and 9.5*30.5 days
@@ -55,6 +69,10 @@ def add_with_ips(model, count_births, istart, iend):
 
     return
 
+def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick):
+    lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick)
+
+"""
 # Define the function to decrement ri_timer and update susceptibility
 @nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.uint16[:], nb.int32[:], nb.int64 ), parallel=True)
 def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick):
@@ -67,3 +85,5 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, ag
                 susceptibility[i] = 0
                 #age_at_vax[i] = tick-dob[i] # optional for reporting
 
+
+"""
