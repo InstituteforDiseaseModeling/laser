@@ -11,7 +11,7 @@ class TestPysod(unittest.TestCase):
         ages_years = np.random.randint(100, size=1024, dtype=np.int32)
         max_year = 100
 
-        result = pysod(ages_years, max_year)
+        result = pysod(ages_years, max_year, np.uint32(np.random.randint(2**32)))
         assert all(result >= ages_years), f"pysod should be >= current age (in years) {result=}, {ages_years=}"
         assert all(result <= max_year), f"pysod should be <= max year {result=}, {max_year=}"
 

@@ -112,8 +112,8 @@ cumulative_deaths = [
 __cdnp = np.array(cumulative_deaths)
 
 
-@nb.njit((nb.int32[:], nb.uint32), parallel=True)
-def pysod(ages_years: np.ndarray, max_year: np.uint32 = 100):
+@nb.njit((nb.int32[:], nb.uint32, nb.uint32), parallel=True)
+def pysod(ages_years: np.ndarray, max_year: np.uint32 = 100, prng_seed: np.uint32 = 20240801):
     """
     Calculate the predicted year of death based on the given ages in years.
 
@@ -131,6 +131,9 @@ def pysod(ages_years: np.ndarray, max_year: np.uint32 = 100):
 
     n = ages_years.shape[0]
     ysod = np.empty(n, dtype=np.int32)
+
+    for t in nb.prange(nb.get_num_threads()):
+        np.random.seed(prng_seed + t)
 
     for i in nb.prange(n):
         age_years = ages_years[i]
@@ -171,8 +174,11 @@ def predicted_year_of_death(age_years, max_year=100):
     return yod
 
 
-@nb.njit((nb.int32[:], nb.int32[:], nb.int32[:]), parallel=True)
-def _pdsod(ages_days: np.ndarray, ysod: np.ndarray, dods: np.ndarray):
+@nb.njit((nb.int32[:], nb.int32[:], nb.int32[:], nb.uint32), parallel=True)
+def _pdsod(ages_days: np.ndarray, ysod: np.ndarray, dods: np.ndarray, prng_seed: np.uint32 = 20240801):
+    for t in nb.prange(nb.get_num_threads()):
+        np.random.seed(prng_seed + t)
+
     n = ages_days.shape[0]
     for i in nb.prange(n):
         age_days = ages_days[i]
@@ -192,7 +198,7 @@ def _pdsod(ages_days: np.ndarray, ysod: np.ndarray, dods: np.ndarray):
     return
 
 
-def pdsod(ages_days: np.ndarray, max_year: np.uint32 = 100):
+def pdsod(ages_days: np.ndarray, max_year: np.uint32 = 100, prng: np.random.Generator = np.random.default_rng()):
     """
     Calculate the predicted day of death based on the given ages in days.
 
@@ -210,9 +216,9 @@ def pdsod(ages_days: np.ndarray, max_year: np.uint32 = 100):
 
     n = ages_days.shape[0]
     dods = np.empty(n, dtype=np.int32)
-    ysod = pysod(np.floor_divide(ages_days, 365, dtype=np.int32), max_year)
+    ysod = pysod(np.floor_divide(ages_days, 365, dtype=np.int32), np.uint32(max_year), np.uint32(prng.integers(0, 2**32)))
 
-    _pdsod(ages_days, ysod, dods)
+    _pdsod(ages_days, ysod, dods, np.uint32(prng.integers(0, 2**32)))
 
     # doy is now in dods, add in the year
     dods += ysod * 365
