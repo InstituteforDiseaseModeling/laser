@@ -1,6 +1,8 @@
 """Single array-based population class for agent-based models"""
 
+from collections.abc import Iterable
 from typing import Tuple
+from typing import Union
 
 import numpy as np
 
@@ -35,10 +37,15 @@ class Population:
         setattr(self, name, np.full(self._capacity, default, dtype=dtype))
         return
 
-    def add_vector_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
+    def add_vector_property(self, name, dims: Union[int, Tuple, list], dtype=np.uint32, default=0) -> None:
         """Add a vector property to the class"""
         # initialize the property to a NumPy array with of size self._count, dtype, and default value
-        setattr(self, name, np.full((self._capacity, length), default, dtype=dtype))
+        dimensions = [self._capacity]
+        if isinstance(dims, Iterable):
+            dimensions.extend(dims)
+        else:
+            dimensions.append(dims)
+        setattr(self, name, np.full(dimensions, default, dtype=dtype))
         return
 
     @property
