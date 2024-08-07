@@ -200,7 +200,7 @@ class Population:
         ages_in_days = current_day - self.__dict__['dob'][:self.count]
 
         # Calculate number of expansion slots
-        birth_cap = (self.capacity-self.count) * 4 # hack coz right now seem to have "too many" births
+        birth_cap = (self.capacity-self.count)
 
         # Sort population by age
         sorted_indices = np.argsort(ages_in_days)

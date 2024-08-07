@@ -48,7 +48,7 @@ print(f"{initial_populations.sum()=:,}")
 from idmlaser.utils import PropertySet
 
 meta_params = PropertySet({
-    "ticks": 3650,
+    "ticks": int(365*20),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
 })
@@ -171,6 +171,7 @@ def do_births(model, tick):
 
     if doy == 1:
         model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.params.cbr / 1000)
+        #print( f"Births for year {year} = {model.nodes.births[:, year]}" )
 
     annual_births = model.nodes.births[:, year]
     todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
@@ -321,15 +322,17 @@ model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    
 
 def do_non_disease_deaths(model, tick):
 
-    pq = model.nddq
+    # Add eula population
     year = tick // 365
+    for nodeid in range(len(model.population.total_population_per_year)):
+        model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+
+    pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:
         i = pq.popi()
         nodeid = model.population.nodeid[i]
         model.nodes.population[nodeid,tick+1] -= 1
         model.nodes.deaths[nodeid,year] += 1
-    # Add eula population
-    model.nodes.population[nodeid,tick+1] += model.population.total_population_per_year[nodeid][year]
 
     return
 
