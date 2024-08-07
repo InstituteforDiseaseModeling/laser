@@ -197,7 +197,7 @@ class Population:
         
         # Calculate the age of each individual in days
         current_day = 0  # Adjust this if you have a simulation day tracker
-        ages_in_days = current_day - self.__dict__['dob']
+        ages_in_days = current_day - self.__dict__['dob'][:self.count]
 
         # Calculate number of expansion slots
         birth_cap = (self.capacity-self.count) * 4 # hack coz right now seem to have "too many" births
@@ -209,9 +209,6 @@ class Population:
         # Identify the index where ages exceed the threshold
         split_index = np.searchsorted(ages_in_days[sorted_indices], age_threshold_in_days)
         print( f"split_index = {split_index}" )
-
-        # Ensure split_index does not exceed the size of the sorted_indices; probably unnecessary
-        split_index = min(split_index, len(sorted_indices))
 
         # Keep only the individuals below the age threshold
         for key, value in self.__dict__.items():
@@ -254,6 +251,7 @@ class Population:
         unique_nodeids = np.unique(nodeid_filtered)
         nodeid_indices = {nodeid: i for i, nodeid in enumerate(unique_nodeids)}
         self.total_population_per_year = np.zeros((len(unique_nodeids), 20), dtype=int)
+        self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), 20), dtype=int)
 
         # Accumulate deaths by year and node
         for i in tqdm(range(len(death_year))):
@@ -263,6 +261,11 @@ class Population:
         # Convert deaths to populations by subtracting cumulative deaths from the initial population
         initial_population_counts = np.bincount(nodeid_filtered, minlength=len(unique_nodeids))
         cumulative_deaths = np.cumsum(self.total_population_per_year, axis=1)
+        
+        # Calculate new deaths per year
+        self.expected_new_deaths_per_year[:, 0] = self.total_population_per_year[:, 0]
+        self.expected_new_deaths_per_year[:, 1:] = np.diff(cumulative_deaths, axis=1)
+
         self.total_population_per_year = initial_population_counts[:, None] - cumulative_deaths
 
         # Optional: print the resulting populations
