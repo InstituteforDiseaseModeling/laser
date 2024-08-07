@@ -54,7 +54,7 @@ class Population:
 
     def add(self, count: int) -> Tuple[int, int]:
         """Add agents to the population"""
-        assert self._count + count <= self._capacity, f"Population exceeds capacity ({self._count=}, {count=}, {self._capacity=})"
+        assert self._count + count <= self._capacity, f"New population ({self._count + count}) exceeds capacity ({self._capacity=})"
         i = self._count
         self._count += int(count)
         j = self._count
@@ -191,7 +191,7 @@ class Population:
         - Update the population count to reflect the number of remaining individuals.
         """
 
-        print( "Removed EULA agents from population. Have to age sort." )
+        print( "Removing EULA agents from population. Have to age sort." )
         # Convert age_in_years to days
         age_threshold_in_days = int(eula_age_in_years * 365)
         
@@ -210,7 +210,7 @@ class Population:
         split_index = np.searchsorted(ages_in_days[sorted_indices], age_threshold_in_days)
         print( f"split_index = {split_index}" )
 
-        # Ensure split_index does not exceed the size of the sorted_indices
+        # Ensure split_index does not exceed the size of the sorted_indices; probably unnecessary
         split_index = min(split_index, len(sorted_indices))
 
         # Keep only the individuals below the age threshold
@@ -256,7 +256,7 @@ class Population:
         self.total_population_per_year = np.zeros((len(unique_nodeids), 20), dtype=int)
 
         # Accumulate deaths by year and node
-        for i in range(len(death_year)):
+        for i in tqdm(range(len(death_year))):
             node_index = nodeid_indices[nodeid_filtered[i]]
             self.total_population_per_year[node_index, death_year[i]] += 1
 
