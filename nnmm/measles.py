@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Model
-# 
-# We will create a blank object, called `model`, to hold the various pieces of information we have about our model.
-
-# In[540]:
+# In[1]:
 
 
 class Model:
@@ -13,13 +9,12 @@ class Model:
 
 model = Model()
 
-total_births = 0
 
 # ## Source Demographics Data
 # 
 # We have some census data for Nigeria (2015) which we will use to set the initial populations for our nodes. Since we are modeling northern Nigeria, as a first cut we will only choose administrative districts which start with "NORTH_". That gives us 419 nodes with a total population of ~96M.
 
-# In[541]:
+# In[2]:
 
 
 # setup initial populations
@@ -47,7 +42,7 @@ print(f"{initial_populations.sum()=:,}")
 # 
 # Also, we will set the parameters separately as `meta_params` and `measles_params` but combine them into one parameter set for future use. We _could_ create `model.params = PropertySet({"meta":meta_params, "measles":measles_params})` and then reference them "by path" in the subsequent code, e.g., `params.meta.ticks` and `params.measles.inf_mean`.
 
-# In[542]:
+# In[3]:
 
 
 from idmlaser.utils import PropertySet
@@ -85,7 +80,7 @@ model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 # 
 # We have our initial populations, but we need to allocate enough space to handle growth during the simulation.
 
-# In[543]:
+# In[4]:
 
 
 from idmlaser.numpynumba import Population
@@ -110,7 +105,7 @@ print(f"{ifirst=:,}, {ilast=:,}")
 # 
 # Add a property for node id. 419 nodes requires 9 bits so we will allocate a 16 bit value. Negative IDs don't make sense, so, `uint16`.
 
-# In[544]:
+# In[5]:
 
 
 population.add_scalar_property("nodeid", np.uint16)
@@ -126,7 +121,7 @@ for nodeid, count in enumerate(initial_populations):
 # 
 # Default data type is uint32.
 
-# In[545]:
+# In[6]:
 
 
 node_count = len(nn_nodes)
@@ -135,31 +130,21 @@ model.nodes = nodes # type: ignore
 ifirst, ilast = nodes.add(node_count)
 print(f"{ifirst=:,}, {ilast=:,}")
 nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
+import pdb
 nodes.population[:,0] = initial_populations
-
-
-# # RI Coverages
-
-# In[546]:
-
-
-# Add new property "ri_coverages"
-nodes.add_scalar_property("ri_coverages", dtype=np.float32)
-nodes.ri_coverages = np.random.rand(node_count)
 
 
 # ## Population per Tick
 # 
 # We will propagate the current populations forward on each tick. Vital dynamics of births and non-disease deaths will update the current values. The argument signature for per tick step phases is (`model`, `tick`). This lets functions access model specific properties and use the current tick, if necessary, e.g. record information or decide to act.
 
-# In[547]:
+# In[7]:
 
 
 def propagate_population(model, tick):
     model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
 
     return
-
 
 # ## Vital Dynamics: Births
 # 
@@ -169,7 +154,7 @@ def propagate_population(model, tick):
 # 
 # Note that we add in initializing the susceptibility after we add that property below.
 
-# In[548]:
+# In[8]:
 
 
 from idmlaser.kmcurve import pdsod
@@ -177,8 +162,6 @@ from idmlaser.kmcurve import pdsod
 model.nodes.add_vector_property("births", (model.params.ticks + 364) // 365)    # births per year
 
 # Adding ri_timer here since it's referred to in do_births.
-import ri
-import maternal_immunity as mi
 model.population.add_scalar_property("ri_timer", np.uint16)
 
 def do_births(model, tick):
@@ -192,16 +175,28 @@ def do_births(model, tick):
     annual_births = model.nodes.births[:, year]
     todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
     count_births = todays_births.sum()
-
-    global total_births
-    total_births += count_births
-
     istart, iend = model.population.add(count_births)   # add count_births agents to the population, get the indices of the new agents
 
     # enable this after loading the aliased distribution and dod and dob properties (see cells below)
     model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
     model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
 
+    # enable this after adding susceptibility property to the population (see cells below)
+    model.population.susceptibility[istart:iend] = 1
+
+    # Randomly set ri_timer for coverage fraction of agents to a value between 8.5*30.5 and 9.5*30.5 days
+    # change these numbers or parameterize as needed
+    ri_timer_values = np.random.uniform(8.5 * 30.5, 9.5 * 30.5, count_births).astype(np.uint16)
+
+    # Create a mask to select coverage fraction of agents
+    # Do coverage by node, not same for every node
+    try:
+        mask = np.random.rand(count_births) < (model.nodes.ri_coverages[model.population.nodeid[istart:iend]])
+    except Exception as ex:
+        pdb.set_trace()
+
+    # Set ri_timer values for the selected agents
+    model.population.ri_timer[istart:iend][mask] = ri_timer_values[mask]
 
     index = istart
     nodeids = model.population.nodeid   # grab this once for efficiency
@@ -216,15 +211,14 @@ def do_births(model, tick):
         index += births
     model.nodes.population[:,tick+1] += todays_births
 
-    import access_groups as ag
-    ag.set_accessibility( model, istart, iend )
-    # accessibility ust be set before ri, since currently ri uses accessibility
-    ri.add_with_ips( model, count_births, istart, iend )
-    mi.add( model, istart, iend )
+    set_accessibility(model, istart, iend )
+    add_with_ips( model, count_births, istart, iend )
+    add_maternal_immunity( model, istart, iend )
     return
 
 
-# ## Non-Disease Mortality Part I
+# ## Non-Disease Mortality 
+# ### Part I
 # 
 # We start by loading a population pyramid in order to initialize the ages of the initial population realistically.
 # 
@@ -232,7 +226,7 @@ def do_births(model, tick):
 # 
 # **Note:** the values in `model.population.dob` are _positive_ at this point. Later we will negate them to convert them to dates of birth prior to now (t = 0).
 
-# In[549]:
+# In[9]:
 
 
 from tqdm import tqdm
@@ -258,21 +252,15 @@ for i in tqdm(range(len(age_distribution))):
     # draw uniformly between the start and end of the age group bucket
     population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
 
-# Initialize everyone with Accessibility 'IP'. Values are 0 (High), 1 (Medium) or 2 (Low), with probability 0.85, 0.14, 0.01 conditioned on node-based coverage.
-model.population.add_scalar_property("accessibility", np.uint8)
 
-import numpy as np
-
-# In theory we want to set access group "IPs" for folks already born. But doesn't matter yet.
-#set_accessibility(model,0,count_active)
-
-# ## Non-Disease Mortality Part II
+# ## Non-Disease Mortality 
+# ### Part II
 # 
 # We import `pdsod` ("predicted_days_of_death") which currently uses a USA 2003 survival table. `pdsod` will draw for a year of death (in or after the current age year) and then will draw a day in the selected year.
 # 
 # **Note:** the incoming values in `model.population.dob` are positive (_ages_). After we use them to draw for date of death, we negate them to convert them to dates of birth (in days) prior to now (t=0).
 
-# In[550]:
+# In[10]:
 
 
 from datetime import datetime
@@ -292,12 +280,16 @@ dobs *= -1  # convert ages to date of birth prior to _now_ (t = 0) ∴ negative
 print(f"First 32 DoBs (should all be negative - these agents were born before today):\n{dobs[:32]}")
 print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
+# Now we are going to eula-ify our population at age=5.0
+model.population.init_eula(5)
 
-# ## Non-Disease Mortality Part III
+
+# ## Non-Disease Mortality 
+# ### Part III
 # 
 # If we had no births, we could use a regular FIFO queue with the dates of death sorted to process non-disease deaths in time order. However, we may have agents born during the simulation who are predicted to die from non-disease causes before the end of the simulation and need to be insert, in sorted order, into the queue. So, we will use a priority queue - a data structure which allows for efficient insertion and removal while maintaining sorted order - to keep track of agents by date of non-disease death.
 
-# In[551]:
+# In[11]:
 
 
 from idmlaser.utils import PriorityQueuePy
@@ -315,13 +307,14 @@ print(f"Non-disease mortality: tracked {len(indices):,}, untracked {population.c
 model.nddq = mortality
 
 
-# ## Non-Disease Mortality Part IV
+# ## Non-Disease Mortality 
+# ### Part IV
 # 
 # During the simulation, we will process all agents with a predicated date of death today marking them as deceased and removing them from the active population count.
 # 
 # **_TODO:_** Set a state to indicate "deceased" _or_ ignore the priority queue altogether and compare `dod` against `tick` and ignore agents where `dod < tick`.
 
-# In[552]:
+# In[12]:
 
 
 model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    # deaths per year
@@ -335,6 +328,8 @@ def do_non_disease_deaths(model, tick):
         nodeid = model.population.nodeid[i]
         model.nodes.population[nodeid,tick+1] -= 1
         model.nodes.deaths[nodeid,year] += 1
+    # Add eula population
+    model.nodes.population[nodeid,tick+1] += model.population.total_population_per_year[nodeid][year]
 
     return
 
@@ -347,7 +342,7 @@ def do_non_disease_deaths(model, tick):
 # 
 # Similarly, we wrap a Numba compiled function using all available cores in the exposure update function, extracting the values the JITted function needs from the `model` object.
 
-# In[553]:
+# In[13]:
 
 
 import numba as nb
@@ -402,11 +397,10 @@ def do_exposure_update(model, tick):
 # 
 # **_TODO:_** Update this function to probabilistically set susceptibility to `0` for children over 1 year of age based on local RI coverage and other factors (estimated prevalence and probability of _not_ having had measles?).
 
-# In[554]:
+# In[14]:
 
 
 model.population.add_scalar_property("susceptibility", np.uint8)
-model.population.add_scalar_property("susceptibility_timer", np.uint8) # might be too small, currently thinking 6 months
 
 # initialize susceptibility based on age
 @nb.njit((nb.uint32, nb.int32[:], nb.uint8[:]), parallel=True)
@@ -421,25 +415,157 @@ def initialize_susceptibility(count, dob, susceptibility):
 initialize_susceptibility(model.population.count, model.population.dob, model.population.susceptibility)
 
 
-# ## Routine Immunization - RI
-# 
-# - Children under 1(?) year of age should draw for a date of RI (consider whether to draw vs. RI coverage in the node before choosing an RI date or later when their RI date comes up). Children with an RI date in the future should be put in a priority queue to be processed on their date of RI.
-#   - There can be a single `riq` for the model, there is no need to differentiate by node (any node heterogeneity can be considered when their RI date comes up).
-# 
-# - Create a tick/step phase function to process all agents with RI due on the given tick (see do_non_disease_deaths). This function draws to determine if the innoculation happens (based on RI coverage if the draw is not done at birth), determines if the innoculation is efficacious (potential maternal immunity interference or just vaccine failure). If the vaccination does not take, the agent should be considered for a follow-up RI at 15 months which would be in an additional RI priority queue.
-# 
-# - Update do_births to draw for RI (based on coverage) and RI date (based on RI date distribution) and put them into the `model.riq` (or set an RI timer...).
+# ## Routine Immunization (RI) 
+# Do MCV1 for most kids at around 9mo. Do MCV2 for most of the kids who didn't take around 15mo. There are a bunch of ways of doing this.
+# What we're doing here is using an IP -- to borrow EMOD terminology -- for Accessibility, with values 0 (Easy), 1 (Medium), 2 (Hard). See elsewhere for that.
+# The MCV1 Timer is a uniform draw from 8.5 months to 9.5 months. MCV2 Timer is a uniform draw from 14.5 months to 15.5 months.
+# ### Coverages
+# All MCV is subject to coverage levels which vary by node.
 
-# In[555]:
+# In[15]:
 
+
+# Add new property "ri_coverages", just randomly for demonstration purposes
+# Replace with values from data
+nodes.add_scalar_property("ri_coverages", dtype=np.float32)
+nodes.ri_coverages = np.random.rand(node_count)
+
+
+# ## RI
+# ## Accessibility "IP" Groups
+# - 85% of in-coverage kids get MCV1
+# - 14% get MCV2
+# - 1% get nothing
+# Vary as needed.
+
+# In[16]:
+
+
+model.population.add_scalar_property("accessibility", np.uint8)
+
+def set_accessibility(model, istart, iend ):
+    # Get the coverage probabilities for the relevant agents
+    coverages = model.nodes.ri_coverages[model.population.nodeid[istart:iend]]                        
+    
+    # Generate random numbers to decide accessibility based on coverages
+    random_values = np.random.rand(coverages.size)
+    
+    # Calculate attenuated probabilities
+    prob_0 = 0.85 * coverages                                           
+    prob_1 = 0.14 * coverages                                   
+    prob_2 = 0.01 * coverages
+    
+    # Normalize probabilities to ensure they sum to 1 after attenuation
+    total_prob = prob_0 + prob_1 + prob_2
+    prob_0 /= total_prob
+    prob_1 /= total_prob
+    prob_2 /= total_prob
+            
+    # Initialize accessibility array with zeros      
+    accessibility = np.zeros_like(random_values, dtype=np.uint8)
+    
+    # Set values based on attenuated probabilities
+    accessibility[random_values < prob_0] = 0                                   
+    accessibility[(random_values >= prob_0) & (random_values < prob_0 + prob_1)] = 1
+    accessibility[random_values >= prob_0 + prob_1] = 2
+    
+    # Assign to the population's accessibility attribute
+    model.population.accessibility[istart:iend] = accessibility
+
+
+# ## RI 
+# ### Add based on accessibility group for newborns
+
+# In[17]:
+
+
+def add_with_ips(model, count_births, istart, iend):
+    # Define the timer ranges as needed
+    ri_timer_values_9mo = np.random.uniform(8.5 * 30.5, 9.5 * 30.5, count_births).astype(np.uint16) # 9mo-ish
+    ri_timer_values_15mo = np.random.uniform(14.5 * 30.5, 15.5 * 30.5, count_births).astype(np.uint16) # 15mo-ish                                                                                           
+
+    # Get the accessibility values for the current range
+    accessibility = model.population.accessibility[istart:iend]                                       
+                                                                                                      
+    # Masks based on accessibility                                                                    
+    mask_0 = (accessibility == 0)
+    mask_1 = (accessibility == 1)
+    mask_2 = (accessibility == 2) # for validation                                                    
+    if np.count_nonzero( mask_1 ) == 0:
+        raise ValueError( "Didn't find anyone with accessibility set to 1 (medium)." )                
+    if np.count_nonzero( mask_2 ) == 0:
+        raise ValueError( "Didn't find anyone with accessibility set to 2 (medium)." )
+            
+    # mask_2 is unnecessary since we don't apply any timer for it                                     
+        
+    # Apply the 9-month-ish timer to accessibility 0
+    model.population.ri_timer[istart:iend][mask_0] = ri_timer_values_9mo[mask_0]                      
+    
+    # Apply the 15-month-ish timer to accessibility 1                                                 
+    model.population.ri_timer[istart:iend][mask_1] = ri_timer_values_15mo[mask_1]                     
+    
+    # No need to apply anything to accessibility 2, as it should remain unmodified                    
+    
+    return                                                                                            
+
+
+# ## RI
+# ### "Step-Function"
+# Timers get counted down each timestep and when they reach 0, susceptibility is set to 0.
+
+# In[18]:
+
+
+@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.int32[:], nb.int64), parallel=True)
+def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick):
+    for i in nb.prange(count):
+        if ri_timer[i] > 0:
+            ri_timer[i] -= 1
+            # TBD: It's perfectly possible that the individual got infected (or recovered) while this timer
+            # was counting down and we might want to abort the timer.
+            if ri_timer[i] == 0:
+                susceptibility[i] = 0
 
 def do_ri(model, tick):
-    ri._update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.age_at_vax, model.population.dob, tick)
+    # Ensure arrays are of types supported by Numba
+    #count = np.int64(model.population.count)
+    #ri_timer = model.population.ri_timer.astype(np.uint16)
+    #susceptibility = model.population.susceptibility.astype(np.uint8)
+    #dob = model.population.dob.astype(np.int32)
+    #tick = np.int64(tick)
+    #pdb.set_trace()
+    _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
     return
 
 
+# # Maternal Immunity (Waning)
+# All newborns come into the world with susceptibility=0. They call get a 6month timer. When that timer hits 0, they become susceptible.
+
+# In[19]:
+
+
+import numba as nb
+model.population.add_scalar_property("susceptibility_timer", np.uint8)
+
+# Add for newborns
+def add_maternal_immunity( model, istart, iend ):
+    # enable this after adding susceptibility property to the population (see cells below)            
+    model.population.susceptibility[istart:iend] = 0 # newborns have maternal immunity                
+    model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months                      
+
+
+# Update
+# Define the function to decrement susceptibility_timer and update susceptibility
+@nb.njit((nb.uint32, nb.uint8[:], nb.uint8[:]), parallel=True)
+def _update_susceptibility_based_on_sus_timer(count, susceptibility_timer, susceptibility):
+    for i in nb.prange(count):
+        if susceptibility_timer[i] > 0:
+            susceptibility_timer[i] -= 1
+            if susceptibility_timer[i] == 0:
+                susceptibility[i] = 1
+
 def do_susceptibility_decay(model, tick):
-    mi._update_susceptibility_based_on_sus_timer(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
+    _update_susceptibility_based_on_sus_timer(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
     return
 
 
@@ -453,7 +579,7 @@ def do_susceptibility_decay(model, tick):
 # 
 # **_TODO_:** Fix this with a compiled C/C++ function and [OpenMP 'atomic update'](https://www.openmp.org/spec-html/5.0/openmpsu95.html).
 
-# In[556]:
+# In[20]:
 
 
 # initial_infections = np.random.randint(0, 11, model.nodes.count, dtype=np.uint32)
@@ -486,7 +612,7 @@ print(f"{(model.population.itimer > 0).sum()=:,}")
 # 
 # Then we limit outgoing migration from any one node to `max_frac`.
 
-# In[557]:
+# In[21]:
 
 
 # We need to calculate the distances between the centroids of the nodes in northern Nigeria
@@ -510,6 +636,7 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return d
 
 locations = np.zeros((model.nodes.count, 2), dtype=np.float32)
+
 for i, node in enumerate(nn_nodes.values()):
     (longitude, latitude) = node[1]
     locations[i, 0] = latitude
@@ -550,7 +677,7 @@ print(f"Upper left corner of network looks like this (after limiting to max_frac
 # 
 # We will also track incidence by node and tick.
 
-# In[558]:
+# In[22]:
 
 
 @nb.njit(
@@ -618,7 +745,7 @@ def do_transmission_update(model, tick) -> None:
 # _Consider sorting the SIAs by tick in order to be able to just check the first N campaigns in the list._
 # 
 
-# In[559]:
+# In[23]:
 
 
 sias = [(10, [1, 3, 5], 0.80)]  # Tick 10, nodes 1, 3, and 5, 80% coverage.
@@ -646,7 +773,7 @@ def do_sias(model, tick):
 # 
 # The phases (sub-steps) of the processing on each tick go here as they are implemented.
 
-# In[560]:
+# In[24]:
 
 
 # consider `step_functions` rather than `phases` for the following
@@ -667,15 +794,14 @@ model.phases = [
 # 
 # We iterate over the specified number of ticks, keeping track, in `metrics`, of the time spent in each phase at each tick.
 
-# In[561]:
+# In[25]:
 
 
 from datetime import datetime
 
 from tqdm import tqdm
 
-population.add_scalar_property("age_at_vax", np.uint16)
-#population.add_scalar_property("age_at_inf", np.uint16)
+#model.population.save( "pop_init.h5" )
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     metrics = [tick]
@@ -685,8 +811,6 @@ for tick in tqdm(range(model.params.ticks)):
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
-        if tick == 365*5:
-            model.population.save(filename="pop_5yrs.csv", tail_number=total_births)
     model.metrics.append(metrics)
 
 
@@ -694,7 +818,7 @@ for tick in tqdm(range(model.params.ticks)):
 # 
 # Let's take a quick look at the final population size accounting for births over the course of the simulation. This does _not_ account for non-disease deaths so we are looking at the maximum number of unique agents over the simulation.
 
-# In[562]:
+# In[ ]:
 
 
 print(f"{model.population.count=:,} (vs. requested capacity {model.population.capacity=:,})")
@@ -704,7 +828,7 @@ print(f"{model.population.count=:,} (vs. requested capacity {model.population.ca
 # 
 # Let's convert the timing information to a DataFrame and peek at the first few entries.
 
-# In[563]:
+# In[ ]:
 
 
 import pandas as pd
@@ -717,7 +841,7 @@ metrics.head()
 # 
 # Let's take a look at where we spend our processing time.
 
-# In[564]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt
@@ -737,7 +861,7 @@ plt.show()
 # 
 # Let's make sure that our population is growing over time by plotting the population for a few nodes.
 
-# In[565]:
+# In[ ]:
 
 
 from matplotlib import pyplot as plt
@@ -760,7 +884,7 @@ plt.show()
 # 
 # Let's see if our births over time look right. Given a fixed CBR and a growing population, we should generally have more births later in the simulation.
 
-# In[566]:
+# In[ ]:
 
 
 from matplotlib import pyplot as plt
@@ -782,7 +906,7 @@ plt.show()
 # 
 # Let's see if our non-disease deaths look right over time.
 
-# In[567]:
+# In[ ]:
 
 
 from matplotlib import pyplot as plt
@@ -802,7 +926,7 @@ plt.show()
 
 # ## Cases Over Time
 
-# In[571]:
+# In[ ]:
 
 
 from matplotlib import pyplot as plt
@@ -828,7 +952,7 @@ plt.show()
 
 # ## Incidence Over Time
 
-# In[572]:
+# In[ ]:
 
 
 from matplotlib import pyplot as plt
@@ -852,7 +976,7 @@ plt.legend()
 plt.show()
 
 
-# In[569]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt
