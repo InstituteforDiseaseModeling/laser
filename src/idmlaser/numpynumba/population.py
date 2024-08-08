@@ -4,8 +4,15 @@ from typing import Tuple
 
 from tqdm import tqdm
 import numpy as np
+import numba as nb
 import h5py
 import pdb
+
+@nb.njit(parallel=True)
+def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, total_population_per_year):
+    for i in nb.prange(len(death_year)):
+        node_index = nodeid_indices_array[nodeid_filtered[i]]
+        total_population_per_year[node_index, death_year[i]] += 1
 
 class Population:
     """Array-based Agent Based Population Class"""
@@ -246,27 +253,31 @@ class Population:
 
         # Calculate the year of death for each individual (0-based index for years 1-years)
         death_year = dod_filtered // 365
-        death_year[death_year >= years] = years-1  # Cap deaths at year years
+        # Let's initially count for all the years, even if we only keep first 10.
+        # No, too slow. Let's count 0 through years-1, and put 'everything else' in 'years'
+        death_year[death_year >= years] = years-1  # Cap deaths at years-1
 
-        # Initialize the total_population_per_year array
+        # Initialize the expected_new_deaths array
         unique_nodeids = np.unique(nodeid_filtered)
         nodeid_indices = {nodeid: i for i, nodeid in enumerate(unique_nodeids)}
-        self.total_population_per_year = np.zeros((len(unique_nodeids), years), dtype=int)
         self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), years), dtype=int)
 
-        # Accumulate deaths by year and node
-        for i in tqdm(range(len(death_year))):
-            node_index = nodeid_indices[nodeid_filtered[i]]
-            self.total_population_per_year[node_index, death_year[i]] += 1
+        nodeid_indices_array = np.zeros(unique_nodeids.max() + 1, dtype=np.int32)
+        for i, nodeid in enumerate(unique_nodeids):
+            nodeid_indices_array[nodeid] = i
+        accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, self.expected_new_deaths_per_year)
 
         # Convert deaths to populations by subtracting cumulative deaths from the initial population
-        initial_population_counts = np.bincount(nodeid_filtered, minlength=len(unique_nodeids))
-        cumulative_deaths = np.cumsum(self.total_population_per_year, axis=1)
+        cumulative_deaths = np.cumsum(self.expected_new_deaths_per_year, axis=1) # xtra dupe element at end I don't understand yet
         
         # Calculate new deaths per year
-        self.expected_new_deaths_per_year[:, 0] = self.total_population_per_year[:, 0]
+        self.expected_new_deaths_per_year[:, 0] = self.expected_new_deaths_per_year[:, 0]
         self.expected_new_deaths_per_year[:, 1:] = np.diff(cumulative_deaths, axis=1)
+        self.expected_new_deaths_per_year = self.expected_new_deaths_per_year[:, 0:10] # discard extra killall column
 
+        # Calculate the initial population counts, though not currently used
+        initial_population_counts = np.bincount(nodeid_filtered, minlength=len(unique_nodeids))
+        # Calculate total_population_per_year at the end, using cumulative deaths
         self.total_population_per_year = initial_population_counts[:, None] - cumulative_deaths
 
         # Optional: print the resulting populations
