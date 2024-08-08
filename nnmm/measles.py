@@ -48,7 +48,7 @@ print(f"{initial_populations.sum()=:,}")
 from idmlaser.utils import PropertySet
 
 meta_params = PropertySet({
-    "ticks": int(365*20),
+    "ticks": int(365*10),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
 })
@@ -325,7 +325,7 @@ def do_non_disease_deaths(model, tick):
     # Add eula population
     year = tick // 365
     for nodeid in range(len(model.population.total_population_per_year)):
-        model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+        model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year-1]/365)
 
     pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:

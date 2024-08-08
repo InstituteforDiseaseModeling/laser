@@ -225,14 +225,14 @@ class Population:
         # Update population count
         self._count = split_index
 
-    def expected_pops_over_years(self, eula_age_in_years=5):
+    def expected_pops_over_years(self, eula_age_in_years=5, years=10):
         """
-        Estimate the population sizes by node for each year from 1 to 20, considering a 
+        Estimate the population sizes by node for each year from 1 to years, considering a 
         specific age threshold (eula_age_in_years). Start by filtering out individuals 
         younger than the given age at the start of the simulation. Then, calculate the 
         number of deaths for each node per year using the pre-existing data-of-death
         and use this information to compute the expected population size at each node 
-        for each of the 20 years.
+        for each of the years.
 
         TBD: Make sim length configurable
         """
@@ -243,15 +243,15 @@ class Population:
         dod_filtered = self.__dict__['dod'][initial_mask]
         nodeid_filtered = self.__dict__['nodeid'][initial_mask]
 
-        # Calculate the year of death for each individual (0-based index for years 1-20)
+        # Calculate the year of death for each individual (0-based index for years 1-years)
         death_year = dod_filtered // 365
-        death_year[death_year >= 20] = 19  # Cap deaths at year 20
+        death_year[death_year >= years] = years-1  # Cap deaths at year years
 
         # Initialize the total_population_per_year array
         unique_nodeids = np.unique(nodeid_filtered)
         nodeid_indices = {nodeid: i for i, nodeid in enumerate(unique_nodeids)}
-        self.total_population_per_year = np.zeros((len(unique_nodeids), 20), dtype=int)
-        self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), 20), dtype=int)
+        self.total_population_per_year = np.zeros((len(unique_nodeids), years), dtype=int)
+        self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), years), dtype=int)
 
         # Accumulate deaths by year and node
         for i in tqdm(range(len(death_year))):
