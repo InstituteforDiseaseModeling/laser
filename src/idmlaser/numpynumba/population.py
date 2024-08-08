@@ -237,6 +237,7 @@ class Population:
         TBD: Make sim length configurable
         """
         eula_age_in_days = eula_age_in_years * 365
+        years += 1
 
         # Determine the initial mask for individuals older than eula_age_in_years at the start of the simulation
         initial_mask = self.__dict__['dob'] <= -eula_age_in_days
