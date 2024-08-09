@@ -87,12 +87,20 @@ class Population:
         df.to_csv(filename, index=False)
         print(f"Population data saved to {filename}")
 
-    def save(self, filename: str, tail_number=0 ) -> None:
+    def save(self, filename: str, tail_number=0, initial_populations=None, age_distribution=None, cumulative_deaths=None, eula_age=None ) -> None:
         """Save the population properties to an HDF5 file"""
         with h5py.File(filename, 'w') as hdf:
             hdf.attrs['count'] = self._count
             hdf.attrs['capacity'] = self._capacity
             hdf.attrs['node_count'] = self.node_count
+            if initial_populations is not None:
+                hdf.attrs['init_pops'] = initial_populations
+            if age_distribution is not None:
+                hdf.attrs['age_dist'] = age_distribution
+            if cumulative_deaths is not None:
+                hdf.attrs['cumulative_deaths'] = cumulative_deaths
+            if eula_age is not None:
+                hdf.attrs['eula_age'] = eula_age
 
             for key, value in self.__dict__.items():
                 if isinstance(value, np.ndarray):
