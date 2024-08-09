@@ -90,6 +90,10 @@ class Population:
     def save(self, filename: str, tail_number=0 ) -> None:
         """Save the population properties to an HDF5 file"""
         with h5py.File(filename, 'w') as hdf:
+            hdf.attrs['count'] = self._count
+            hdf.attrs['capacity'] = self._capacity
+            hdf.attrs['node_count'] = self.node_count
+
             for key, value in self.__dict__.items():
                 if isinstance(value, np.ndarray):
                     if tail_number > 0:
@@ -122,6 +126,9 @@ class Population:
             population = Population(0) # We'll do capacity automatically
             """Load the population properties from an HDF5 file"""
             with h5py.File(filename, 'r') as hdf:
+                population._count = hdf.attrs['count']
+                population._capacity = hdf.attrs['capacity']
+                population.node_count = hdf.attrs['node_count']
                 # Ensure nodeid is loaded first
                 population.__dict__['nodeid'] = np.array(hdf['nodeid'])
 
@@ -151,20 +158,27 @@ class Population:
         return population
 
     def set_capacity( self, new_capacity ):
-
         self._capacity = new_capacity
         for key, value in self.__dict__.items():
             if isinstance(value, np.ndarray):
+                # Ignore 2D arrays
+                if value.ndim == 2:
+                    print( "Ignoring key {key} while expanding capacity." )
+                    continue
+
                 old_size = len(value)
                 if old_size < new_capacity:
                     # Create a new array of the required size, filled with zeros (or a suitable default)
                     new_array = np.zeros(new_capacity, dtype=value.dtype)
+                    try:
+                        # Copy the old data into the new array
+                        new_array[:old_size] = value
 
-                    # Copy the old data into the new array
-                    new_array[:old_size] = value
-
-                    # Replace the old array with the new array
-                    self.__dict__[key] = new_array
+                        # Replace the old array with the new array
+                        self.__dict__[key] = new_array
+                    except Exception as ex:
+                        print( str( ex ) )
+                        pdb.set_trace()
 
         return
 
@@ -173,10 +187,13 @@ class Population:
         return 0, self.count # not sure this is useful outside of original case
 
     def current_populations( self ):
+        print( "NOTE: current_populations fn actually implemented as initial_populations." );
+        # TBD: maybe initial is all we actually need?
         nodeid_array = self.__dict__['nodeid']
 
         # Use np.unique to get the counts directly
         _, counts = np.unique(nodeid_array[:self.count], return_counts=True)
+        counts += self.total_population_per_year[:,0] # why 0? Need year param
 
         # Store counts in node_populations array
         node_populations = counts

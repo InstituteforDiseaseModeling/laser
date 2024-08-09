@@ -52,10 +52,12 @@ def add_with_ips(model, count_births, istart, iend):
     mask_0 = (accessibility == 0)
     mask_1 = (accessibility == 1)
     mask_2 = (accessibility == 2) # for validation
+    """
     if np.count_nonzero( mask_1 ) == 0:
         raise ValueError( "Didn't find anyone with accessibility set to 1 (medium)." )
     if np.count_nonzero( mask_2 ) == 0:
         raise ValueError( "Didn't find anyone with accessibility set to 2 (medium)." )
+    """
 
     # mask_2 is unnecessary since we don't apply any timer for it
 
