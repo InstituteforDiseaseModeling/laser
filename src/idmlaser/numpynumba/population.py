@@ -14,6 +14,27 @@ def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array
         node_index = nodeid_indices_array[nodeid_filtered[i]]
         total_population_per_year[node_index, death_year[i]] += 1
 
+def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age):
+    with h5py.File(hdf5_filename, 'r') as hdf:
+        try:
+            # Retrieve the attributes from the file
+            file_initial_populations = hdf.attrs['init_pops']
+            file_age_distribution = hdf.attrs['age_dist']
+            file_cumulative_deaths = hdf.attrs['cumulative_deaths']
+            file_eula_age = hdf.attrs['eula_age']
+
+            # Compare the attributes
+            if (np.array_equal(initial_populations, file_initial_populations) and
+                np.array_equal(age_distribution, file_age_distribution) and
+                np.array_equal(cumulative_deaths, file_cumulative_deaths) and
+                np.array_equal(eula_age, file_eula_age)):
+                return True
+            else:
+                return False
+        except KeyError as e:
+            print(f"Attribute not found in file: {e}")
+            return False
+
 class Population:
     """Array-based Agent Based Population Class"""
 
