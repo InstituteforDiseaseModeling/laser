@@ -114,14 +114,14 @@ def extend_capacity(model, initial_populations):
     print(f"{ifirst=:,}, {ilast=:,}")
 
 def extend_capacity_after_loading( model ):
-    capacity = model.population.count
+    capacity = model.population.capacity
     print(f"initial {capacity=:,}")
     print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
-    growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
-    print(f"{growth=}")
-    capacity *= growth
-    capacity *= 1.01  # 1% buffer
-    capacity = np.uint32(np.round(capacity))
+    #growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
+    #print(f"{growth=}")
+    #capacity *= growth
+    #capacity *= 1.01  # 1% buffer
+    #capacity = np.uint32(np.round(capacity))
     print(f"required {capacity=:,}")
     print(f"Allocating capacity for {capacity:,} individuals")
     model.population.set_capacity( capacity )
@@ -269,14 +269,20 @@ def init_from_data():
     return capacity
 
 def init_from_file():
-    population = Population.load("pop_init.h5")
+    population = Population.load("pop_init_eulagized.h5")
     model.population = population
-    capacity = extend_capacity_after_loading( model )
-    return capacity
+    extend_capacity_after_loading( model )
+    # ??
+    #init_pop = model.population.current_populations()
+    #add_node_property( model.population, init_pop  )
+    #add_dods( model.population )
+    #model.population.expected_new_deaths_per_year = np.load( "pop_init_eulas.npz" )["arr_0"]
+    #nodes.population[:,0] = model.population.current_populations()
 
 # Pick one
 #capacity = init_from_data()
-capacity = init_from_file()
+#capacity = 
+init_from_file()
 
 
 # ## Node IDs
@@ -304,11 +310,11 @@ model.nodes = nodes # type: ignore
 ifirst, ilast = nodes.add(node_count)
 print(f"{ifirst=:,}, {ilast=:,}")
 nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
-#nodes.population[:,0] = initial_populations
 initial_populations = model.population.current_populations()
 print(f"First 32 populations:\n{initial_populations[0:32]}")
 nodes.population[:,0] = initial_populations 
 
+# only for reloading from file; add some condition
 
 # # RI Coverages
 
@@ -328,6 +334,7 @@ nodes.ri_coverages = np.random.rand(node_count)
 
 
 def propagate_population(model, tick):
+    print( f"timestep {tick} starting with population {np.sum(model.nodes.population[:,tick])}." )
     model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
 
     return
@@ -365,7 +372,7 @@ def init_nondisease_mortality_queue( model, capacity ):
 
     model.nddq = mortality
 
-init_nondisease_mortality_queue( model, capacity )
+init_nondisease_mortality_queue( model, model.population.capacity )
 
 # ## Non-Disease Mortality Part IV
 # 
@@ -393,11 +400,11 @@ model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    
 # In[548]:
 
 def do_births(model, tick):
-
     doy = tick % 365 + 1    # day of year 1...365
     year = tick // 365
 
     if doy == 1:
+        #pdb.set_trace()
         model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.params.cbr / 1000)
 
     annual_births = model.nodes.births[:, year]
@@ -410,8 +417,8 @@ def do_births(model, tick):
     istart, iend = model.population.add(count_births)   # add count_births agents to the population, get the indices of the new agents
 
     # enable this after loading the aliased distribution and dod and dob properties (see cells below)
-    model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
     model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
+    model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
 
 
     index = istart
@@ -435,8 +442,12 @@ def do_births(model, tick):
 
 def do_non_disease_deaths(model, tick):
 
-    pq = model.nddq
+    # Add eula population
     year = tick // 365
+    for nodeid in range(len(model.population.total_population_per_year)):
+        model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+
+    pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:
         i = pq.popi()
         nodeid = model.population.nodeid[i]
@@ -444,6 +455,7 @@ def do_non_disease_deaths(model, tick):
         model.nodes.deaths[nodeid,year] += 1
 
     return
+
 
 
 # ## Incubation and Infection
@@ -736,8 +748,8 @@ for tick in tqdm(range(model.params.ticks)):
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
-        if tick == 1824: # 365*5:
-            model.population.save(filename="pop_5yrs.hd5", tail_number=total_births)
+        #if tick == 1824: # 365*5:
+            #model.population.save(filename="pop_5yrs.hd5", tail_number=total_births)
             #model.population.save_npz(filename="pop_5yrs.npz", tail_number=total_births)
     model.metrics.append(metrics)
 
