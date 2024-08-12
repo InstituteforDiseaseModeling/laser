@@ -48,6 +48,7 @@ meta_params = PropertySet({
     "ticks": int(3650/2),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
+    "eula_age": 4
 })
 
 measles_params = PropertySet({
@@ -73,21 +74,20 @@ model.params = PropertySet(meta_params, measles_params, network_params) # type: 
 model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 
 
-def init_pop_from_data():
-    from nigeria import lgas
+from nigeria import lgas
 
-    print(Path.cwd())
-    admin2 = {k:v for k,v in lgas.items() if len(k.split(":")) == 5}
-    print(f"{len(admin2)=}")
+print(Path.cwd())
+admin2 = {k:v for k,v in lgas.items() if len(k.split(":")) == 5}
+print(f"{len(admin2)=}")
 
-    nn_nodes = {k:v for k, v in admin2.items() if k.split(":")[2].startswith("NORTH_")}
-    print(f"{len(nn_nodes)=}")
+nn_nodes = {k:v for k, v in admin2.items() if k.split(":")[2].startswith("NORTH_")}
+print(f"{len(nn_nodes)=}")
 
-    initial_populations = np.array([v[0][0] for v in nn_nodes.values()])
-    print(f"{len(initial_populations)=}")
-    print(f"First 32 populations:\n{initial_populations[0:32]}")
-    print(f"{initial_populations.sum()=:,}")
-    return nn_nodes, initial_populations
+initial_populations = np.array([v[0][0] for v in nn_nodes.values()])
+print(f"{len(initial_populations)=}")
+print(f"First 32 populations:\n{initial_populations[0:32]}")
+print(f"{initial_populations.sum()=:,}")
+
 
 # ## Capacity Calculation
 # 
@@ -115,14 +115,6 @@ def extend_capacity(model, initial_populations):
 
 def extend_capacity_after_loading( model ):
     capacity = model.population.capacity
-    print(f"initial {capacity=:,}")
-    print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
-    #growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
-    #print(f"{growth=}")
-    #capacity *= growth
-    #capacity *= 1.01  # 1% buffer
-    #capacity = np.uint32(np.round(capacity))
-    print(f"required {capacity=:,}")
     print(f"Allocating capacity for {capacity:,} individuals")
     model.population.set_capacity( capacity )
 
@@ -165,15 +157,14 @@ def initialize_immunity():
 
 # In[549]:
 
+from tqdm import tqdm
+import idmlaser.pyramid as pyramid
+pyramid_file = Path.cwd().parent / "tests" / "USA-pyramid-2023.csv"
+age_distribution = pyramid.load_pyramid_csv(pyramid_file)
 
 def add_dobs(population, initial_populations):
-    from tqdm import tqdm
 
-    import idmlaser.pyramid as pyramid
-
-    pyramid_file = Path.cwd().parent / "tests" / "USA-pyramid-2023.csv"
     print(f"Loading pyramid from '{pyramid_file}'...")
-    age_distribution = pyramid.load_pyramid_csv(pyramid_file)
     print("Creating aliased distribution...")
     aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,4])
     count_active = initial_populations.sum()
@@ -217,6 +208,7 @@ def add_dods(population):
     dobs *= -1  # convert ages to date of birth prior to _now_ (t = 0) ∴ negative
     print(f"First 32 DoBs (should all be negative - these agents were born before today):\n{dobs[:32]}")
     print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
+    model.population.init_eula(model.params.eula_age)
 
 # ## Initial Infections
 # 
@@ -257,7 +249,7 @@ def init_infections(initial_populations):
 
 
 def init_from_data():
-    nn_nodes, initial_populations = init_pop_from_data()
+    #nn_nodes, initial_populations = init_pop_from_data()
     capacity = extend_capacity( model, initial_populations )
     add_node_property( model.population, initial_populations )
     add_dobs( model.population, initial_populations )
@@ -272,18 +264,25 @@ def init_from_file():
     population = Population.load("pop_init_eulagized.h5")
     model.population = population
     extend_capacity_after_loading( model )
-    # ??
-    #init_pop = model.population.current_populations()
-    #add_node_property( model.population, init_pop  )
-    #add_dods( model.population )
-    #model.population.expected_new_deaths_per_year = np.load( "pop_init_eulas.npz" )["arr_0"]
-    #nodes.population[:,0] = model.population.current_populations()
 
-# Pick one
-#capacity = init_from_data()
-#capacity = 
-init_from_file()
+from idmlaser.kmcurve import cumulative_deaths
+from idmlaser.numpynumba.population import check_hdf5_attributes
 
+def check_for_cached():
+    cached = check_hdf5_attributes(
+            hdf5_filename="pop_init_eulagized.h5",
+            initial_populations=initial_populations,
+            age_distribution=age_distribution,
+            cumulative_deaths=cumulative_deaths,
+            eula_age=model.params.eula_age
+        )
+    return cached
+
+if check_for_cached():
+    print( "*\nFound cached file. Using it.*\n" )
+    init_from_file()
+else:
+    capacity = init_from_data()
 
 # ## Node IDs
 # 
@@ -334,7 +333,6 @@ nodes.ri_coverages = np.random.rand(node_count)
 
 
 def propagate_population(model, tick):
-    print( f"timestep {tick} starting with population {np.sum(model.nodes.population[:,tick])}." )
     model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
 
     return
