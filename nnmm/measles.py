@@ -3,6 +3,10 @@
 
 # In[1]:
 
+import sys
+import pdb
+from pathlib import Path
+import numpy as np
 
 class Model:
     pass
@@ -18,9 +22,6 @@ model = Model()
 
 
 # setup initial populations
-from pathlib import Path
-
-import numpy as np
 from nigeria import lgas
 
 print(Path.cwd())
@@ -34,7 +35,6 @@ initial_populations = np.array([v[0][0] for v in nn_nodes.values()])
 print(f"{len(initial_populations)=}")
 print(f"First 32 populations:\n{initial_populations[0:32]}")
 print(f"{initial_populations.sum()=:,}")
-
 
 # ## Parameters
 # 
@@ -51,6 +51,7 @@ meta_params = PropertySet({
     "ticks": int(365*10),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
+    "eula_age": 10
 })
 
 measles_params = PropertySet({
@@ -83,6 +84,7 @@ model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 # In[4]:
 
 
+# NOT REALLY NEEDED IF USING CACHED INIT POP
 from idmlaser.numpynumba import Population
 
 capacity = initial_populations.sum()
@@ -108,6 +110,7 @@ print(f"{ifirst=:,}, {ilast=:,}")
 # In[5]:
 
 
+# NOT REALLY NEEDED IF USING CACHED INIT POP
 population.add_scalar_property("nodeid", np.uint16)
 index = 0
 for nodeid, count in enumerate(initial_populations):
@@ -130,7 +133,6 @@ model.nodes = nodes # type: ignore
 ifirst, ilast = nodes.add(node_count)
 print(f"{ifirst=:,}, {ilast=:,}")
 nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
-import pdb
 nodes.population[:,0] = initial_populations
 
 
@@ -237,6 +239,21 @@ import idmlaser.pyramid as pyramid
 pyramid_file = Path.cwd().parent / "tests" / "USA-pyramid-2023.csv"
 print(f"Loading pyramid from '{pyramid_file}'...")
 age_distribution = pyramid.load_pyramid_csv(pyramid_file)
+
+# When do we first have data to check if we have a cached input file that matches our parameters?
+from idmlaser.kmcurve import cumulative_deaths
+def check_for_cached():
+    from idmlaser.numpynumba.population import check_hdf5_attributes
+    cached = check_hdf5_attributes(
+            hdf5_filename="pop_init_eulagized.h5",
+            initial_populations=initial_populations,
+            age_distribution=age_distribution,
+            cumulative_deaths=cumulative_deaths,
+            eula_age=model.params.eula_age
+        )
+# Just invoked if user comments this line in. Working on automation.
+#check_for_cached()
+
 print("Creating aliased distribution...")
 aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,4])
 count_active = initial_populations.sum()
@@ -282,7 +299,8 @@ print(f"First 32 DoBs (should all be negative - these agents were born before to
 print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
 # Now we are going to eula-ify our population at age=5.0
-model.population.init_eula(5)
+if "eula_age" in model.params.__dict__:
+    model.population.init_eula(model.params.eula_age)
 
 
 # ## Non-Disease Mortality 
@@ -324,8 +342,9 @@ def do_non_disease_deaths(model, tick):
 
     # Add eula population
     year = tick // 365
-    for nodeid in range(len(model.population.total_population_per_year)):
-        model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+    if model.population.expected_new_deaths_per_year is not None:
+        for nodeid in range(len(model.population.expected_new_deaths_per_year)):
+            model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
 
     pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:
@@ -799,12 +818,20 @@ model.phases = [
 
 # In[25]:
 
+import numpy as np
+
 
 from datetime import datetime
 
-from tqdm import tqdm
+def save_initial_pop():
+    # Need to save some metadata/data that was critical to the creation of the init population
+    # initial population is at: model.nodes.population[:,0]
+    # age_distribution
+    model.population.save( "pop_init_eulagized.h5", initial_populations=initial_populations, age_distribution=age_distribution, cumulative_deaths=cumulative_deaths, eula_age=model.params.eula_age )
+    sys.exit()
+# Just invoked if user comments this line in. Working on automation.
+#save_initial_pop()
 
-#model.population.save( "pop_init.h5" )
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     metrics = [tick]
