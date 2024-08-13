@@ -51,7 +51,7 @@ meta_params = PropertySet({
     "ticks": int(365*10),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
-    "eula_age": 10
+    "eula_age": 5
 })
 
 measles_params = PropertySet({
@@ -827,8 +827,10 @@ def save_initial_pop():
     # Need to save some metadata/data that was critical to the creation of the init population
     # initial population is at: model.nodes.population[:,0]
     # age_distribution
-    model.population.save( "pop_init_eulagized.h5", initial_populations=initial_populations, age_distribution=age_distribution, cumulative_deaths=cumulative_deaths, eula_age=model.params.eula_age )
-    sys.exit()
+    # Generate a unique filename with the current date and time
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"laser_cache/pop_init_eulagized_{timestamp}.h5"
+    model.population.save( filename, initial_populations=initial_populations, age_distribution=age_distribution, cumulative_deaths=cumulative_deaths, eula_age=model.params.eula_age )
 # Just invoked if user comments this line in. Working on automation.
 #save_initial_pop()
 
