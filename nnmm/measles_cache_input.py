@@ -7,6 +7,8 @@
 
 # In[540]:
 
+import sys
+eula_age = int(sys.argv[1])
 
 class Model:
     pass
@@ -48,7 +50,7 @@ meta_params = PropertySet({
     "ticks": int(3650/2),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
-    "eula_age": 4
+    "eula_age": eula_age
 })
 
 measles_params = PropertySet({
@@ -192,8 +194,6 @@ def add_dobs(population, initial_populations):
 
 
 def add_dods(population):
-    from datetime import datetime
-
     from idmlaser.kmcurve import pdsod  # noqa: F811
 
     population.add_scalar_property("dod", np.int32)
@@ -260,8 +260,8 @@ def init_from_data():
     initialize_immunity()
     return capacity
 
-def init_from_file():
-    population = Population.load("pop_init_eulagized.h5")
+def init_from_file( filename ):
+    population = Population.load( filename )
     model.population = population
     extend_capacity_after_loading( model )
 
@@ -269,18 +269,30 @@ from idmlaser.kmcurve import cumulative_deaths
 from idmlaser.numpynumba.population import check_hdf5_attributes
 
 def check_for_cached():
-    cached = check_hdf5_attributes(
-            hdf5_filename="pop_init_eulagized.h5",
-            initial_populations=initial_populations,
-            age_distribution=age_distribution,
-            cumulative_deaths=cumulative_deaths,
-            eula_age=model.params.eula_age
-        )
-    return cached
+    hdf5_directory = "laser_cache"
+    #pdb.set_trace()
+    import os
+    if not os.path.exists(hdf5_directory):
+        os.makedirs(hdf5_directory)
+    for filename in os.listdir(hdf5_directory):
+        if filename.endswith(".h5"):
+            hdf5_filepath = os.path.join(hdf5_directory, filename)
+            cached = check_hdf5_attributes(
+                hdf5_filename=hdf5_filepath,
+                initial_populations=initial_populations,
+                age_distribution=age_distribution,
+                cumulative_deaths=cumulative_deaths,
+                eula_age=model.params.eula_age
+            )
+            if cached:
+                init_from_file( hdf5_filepath )
+                return True
+    return False
 
+not_cached = True
 if check_for_cached():
-    print( "*\nFound cached file. Using it.*\n" )
-    init_from_file()
+    print( "*\nFound cached file. Using it.\n*" )
+    not_cached = False # sorry for double negative
 else:
     capacity = init_from_data()
 
@@ -309,8 +321,10 @@ model.nodes = nodes # type: ignore
 ifirst, ilast = nodes.add(node_count)
 print(f"{ifirst=:,}, {ilast=:,}")
 nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
-initial_populations = model.population.current_populations()
-print(f"First 32 populations:\n{initial_populations[0:32]}")
+# maybe only if loaded file... ?
+#pdb.set_trace()
+#initial_populations = model.population.current_populations()
+#print(f"First 32 populations:\n{initial_populations[0:32]}")
 nodes.population[:,0] = initial_populations 
 
 # only for reloading from file; add some condition
@@ -733,8 +747,20 @@ model.phases = [
 # In[561]:
 
 
+def save_initial_pop():
+    # Need to save some metadata/data that was critical to the creation of the init population
+    # initial population is at: model.nodes.population[:,0]
+    # age_distribution
+    # Generate a unique filename with the current date and time
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"laser_cache/pop_init_eulagized_{timestamp}.h5"
+    #pdb.set_trace()
+    model.population.save( filename, initial_populations=initial_populations, age_distribution=age_distribution, cumulative_deaths=cumulative_deaths, eula_age=model.params.eula_age )
 
-#model.population.save(filename="pop_init.h5", tail_number=total_births)
+if not_cached:
+    save_initial_pop()
+
+
 model.population.add_scalar_property("age_at_vax", np.uint16)
 #population.add_scalar_property("age_at_inf", np.uint16)
 model.metrics = []
