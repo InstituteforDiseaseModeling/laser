@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import numba as nb
 import h5py
+import os
 import pdb
 
 @nb.njit(parallel=True)
@@ -15,6 +16,9 @@ def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array
         total_population_per_year[node_index, death_year[i]] += 1
 
 def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age):
+    if not os.path.exists( hdf5_filename ):
+        print( "WARNING: Couldn't find requested file: {hdf5_filename}" )
+        return False
     with h5py.File(hdf5_filename, 'r') as hdf:
         try:
             # Retrieve the attributes from the file
@@ -27,9 +31,14 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
             if (np.array_equal(initial_populations, file_initial_populations) and
                 np.array_equal(age_distribution, file_age_distribution) and
                 np.array_equal(cumulative_deaths, file_cumulative_deaths) and
-                np.array_equal(eula_age, file_eula_age)):
+                eula_age == file_eula_age):
                 return True
             else:
+                print( "DEBUG: No match." )
+                print( f"init_pop? {np.array_equal(initial_populations, file_initial_populations)} " )
+                print( f"age_dist? {np.array_equal(age_distribution, file_age_distribution)} " )
+                print( f"cum_death? {np.array_equal(cumulative_deaths, file_cumulative_deaths)} " )
+                print( f"eula_age? {np.array_equal(eula_age, file_eula_age)} " )
                 return False
         except KeyError as e:
             print(f"Attribute not found in file: {e}")
@@ -56,6 +65,7 @@ class Population:
 
         self.add_property = self.add_scalar_property  # alias
         self.node_count = -1
+        self.expected_new_deaths_per_year = None
 
         return
 
@@ -192,7 +202,7 @@ class Population:
             if isinstance(value, np.ndarray):
                 # Ignore 2D arrays
                 if value.ndim == 2:
-                    print( "Ignoring key {key} while expanding capacity." )
+                    print( f"Ignoring key {key} while expanding capacity." )
                     continue
 
                 old_size = len(value)
@@ -244,7 +254,7 @@ class Population:
         - Update the population count to reflect the number of remaining individuals.
         """
 
-        print( "Removing EULA agents from population. Have to age sort." )
+        print( "**\nRemoving EULA agents from population. Have to age sort.\n**" )
         # Convert age_in_years to days
         age_threshold_in_days = int(eula_age_in_years * 365)
         
