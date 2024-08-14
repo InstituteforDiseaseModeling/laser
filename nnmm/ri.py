@@ -2,6 +2,33 @@ import numpy as np
 import numba as nb
 import ctypes
 
+# ## Routine Immunization (RI) 
+# Do MCV1 for most kids at around 9mo. Do MCV2 for most of the kids who didn't take around 15mo. There are a bunch of ways of doing this.
+# What we're doing here is using an IP -- to borrow EMOD terminology -- for Accessibility, with values 0 (Easy), 1 (Medium), 2 (Hard). See elsewhere for that.
+# The MCV1 Timer is a uniform draw from 8.5 months to 9.5 months. MCV2 Timer is a uniform draw from 14.5 months to 15.5 months.
+# ### Coverages
+# All MCV is subject to coverage levels which vary by node.
+
+# ## RI
+# ## Accessibility "IP" Groups
+# - 85% of in-coverage kids get MCV1
+# - 14% get MCV2
+# - 1% get nothing
+# Vary as needed.
+
+# In[16]:
+
+
+# ## RI 
+# ### Add based on accessibility group for newborns
+
+# In[17]:
+
+
+# ## RI
+# ### "Step-Function"
+# Timers get counted down each timestep and when they reach 0, susceptibility is set to 0.
+
 lib = ctypes.CDLL('./libri.so')
 
 # Define the argument types for the C function
@@ -9,7 +36,7 @@ lib.update_susceptibility_based_on_ri_timer.argtypes = [
     ctypes.c_uint32,                  # count
     np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
     np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
-    np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
+    #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
     np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
     ctypes.c_int64                    # tick
 ]
@@ -71,13 +98,10 @@ def add_with_ips(model, count_births, istart, iend):
 
     return
 
-def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick):
-    lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick)
 
-"""
 # Define the function to decrement ri_timer and update susceptibility
-@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.uint16[:], nb.int32[:], nb.int64 ), parallel=True)
-def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age_at_vax, dob, tick):
+@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.int32[:], nb.int64 ), parallel=True)
+def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick):
     for i in nb.prange(count):
         if ri_timer[i] > 0:
             ri_timer[i] -= 1
@@ -88,4 +112,12 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, ag
                 #age_at_vax[i] = tick-dob[i] # optional for reporting
 
 
-"""
+
+#def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick):
+    #_update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
+
+def do_ri(model, tick):
+    #lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
+    _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
+    return
+

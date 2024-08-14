@@ -2,7 +2,10 @@ import numpy as np
 import numba as nb
 import ctypes
 
-def add( model, istart, iend ):
+# # Maternal Immunity (Waning)
+# All newborns come into the world with susceptibility=0. They call get a 6month timer. When that timer hits 0, they become susceptible.
+
+def init( model, istart, iend ):
     # enable this after adding susceptibility property to the population (see cells below)
     model.population.susceptibility[istart:iend] = 0 # newborns have maternal immunity
     model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months
@@ -36,4 +39,6 @@ def _update_susceptibility_based_on_sus_timer(count, susceptibility_timer, susce
                                                  susceptibility.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)))
 
 
-
+def do_susceptibility_decay(model, tick):
+    _update_susceptibility_based_on_sus_timer(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
+    return
