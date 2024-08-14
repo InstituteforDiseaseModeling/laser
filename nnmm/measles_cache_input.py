@@ -630,25 +630,7 @@ print(f"Upper left corner of network looks like this (after limiting to max_frac
 # In[558]:
 
 
-@nb.njit(
-    (nb.uint8[:], nb.uint16[:], nb.float32[:], nb.uint8[:], nb.uint32, nb.float32, nb.float32, nb.uint32[:]),
-    parallel=True,
-    nogil=True,
-    cache=True,
-)
-def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, incidence):
-    for i in nb.prange(count):
-        susceptibility = susceptibilities[i]
-        if susceptibility > 0:
-            nodeid = nodeids[i]
-            force = susceptibility * forces[nodeid] # force of infection attenuated by personal susceptibility
-            if (force > 0) and (np.random.random_sample() < force):  # draw random number < force means infection
-                susceptibilities[i] = 0.0  # set susceptibility to 0.0
-                # set exposure timer for newly infected individuals to a draw from a normal distribution, must be at least 1 day
-                etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
-                incidence[nodeid] += 1
-
-    return
+import tx
 
 model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
 model.nodes.add_scalar_property("forces", dtype=np.float32)
@@ -674,7 +656,7 @@ def do_transmission_update(model, tick) -> None:
     np.multiply(contagion, beta_effective, out=forces)
     np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection
 
-    tx_inner(
+    tx.tx_inner(
         population.susceptibility,
         population.nodeid,
         forces,
