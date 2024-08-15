@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 
-import sys
-import pdb
 from pathlib import Path
 import numpy as np
-import numba as nb
 from datetime import datetime
 from tqdm import tqdm
 
-
+# Very simple!
 class Model:
     pass
 
 model = Model()
 
-import init_pop_nigeria as ipn
+# Initialize model nodes and population sizes from data
+from mods import init_pop_nigeria as ipn
 nn_nodes, initial_populations = ipn.run()
 
 
@@ -33,6 +31,8 @@ meta_params = PropertySet({
     "output": Path.cwd() / "outputs",
     "eula_age": 5
 })
+# parameter?
+prevalence = 0.025 # 2.5% prevalence
 
 measles_params = PropertySet({
     "exp_mean": np.float32(7.0),
@@ -61,7 +61,6 @@ model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 # 
 # We have our initial populations, but we need to allocate enough space to handle growth during the simulation.
 
-# NOT REALLY NEEDED IF USING CACHED INIT POP
 from idmlaser.numpynumba import Population
 
 def extend_capacity_from_data(model,initial_populations):
@@ -89,13 +88,12 @@ capacity = extend_capacity_from_data(model,initial_populations)
 
 # In[5]:
 
-model.population.add_scalar_property("nodeid", np.uint16)
-model.population.add_scalar_property("ri_timer", np.uint16)
-model.population.add_scalar_property("etimer", np.uint8)
-model.population.add_scalar_property("itimer", np.uint8)
-model.population.add_scalar_property("susceptibility", np.uint8)
-model.population.add_scalar_property("susceptibility_timer", np.uint8)
-model.population.add_scalar_property("accessibility", np.uint8)
+from schema import schema
+
+# Add scalar properties to model.population
+for name, dtype in schema.items():
+    model.population.add_scalar_property(name, dtype)
+
 
 # NOT REALLY NEEDED IF USING CACHED INIT POP
 def assign_node_ids(model,initial_populations):
@@ -122,6 +120,7 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
     print(f"{ifirst=:,}, {ilast=:,}")
     model.nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
     nodes.population[:,0] = initial_populations
+    model.nodes.nn_nodes = nn_nodes
 
 save_pops_in_nodes( model, nn_nodes, initial_populations )
 
@@ -132,6 +131,12 @@ model.nodes.add_scalar_property("forces", dtype=np.float32)
 model.nodes.add_vector_property("incidence", model.params.ticks, dtype=np.uint32)
 model.nodes.add_vector_property("births", (model.params.ticks + 364) // 365)    # births per year
 model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    # deaths per year
+# Add new property "ri_coverages", just randomly for demonstration purposes
+# Replace with values from data
+model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
+model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
+# ri coverages and init prev seem to be the same "kind of thing"?
+model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
 
 
 # ## Population per Tick
@@ -143,39 +148,33 @@ def propagate_population(model, tick):
 
     return
 
-import age_init
-age_init.run( initial_populations, model, capacity )
+from mods import age_init
+age_init.init( model )
 
-import mortality
-mortality.init( model, capacity )
+from mods import mortality
+mortality.init( model )
 
-import intrahost
-import immunity
-immunity.initialize_susceptibility(model.population.count, model.population.dob, model.population.susceptibility)
-
-# Add new property "ri_coverages", just randomly for demonstration purposes
-# Replace with values from data
-model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
-model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
+from mods import immunity
+immunity.init(model)
 
 # Initial Prevalence
 # Print this _before_ initializing infections because `initial_infections` is modified in-place.
-print(f"{(model.population.itimer > 0).sum()=:,}")
+#print(f"{(model.population.itimer > 0).sum()=:,}")
 
-prevalence = 0.025 # 2.5% prevalence
-import init_prev
-initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
-init_prev.initialize_infections(np.uint32(model.population.count), initial_infections, model.population.nodeid, model.population.itimer, model.params.inf_mean, model.params.inf_std)
-print(f"{initial_infections.sum()=:,}")
+from mods import init_prev
+# makes reference to specific properties
+init_prev.init( model )
+#print(f"{initial_infections.sum()=:,}")
 
 # Transmission
-import transmission
-transmission.setup( model, nn_nodes, initial_populations )
+from mods import transmission
+transmission.init( model )
 
-import maternal_immunity as mi
-import ri
-import sia
-import fertility
+from mods import intrahost
+from mods import maternal_immunity as mi
+from mods import ri
+from mods import sia
+from mods import fertility
 
 # ## Tick/Step Processing Phases
 # 
