@@ -63,24 +63,15 @@ model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 
 from idmlaser.numpynumba import Population
 
-def extend_capacity_from_data(model,initial_populations):
-    capacity = initial_populations.sum()
-    print(f"initial {capacity=:,}")
-    print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
-    growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
-    print(f"{growth=}")
-    capacity *= growth
-    capacity *= 1.01  # 1% buffer
-    capacity = np.uint32(np.round(capacity))
-    print(f"required {capacity=:,}")
-    print(f"Allocating capacity for {capacity:,} individuals")
-    population = Population(capacity)
-    model.population = population   # type: ignore
-    ifirst, ilast = population.add(initial_populations.sum())
-    print(f"{ifirst=:,}, {ilast=:,}")
-    return capacity
+# We're going to create the human/agent population from the capacity (expansion slots based on births)
+# It will be in model.population
+Population.create_from_capacity(model,initial_populations)
+capacity = model.population.capacity
+from schema import schema
+model.population.add_properties_from_schema( schema )
 
-capacity = extend_capacity_from_data(model,initial_populations)
+# we now have our population dataframe!
+# let's give it some values.
 
 # ## Node IDs
 # 
@@ -88,14 +79,7 @@ capacity = extend_capacity_from_data(model,initial_populations)
 
 # In[5]:
 
-from schema import schema
 
-# Add scalar properties to model.population
-for name, dtype in schema.items():
-    model.population.add_scalar_property(name, dtype)
-
-
-# NOT REALLY NEEDED IF USING CACHED INIT POP
 def assign_node_ids(model,initial_populations):
     index = 0
     for nodeid, count in enumerate(initial_populations):

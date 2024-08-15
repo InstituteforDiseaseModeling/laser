@@ -82,6 +82,11 @@ class Population:
         setattr(self, name, np.full((self._capacity, length), default, dtype=dtype))
         return
 
+    # Add scalar properties to model.population
+    def add_properties_from_schema( self, schema ):
+        for name, dtype in schema.items():
+            self.add_scalar_property(name, dtype)
+
     @property
     def count(self) -> int:
         return self._count
@@ -101,6 +106,24 @@ class Population:
 
     def __len__(self) -> int:
         return self._count
+
+    @staticmethod
+    def create_from_capacity(model,initial_populations):
+        capacity = initial_populations.sum()
+        print(f"initial {capacity=:,}")
+        print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
+        growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
+        print(f"{growth=}")
+        capacity *= growth
+        capacity *= 1.01  # 1% buffer
+        capacity = np.uint32(np.round(capacity))
+        print(f"required {capacity=:,}")
+        print(f"Allocating capacity for {capacity:,} individuals")
+        population = Population(capacity)
+        model.population = population   # type: ignore
+        ifirst, ilast = population.add(initial_populations.sum())
+        print(f"{ifirst=:,}, {ilast=:,}")
+        return capacity
 
     def save_pd(self, filename: str, tail_number=0 ) -> None:
         """Save the population properties to a CSV file"""
