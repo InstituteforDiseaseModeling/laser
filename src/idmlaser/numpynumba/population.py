@@ -10,10 +10,12 @@ import os
 import pdb
 
 @nb.njit(parallel=True)
-def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, total_population_per_year):
+#def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, total_population_per_year):
+def accumulate_deaths_parallel(nodeid_filtered, death_year, deaths_per_year):
     for i in nb.prange(len(death_year)):
-        node_index = nodeid_indices_array[nodeid_filtered[i]]
-        total_population_per_year[node_index, death_year[i]] += 1
+        #node_index = nodeid_indices_array[nodeid_filtered[i]]
+        node_index = nodeid_filtered[i]
+        deaths_per_year[node_index, death_year[i]] += 1
 
 def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age):
     if not os.path.exists( hdf5_filename ):
@@ -106,6 +108,25 @@ class Population:
 
     def __len__(self) -> int:
         return self._count
+
+    def sort_by_property(self, property_name: str):
+        if property_name not in self.__dict__:
+            raise ValueError(f"Property '{property_name}' does not exist in the population.")
+
+        # Should we include expanstion slots in sort? Simpler, but slower, if 0's sorts properly.
+        # Otherwise we should sort the regular section only and tack on the end
+        # Get the values of the property to sort by
+        sort_values = self.__dict__[property_name][:self._count]
+
+        # Calculate sorted indices based on the specified property
+        sorted_indices = np.argsort(sort_values)
+
+        # Sort all properties based on the sorted indices
+        for key, value in self.__dict__.items():
+            if isinstance(value, np.ndarray) and value.size == self._capacity:
+                self.__dict__[key][:self._count] = value[:self._count][sorted_indices]
+
+        return sorted_indices
 
     @staticmethod
     def create_from_capacity(model,initial_populations):
@@ -263,55 +284,31 @@ class Population:
         return node_populations 
 
 
-    def eliminate_eulas(self, eula_age_in_years: float):
+    def eliminate_eulas(self, split_index: int):
         """
-        Remove individuals older than a specified age and extend arrays for new births.
-
-        - Convert the specified age threshold from years to days.
-        - Calculate the age of each individual in days relative to the current simulation day.
-        - Determine the number of expansion slots needed for new births.
-        - Sort the population by age in ascending order.
-        - Identify the index where individuals exceed the specified age threshold.
+        Remove individuals older than a specified age but keep extend arrays for new births.
         - Retain only the individuals below the age threshold and extend the arrays with empty values
           to accommodate new births.
-        - Update the population count to reflect the number of remaining individuals.
+        - Update the population count, and cap, to reflect the number of remaining individuals.
         """
 
-        print( "**\nRemoving EULA agents from population. Have to age sort.\n**" )
-        # Convert age_in_years to days
-        age_threshold_in_days = int(eula_age_in_years * 365)
-        
-        # Calculate the age of each individual in days
-        current_day = 0  # Adjust this if you have a simulation day tracker
-        ages_in_days = current_day - self.__dict__['dob'][:self.count]
-
-        # Calculate number of expansion slots
-        birth_cap = (self.capacity-self.count)
-
-        # Sort population by age
-        sorted_indices = np.argsort(ages_in_days)
-        sorted_ages = ages_in_days[sorted_indices]
-
-        # Identify the index where ages exceed the threshold
-        split_index = np.searchsorted(ages_in_days[sorted_indices], age_threshold_in_days)
-        print( f"split_index = {split_index}" )
+        print( "**\nRemoving EULA agents from population. Assumes already age sorted.\n**" )
 
         # Keep only the individuals below the age threshold
         for key, value in self.__dict__.items():
-            if isinstance(value, np.ndarray) and value.size == self._capacity:
+            if isinstance(value, np.ndarray) and value.size == self._count:
                 try:
-                    self.__dict__[key] = value[sorted_indices[:split_index]]
-                    # Extend the array with "empty" values by birth_cap
-                    extension = np.zeros(birth_cap, dtype=value.dtype)
-                    self.__dict__[key] = np.concatenate([self.__dict__[key], extension])
+                    self.__dict__[key] = value[split_index:]
+                    print( f"Cropping array {key}." )
 
                 except Exception as ex:
                     raise ValueError( f"Exception resizing {key} vector." )
 
         # Update population count
-        self._count = split_index
+        self._count -= split_index
+        self._capacity -= split_index 
 
-    def expected_pops_over_years(self, eula_age_in_years=5, years=10):
+    def expected_deaths_over_sim(self, death_years, split_index, sim_years=10):
         """
         Estimate the population sizes by node for each year from 1 to years, considering a 
         specific age threshold (eula_age_in_years). Start by filtering out individuals 
@@ -320,31 +317,19 @@ class Population:
         and use this information to compute the expected population size at each node 
         for each of the years.
 
-        TBD: Make sim length configurable
+        Assume nodeid but nothing else.
         """
-        eula_age_in_days = eula_age_in_years * 365
-        years += 1
-
-        # Determine the initial mask for individuals older than eula_age_in_years at the start of the simulation
-        initial_mask = self.__dict__['dob'] <= -eula_age_in_days
-        dod_filtered = self.__dict__['dod'][initial_mask]
-        nodeid_filtered = self.__dict__['nodeid'][initial_mask]
-
-        # Calculate the year of death for each individual (0-based index for years 1-years)
-        death_year = dod_filtered // 365
         # Let's initially count for all the years, even if we only keep first 10.
         # No, too slow. Let's count 0 through years-1, and put 'everything else' in 'years'
-        death_year[death_year >= years] = years-1  # Cap deaths at years-1
+        death_years[death_years > sim_years] = sim_years  # Cap deaths at years-1
 
         # Initialize the expected_new_deaths array
-        unique_nodeids = np.unique(nodeid_filtered)
+        nodeids_filtered = self.nodeid[0:split_index]
+        unique_nodeids = np.unique(nodeids_filtered) # slow way of calculating node count
         nodeid_indices = {nodeid: i for i, nodeid in enumerate(unique_nodeids)}
-        self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), years), dtype=int)
+        self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), sim_years+1), dtype=int)
 
-        nodeid_indices_array = np.zeros(unique_nodeids.max() + 1, dtype=np.int32)
-        for i, nodeid in enumerate(unique_nodeids):
-            nodeid_indices_array[nodeid] = i
-        accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, self.expected_new_deaths_per_year)
+        accumulate_deaths_parallel(nodeids_filtered, death_years, self.expected_new_deaths_per_year)
 
         # Convert deaths to populations by subtracting cumulative deaths from the initial population
         cumulative_deaths = np.cumsum(self.expected_new_deaths_per_year, axis=1) # xtra dupe element at end I don't understand yet
@@ -352,20 +337,13 @@ class Population:
         # Calculate new deaths per year
         self.expected_new_deaths_per_year[:, 0] = self.expected_new_deaths_per_year[:, 0]
         self.expected_new_deaths_per_year[:, 1:] = np.diff(cumulative_deaths, axis=1)
-        self.expected_new_deaths_per_year = self.expected_new_deaths_per_year[:, 0:10] # discard extra killall column
+        #self.expected_new_deaths_per_year = self.expected_new_deaths_per_year[:, 0:10] # discard extra killall column
 
         # Calculate the initial population counts, though not currently used
-        initial_population_counts = np.bincount(nodeid_filtered, minlength=len(unique_nodeids))
+        initial_population_counts = np.bincount(nodeids_filtered, minlength=len(unique_nodeids))
         # Calculate total_population_per_year at the end, using cumulative deaths
         self.total_population_per_year = initial_population_counts[:, None] - cumulative_deaths
 
         # Optional: print the resulting populations
         print(self.total_population_per_year)
 
-
-    def init_eula( self, eula_age_in_years=5 ):
-        # 1) Calculate the expected deaths & thus expected populations
-        # in each node for each year of simulation, in the EULA cohort.
-        self.expected_pops_over_years(eula_age_in_years=eula_age_in_years)
-        # 2) Remove the EULA cohort from our population.
-        self.eliminate_eulas(eula_age_in_years=eula_age_in_years)

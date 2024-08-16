@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 from . import access_groups as ag
 from . import ri
 from . import maternal_immunity as mi
@@ -43,11 +44,13 @@ def do_births(model, tick):
     # Do coverage by node, not same for every node
     try:
         mask = np.random.rand(count_births) < (model.nodes.ri_coverages[model.population.nodeid[istart:iend]])
+        # Set ri_timer values for the selected agents
+        model.population.ri_timer[istart:iend][mask] = ri_timer_values[mask]
     except Exception as ex:
+        print( "Exception setting ri_timers for newborns." )
+        print( str( ex ) )
         pdb.set_trace()
 
-    # Set ri_timer values for the selected agents
-    model.population.ri_timer[istart:iend][mask] = ri_timer_values[mask]
 
     index = istart
     nodeids = model.population.nodeid   # grab this once for efficiency

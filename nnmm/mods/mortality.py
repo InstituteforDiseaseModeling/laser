@@ -2,6 +2,7 @@ import numpy as np
 import numba as nb
 from datetime import datetime
 from tqdm import tqdm
+import pdb
 
 from idmlaser.kmcurve import pdsod
 
@@ -12,8 +13,6 @@ from idmlaser.kmcurve import pdsod
 # We import `pdsod` ("predicted_days_of_death") which currently uses a USA 2003 survival table. `pdsod` will draw for a year of death (in or after the current age year) and then will draw a day in the selected year.
 # 
 # **Note:** the incoming values in `model.population.dob` are positive (_ages_). After we use them to draw for date of death, we negate them to convert them to dates of birth (in days) prior to now (t=0).
-
-# In[10]:
 
 def init( model ):
     capacity = model.population.capacity
@@ -30,9 +29,22 @@ def init( model ):
     print(f"First 32 DoBs (should all be negative - these agents were born before today):\n{dobs[:32]}")
     print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
-# Now we are going to eula-ify our population at age=5.0
     if "eula_age" in model.params.__dict__:
-        model.population.init_eula(model.params.eula_age)
+        # Sort by age
+        model.population.sort_by_property("dob")
+        # Convert eula threshold in years to (negative) day-of-birth
+        eula_dob = -int(365*model.params.eula_age)
+        # Find index of first value after eula_dob
+        split_index = np.searchsorted(model.population.dob, eula_dob)
+        # Get list of indices we would EULA-ify
+        dod_filtered = model.population.dod[0:split_index]
+        # Convert these all to "simulation year of death"
+        death_years = dod_filtered // 365
+        # Now invoke function in Population class to calculate the expected deaths by simulation year
+        model.population.expected_deaths_over_sim( death_years, split_index=split_index )
+        #print( model.population.expected_new_deaths_per_year )
+        # Now 'squash' (split) the population to keep only the non-EULA group
+        model.population.eliminate_eulas( split_index=split_index )
 
 
 # ## Non-Disease Mortality 
@@ -43,19 +55,21 @@ def init( model ):
 # In[11]:
 
 
-    from idmlaser.utils import PriorityQueuePy
+    def queue_deaths():
+        from idmlaser.utils import PriorityQueuePy
 
-    tstart = datetime.now(tz=None)  # noqa: DTZ005
-    dods = population.dod
-    mortality = PriorityQueuePy(capacity, dods)
-    for i in tqdm(indices := np.nonzero(dods[0:population.count] < model.params.ticks)[0]):
-        mortality.push(i)
-    tfinish = datetime.now(tz=None)  # noqa: DTZ005
+        tstart = datetime.now(tz=None)  # noqa: DTZ005
+        dods = population.dod
+        mortality = PriorityQueuePy(capacity, dods)
+        for i in tqdm(indices := np.nonzero(dods[0:population.count] < model.params.ticks)[0]):
+            mortality.push(i)
+        tfinish = datetime.now(tz=None)  # noqa: DTZ005
 
-    print(f"Elapsed time for pushing dates of death: {tfinish - tstart}")
-    print(f"Non-disease mortality: tracked {len(indices):,}, untracked {population.count - len(indices):,}")
+        print(f"Elapsed time for pushing dates of death: {tfinish - tstart}")
+        print(f"Non-disease mortality: tracked {len(indices):,}, untracked {population.count - len(indices):,}")
 
-    model.nddq = mortality
+        model.nddq = mortality
+    queue_deaths()
 
 
 # ## Non-Disease Mortality 
