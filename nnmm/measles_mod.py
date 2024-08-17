@@ -159,6 +159,7 @@ from mods import maternal_immunity as mi
 from mods import ri
 from mods import sia
 from mods import fertility
+from mods import ages
 
 # ## Tick/Step Processing Phases
 # 
@@ -170,6 +171,7 @@ from mods import fertility
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
     propagate_population,
+    ages.update_ages, # type: ignore
     fertility.do_births, # type: ignore
     mortality.do_non_disease_deaths, # type: ignore
     intrahost.do_infection_update, # type: ignore

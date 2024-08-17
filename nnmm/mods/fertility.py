@@ -30,8 +30,9 @@ def do_births(model, tick):
     istart, iend = model.population.add(count_births)   # add count_births agents to the population, get the indices of the new agents
 
     # enable this after loading the aliased distribution and dod and dob properties (see cells below)
-    model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
-    model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
+    model.population.dod[istart:iend] = pdsod(np.zeros( count_births ).astype( np.int32 ), max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
+    #model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
+    model.population.age[istart:iend] = 0 # their age is 0 at birth; already set to this but just making sure.
 
     # enable this after adding susceptibility property to the population (see cells below)
     model.population.susceptibility[istart:iend] = 1

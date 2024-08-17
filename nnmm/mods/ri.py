@@ -37,7 +37,7 @@ lib.update_susceptibility_based_on_ri_timer.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
     np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
     #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
-    np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),   # age
     ctypes.c_int64                    # tick
 ]
 
@@ -101,7 +101,7 @@ def add_with_ips(model, count_births, istart, iend):
 
 # Define the function to decrement ri_timer and update susceptibility
 @nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.int32[:], nb.int64 ), parallel=True)
-def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick):
+def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, age, tick):
     for i in nb.prange(count):
         if ri_timer[i] > 0:
             ri_timer[i] -= 1
@@ -117,7 +117,7 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, do
     #_update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
 
 def do_ri(model, tick):
-    #lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
-    _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
+    lib.update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.age, tick)
+    #_update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
     return
 

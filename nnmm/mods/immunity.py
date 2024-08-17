@@ -18,16 +18,17 @@ import numba as nb
 # **_TODO:_** Update this function to probabilistically set susceptibility to `0` for children over 1 year of age based on local RI coverage and other factors (estimated prevalence and probability of _not_ having had measles?).
 
 
+# kind of moot with EULAs
 
 # initialize susceptibility based on age
-@nb.njit((nb.uint32, nb.int32[:], nb.uint8[:]), parallel=True)
-def initialize_susceptibility(count, dob, susceptibility):
+@nb.njit((nb.uint32, nb.float32[:], nb.uint8[:]), parallel=True)
+def initialize_susceptibility(count, age, susceptibility):
 
     for i in nb.prange(count):
-        if dob[i] >= -365*5:
+        if age[i] >= 5:
             susceptibility[i] = 1
 
     return
 
 def init( model ):
-    return initialize_susceptibility( model.population.count, model.population.dob, model.population.susceptibility )
+    return initialize_susceptibility( model.population.count, model.population.age, model.population.susceptibility )

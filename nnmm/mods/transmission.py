@@ -109,6 +109,7 @@ def do_transmission_update(model, tick) -> None:
     contagion = nodes.cases[:, tick]    # we will accumulate current infections into this array
     nodeids = population.nodeid[:population.count]  # just look at the active agent indices
     itimers = population.itimer[:population.count] # just look at the active agent indices
+    # Below counts infectious by node
     np.add.at(contagion, nodeids[itimers > 0], 1)   # increment by the number of active agents with non-zero itimer
 
     network = nodes.network
@@ -118,8 +119,11 @@ def do_transmission_update(model, tick) -> None:
 
     forces = nodes.forces
     beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+    # forces = contagion * beta
     np.multiply(contagion, beta_effective, out=forces)
+    # normalize by population
     np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection
+    # we haven't multiplied by susceptibility fraction yet?
 
     tx_inner(
         population.susceptibility,

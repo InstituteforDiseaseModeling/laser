@@ -11,7 +11,6 @@ import pdb
 # 
 # The population pyramid is typically in 5 year age buckets. Once we draw for the age bucket, we draw uniformly for a date of birth within the range of the bucket.
 # 
-# **Note:** the values in `model.population.dob` are _positive_ at this point. Later we will negate them to convert them to dates of birth prior to now (t = 0).
 def init( model ):
     initial_populations = model.nodes.population[:,0]
     capacity = model.population.capacity
@@ -23,13 +22,13 @@ def init( model ):
     count_active = initial_populations.sum()
     print(f"Sampling {count_active:,} ages... {model.population.count=:,}")
     buckets = aliased_distribution.sample(model.population.count)
-    minimum_age = age_distribution[:, 0] * 365      # closed, include this value
-    limit_age = (age_distribution[:, 1] + 1) * 365  # open, exclude this value
+    minimum_age = age_distribution[:, 0]# * 365      # closed, include this value
+    limit_age = (age_distribution[:, 1] + 1)# * 365  # open, exclude this value
     mask = np.zeros(capacity, dtype=bool)
 
     print("Converting age buckets to ages...")
     for i in tqdm(range(len(age_distribution))):
         mask[:count_active] = (buckets == i)    # indices of agents in this age group bucket
         # draw uniformly between the start and end of the age group bucket
-        model.population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
+        model.population.age[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
 

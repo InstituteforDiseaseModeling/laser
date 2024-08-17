@@ -12,30 +12,29 @@ from idmlaser.kmcurve import pdsod
 # 
 # We import `pdsod` ("predicted_days_of_death") which currently uses a USA 2003 survival table. `pdsod` will draw for a year of death (in or after the current age year) and then will draw a day in the selected year.
 # 
-# **Note:** the incoming values in `model.population.dob` are positive (_ages_). After we use them to draw for date of death, we negate them to convert them to dates of birth (in days) prior to now (t=0).
 
 def init( model ):
     capacity = model.population.capacity
     population = model.population # to keep code similar
-    dobs = population.dob
+    age = population.age
     dods = population.dod
     tstart = datetime.now(tz=None)  # noqa: DTZ005
-    dods[0:population.count] = pdsod(dobs[0:population.count], max_year=100)
+    #pdb.set_trace()
+    dods[0:population.count] = pdsod(age[0:population.count].astype(np.int32)*365, max_year=100)
     tfinish = datetime.now(tz=None)  # noqa: DTZ005
     print(f"Elapsed time for drawing dates of death: {tfinish - tstart}")
 
-    dods -= dobs.astype(dods.dtype) # renormalize to be relative to _now_ (t = 0)
-    dobs *= -1  # convert ages to date of birth prior to _now_ (t = 0) ∴ negative
-    print(f"First 32 DoBs (should all be negative - these agents were born before today):\n{dobs[:32]}")
+    dods -= age.astype(dods.dtype) # renormalize to be relative to _now_ (t = 0)
+    print(f"First 32 Ages (should all be positive - these agents were born before today):\n{age[:32]}")
     print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
     if "eula_age" in model.params.__dict__:
         # Sort by age
-        model.population.sort_by_property("dob")
+        model.population.sort_by_property("age")
         # Convert eula threshold in years to (negative) day-of-birth
-        eula_dob = -int(365*model.params.eula_age)
-        # Find index of first value after eula_dob
-        split_index = np.searchsorted(model.population.dob, eula_dob)
+        eula_age = model.params.eula_age
+        # Find index of first value after eula_age
+        split_index = np.searchsorted(model.population.age, eula_age)
         # Get list of indices we would EULA-ify
         dod_filtered = model.population.dod[0:split_index]
         # Convert these all to "simulation year of death"
