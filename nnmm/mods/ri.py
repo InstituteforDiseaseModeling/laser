@@ -29,17 +29,22 @@ import ctypes
 # ### "Step-Function"
 # Timers get counted down each timestep and when they reach 0, susceptibility is set to 0.
 
-lib = ctypes.CDLL('./libri.so')
+use_nb = True
+try:
+    lib = ctypes.CDLL('./libri.so')
 
 # Define the argument types for the C function
-lib.update_susceptibility_based_on_ri_timer.argtypes = [
-    ctypes.c_uint32,                  # count
-    np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
-    np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
-    #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
-    np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
-    ctypes.c_int64                    # tick
-]
+    lib.update_susceptibility_based_on_ri_timer.argtypes = [
+        ctypes.c_uint32,                  # count
+        np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
+        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
+        #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
+        np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
+        ctypes.c_int64                    # tick
+    ]
+    use_nb = False
+except Exception as ex:
+    print( "Failed to load libri.so. Will use numba." )
 
 
 def add(model, count_births, istart, iend):
@@ -117,7 +122,9 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, do
     #_update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
 
 def do_ri(model, tick):
-    #lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
-    _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
+    if use_nb:
+        _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
+    else:
+        lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
     return
 
