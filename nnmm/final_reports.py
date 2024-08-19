@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 def report( model, initial_populations ):
     metrics = pd.DataFrame(model.metrics, columns=["tick"] + [phase.__name__ for phase in model.phases])
@@ -24,7 +25,6 @@ def report( model, initial_populations ):
 # ## Validation - Population Over Time
 # 
 # Let's make sure that our population is growing over time by plotting the population for a few nodes.
-
     nodes_to_plot = [0, 1, 2, 3]
     node_population = model.nodes.population[nodes_to_plot, :]
 
@@ -44,6 +44,7 @@ def report( model, initial_populations ):
 # Let's see if our births over time look right. Given a fixed CBR and a growing population, we should generally have more births later in the simulation.
 
     node_births = model.nodes.births[nodes_to_plot, :]
+    np.savetxt('births.csv', node_births, delimiter=',', fmt='%d')
 
     plt.figure(figsize=(10, 6))
     for i, node in enumerate(nodes_to_plot):
@@ -61,6 +62,7 @@ def report( model, initial_populations ):
 # Let's see if our non-disease deaths look right over time.
 
     node_deaths = model.nodes.deaths[nodes_to_plot, :]
+    np.savetxt('deaths.csv', node_deaths, delimiter=',', fmt='%d')
 
     plt.figure(figsize=(10, 6))
     for i, node in enumerate(nodes_to_plot):
@@ -75,6 +77,7 @@ def report( model, initial_populations ):
 
 # ## Cases Over Time
 
+    np.savetxt('cases.csv', model.nodes.cases, delimiter=',', fmt='%d')
     group = 0
     size = 16
     nodes_to_plot = list(range(size*group,size*(group+1)))
