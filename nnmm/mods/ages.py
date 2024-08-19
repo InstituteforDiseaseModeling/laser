@@ -16,7 +16,8 @@ lib = ctypes.CDLL(shared_lib_path)
 # Define the function signature
 lib.update_ages.argtypes = [
     ctypes.c_uint32,                  # count
-    np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS')
+    #np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS')
+    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS')
 ]
 
 def update_ages( model, tick ):

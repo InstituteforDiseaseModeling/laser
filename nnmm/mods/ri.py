@@ -16,9 +16,6 @@ import ctypes
 # - 1% get nothing
 # Vary as needed.
 
-# In[16]:
-
-
 # ## RI 
 # ### Add based on accessibility group for newborns
 
@@ -37,8 +34,8 @@ lib.update_susceptibility_based_on_ri_timer.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
     np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
     #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
-    np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),   # age
-    ctypes.c_int64                    # tick
+    #np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # age
+    #ctypes.c_int64                    # tick
 ]
 
 
@@ -117,7 +114,7 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, ag
     #_update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
 
 def do_ri(model, tick):
-    lib.update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.age, tick)
+    lib.update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility) # , model.population.age, tick)
     #_update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
     return
 

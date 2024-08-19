@@ -19,8 +19,8 @@ def init( model ):
     age = population.age
     dods = population.dod
     tstart = datetime.now(tz=None)  # noqa: DTZ005
-    #pdb.set_trace()
-    dods[0:population.count] = pdsod(age[0:population.count].astype(np.int32)*365, max_year=100)
+    dods[0:population.count] = pdsod(age[0:population.count], max_year=100)
+    #dods[0:population.count] = pdsod(age[0:population.count].astype(np.int32)*365, max_year=100)
     tfinish = datetime.now(tz=None)  # noqa: DTZ005
     print(f"Elapsed time for drawing dates of death: {tfinish - tstart}")
 
@@ -30,9 +30,10 @@ def init( model ):
 
     if "eula_age" in model.params.__dict__:
         # Sort by age
+        print( "Sorting all agents by age." )
         model.population.sort_by_property("age")
         # Convert eula threshold in years to (negative) day-of-birth
-        eula_age = model.params.eula_age
+        eula_age = model.params.eula_age * 365
         # Find index of first value after eula_age
         split_index = np.searchsorted(model.population.age, eula_age)
         # Get list of indices we would EULA-ify
@@ -83,7 +84,6 @@ def init( model ):
 
 
 def do_non_disease_deaths(model, tick):
-
     # Add eula population
     year = tick // 365
     if model.population.expected_new_deaths_per_year is not None:

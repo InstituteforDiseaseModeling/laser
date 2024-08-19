@@ -16,7 +16,6 @@ from idmlaser.kmcurve import pdsod
 
 
 def do_births(model, tick):
-
     doy = tick % 365 + 1    # day of year 1...365
     year = tick // 365
 

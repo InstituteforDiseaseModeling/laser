@@ -22,8 +22,8 @@ def init( model ):
     count_active = initial_populations.sum()
     print(f"Sampling {count_active:,} ages... {model.population.count=:,}")
     buckets = aliased_distribution.sample(model.population.count)
-    minimum_age = age_distribution[:, 0]# * 365      # closed, include this value
-    limit_age = (age_distribution[:, 1] + 1)# * 365  # open, exclude this value
+    minimum_age = age_distribution[:, 0] * 365      # closed, include this value
+    limit_age = (age_distribution[:, 1] + 1) * 365  # open, exclude this value
     mask = np.zeros(capacity, dtype=bool)
 
     print("Converting age buckets to ages...")

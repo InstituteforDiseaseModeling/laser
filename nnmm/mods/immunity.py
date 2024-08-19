@@ -21,7 +21,7 @@ import numba as nb
 # kind of moot with EULAs
 
 # initialize susceptibility based on age
-@nb.njit((nb.uint32, nb.float32[:], nb.uint8[:]), parallel=True)
+@nb.njit((nb.uint32, nb.int32[:], nb.uint8[:]), parallel=True)
 def initialize_susceptibility(count, age, susceptibility):
 
     for i in nb.prange(count):

@@ -33,19 +33,21 @@ unsigned recovered_counter = 0;
  * AND index >= start_idx AND index <= stop_idx;
  */
 const float one_day = 1.0f/365.0f;
-void update_ages_vanilla(unsigned long int start_idx, unsigned long int stop_idx, float *ages) {
+//void update_ages(unsigned long int stop_idx, float *ages) {
+void update_ages(unsigned long int stop_idx, int *ages) {
     //printf( "%s: from %d to %d.\n", __FUNCTION__, start_idx, stop_idx );
     #pragma omp parallel for
-    for (size_t i = start_idx; i <= stop_idx; i++) {
+    for (size_t i = 0; i <= stop_idx; i++) {
         if( ages[i] >= 0 )
         {
-            ages[i] += one_day;
+            //ages[i] += one_day;
+            ages[i] ++;
         }
     }
 }
 
 // avxv2
-void update_ages(unsigned long int stop_idx, float *ages) {
+void update_ages_simd(unsigned long int stop_idx, float *ages) {
     // Note that we could make sure not to increase ages of agents who have already exceeded
     // their expected lifespan, but it's probably more expensive to check the expected_lifespan
     // of each agent first, compare to age, than just unconditionally add to everyone.
