@@ -307,6 +307,8 @@ class Population:
         # Update population count
         self._count -= split_index
         self._capacity -= split_index 
+        print( f"After EULA elimination using split index {split_index}, count={self.count} and capacity={self.capacity}" )
+
 
     def expected_deaths_over_sim(self, death_years, split_index, sim_years=10):
         """
