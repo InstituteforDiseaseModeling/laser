@@ -2,7 +2,7 @@ import numpy as np
 
 schema = {
     "nodeid": np.uint16,
-    "age": np.float32,
+    "age": np.int32,
     "dod": np.int32,
     "susceptibility": np.uint8,
     "ri_timer": np.uint16,

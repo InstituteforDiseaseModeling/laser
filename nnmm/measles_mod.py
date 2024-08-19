@@ -171,7 +171,7 @@ from mods import ages
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
     propagate_population,
-    ages.update_ages, # type: ignore
+    #ages.update_ages, # type: ignore
     fertility.do_births, # type: ignore
     mortality.do_non_disease_deaths, # type: ignore
     intrahost.do_infection_update, # type: ignore
