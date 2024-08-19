@@ -6,19 +6,22 @@ import numpy as np
 #script_dir = os.path.dirname(os.path.abspath(__file__))
 from pkg_resources import resource_filename
 
-# Construct the path to the shared library in the same directory
-shared_lib_path = os.path.join(".", 'libages.so')
-#shared_lib_path = resource_filename('idmlaser', 'update_ages.so')
+try:
+    # Construct the path to the shared library in the same directory
+    shared_lib_path = os.path.join(".", 'libages.so')
+    #shared_lib_path = resource_filename('idmlaser', 'update_ages.so')
 
-# Load the shared library
-lib = ctypes.CDLL(shared_lib_path)
+    # Load the shared library
+    lib = ctypes.CDLL(shared_lib_path)
 
-# Define the function signature
-lib.update_ages.argtypes = [
-    ctypes.c_uint32,                  # count
-    #np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS')
-    np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS')
-]
+    # Define the function signature
+    lib.update_ages.argtypes = [
+        ctypes.c_uint32,                  # count
+        #np.ctypeslib.ndpointer(dtype=np.float32, flags='C_CONTIGUOUS')
+        np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS')
+    ]
+except Exception as ex:
+    print( f"Failed to load libages.so." )
 
 def update_ages( model, tick ):
     lib.update_ages(
