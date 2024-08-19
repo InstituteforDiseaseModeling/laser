@@ -2,7 +2,6 @@
 
 from typing import Tuple
 
-from tqdm import tqdm
 import numpy as np
 import numba as nb
 import h5py
@@ -304,9 +303,13 @@ class Population:
                 except Exception as ex:
                     raise ValueError( f"Exception resizing {key} vector." )
 
+        # |_______________|______________________|_____________|
+        # ^0..............^split.................^count........^capacity
         # Update population count
-        self._count -= split_index
-        self._capacity -= split_index 
+        removed = self.count - split_index
+        self._count = split_index
+        self._capacity -= removed 
+        print( f"After EULA elimination using split index {split_index}, count={self.count} and capacity={self.capacity}" )
 
     def expected_deaths_over_sim(self, death_years, split_index, sim_years=10):
         """
