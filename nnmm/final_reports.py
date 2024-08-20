@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 def report( model, initial_populations ):
     metrics = pd.DataFrame(model.metrics, columns=["tick"] + [phase.__name__ for phase in model.phases])
@@ -75,6 +76,7 @@ def report( model, initial_populations ):
 
 # ## Cases Over Time
 
+    np.savetxt('cases.csv', model.nodes.cases, delimiter=',', fmt='%d')
     group = 0
     size = 16
     nodes_to_plot = list(range(size*group,size*(group+1)))
