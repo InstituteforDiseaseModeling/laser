@@ -119,6 +119,6 @@ def do_ri(model, tick):
     if use_nb:
         _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
     else:
-        lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility)
+        lib.update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
     return
 

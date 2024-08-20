@@ -1,6 +1,7 @@
 import numpy as np
 import numba as nb
 import ctypes
+import pdb
 
 # # Maternal Immunity (Waning)
 # All newborns come into the world with susceptibility=0. They call get a 6month timer. When that timer hits 0, they become susceptible.
@@ -25,7 +26,7 @@ try:
     lib = ctypes.CDLL('./libmi.so')
 
 # Define the function prototype
-    lib.update_susceptibility_based_on_sus_timer.argtypes = [ctypes.c_uint32,
+    lib.update_susceptibility_based_on_sus_timer.argtypes = [ctypes.c_int32,
                                                              ctypes.POINTER(ctypes.c_uint8),
                                                              ctypes.POINTER(ctypes.c_uint8)]
     lib.update_susceptibility_based_on_sus_timer.restype = None
@@ -46,5 +47,13 @@ def do_susceptibility_decay(model, tick):
     if use_nb:
         _update_susceptibility_based_on_sus_timer_nb(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
     else:
-        lib._update_susceptibility_based_on_sus_timer_c(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
+        # These should not be necessary
+        susceptibility_timer_ctypes = model.population.susceptibility_timer.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)) 
+        susceptibility_ctypes = model.population.susceptibility.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+
+        lib.update_susceptibility_based_on_sus_timer(
+                model.population.count,
+                susceptibility_timer_ctypes,
+                susceptibility_ctypes
+            )
     return
