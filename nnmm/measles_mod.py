@@ -158,6 +158,7 @@ from mods import intrahost
 from mods import maternal_immunity as mi
 from mods import ri
 from mods import sia
+sia.init( model )
 from mods import fertility
 
 # ## Tick/Step Processing Phases
@@ -177,7 +178,7 @@ model.phases = [
     transmission.do_transmission_update, # type: ignore
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
-    sia.do_sias, # type: ignore
+    sia.do_interventions, # type: ignore 
 ]
 
 

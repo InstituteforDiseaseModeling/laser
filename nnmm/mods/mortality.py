@@ -100,6 +100,7 @@ def do_non_disease_deaths(model, tick):
     pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:
         i = pq.popi()
+        model.population.susceptibility[i] = 0
         nodeid = model.population.nodeid[i]
         model.nodes.population[nodeid,tick+1] -= 1
         model.nodes.deaths[nodeid,year] += 1
