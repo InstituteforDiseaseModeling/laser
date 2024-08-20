@@ -158,6 +158,7 @@ from mods import intrahost
 from mods import maternal_immunity as mi
 from mods import ri
 from mods import sia
+sia.init( model )
 from mods import fertility
 from mods import ages
 
@@ -171,7 +172,7 @@ from mods import ages
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
     propagate_population,
-    #ages.update_ages, # type: ignore
+    ages.update_ages, # type: ignore
     fertility.do_births, # type: ignore
     mortality.do_non_disease_deaths, # type: ignore
     intrahost.do_infection_update, # type: ignore
@@ -179,7 +180,7 @@ model.phases = [
     transmission.do_transmission_update, # type: ignore
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
-    sia.do_sias, # type: ignore
+    sia.do_interventions, # type: ignore
 ]
 
 
