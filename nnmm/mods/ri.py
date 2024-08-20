@@ -39,8 +39,8 @@ try:
         np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
         np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
         #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
-        np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
-        ctypes.c_int64                    # tick
+        #np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
+        #ctypes.c_int64                    # tick
     ]
     use_nb = False
 except Exception as ex:
@@ -125,6 +125,6 @@ def do_ri(model, tick):
     if use_nb:
         _update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility, model.population.dob, tick)
     else:
-        lib.update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, dob, tick)
+        lib.update_susceptibility_based_on_ri_timer(model.population.count, model.population.ri_timer, model.population.susceptibility)
     return
 
