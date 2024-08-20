@@ -30,6 +30,7 @@ def init( model ):
     print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
     if "eula_age" in model.params.__dict__:
+        #pdb.set_trace()
         # Sort by age
         model.population.sort_by_property("dob")
         # Convert eula threshold in years to (negative) day-of-birth
@@ -38,7 +39,7 @@ def init( model ):
         split_index = np.searchsorted(model.population.dob, eula_dob)
         # Get list of indices we would EULA-ify
         # If pop is age order, lowest to highest, we keep the "left chunk" and eula-ify the middle chunk
-        dod_filtered = model.population.dod[split_index:model.population.count]
+        dod_filtered = model.population.dod[0:split_index]
         # Convert these all to "simulation year of death"
         death_years = dod_filtered // 365
         # Now invoke function in Population class to calculate the expected deaths by simulation year

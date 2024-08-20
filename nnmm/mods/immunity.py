@@ -23,6 +23,7 @@ import numba as nb
 @nb.njit((nb.uint32, nb.int32[:], nb.uint8[:]), parallel=True)
 def initialize_susceptibility(count, dob, susceptibility):
 
+    # If EULA=5, this is everyone. Anybody younger than 5 is susceptible
     for i in nb.prange(count):
         if dob[i] >= -365*5:
             susceptibility[i] = 1

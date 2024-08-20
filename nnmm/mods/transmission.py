@@ -121,6 +121,10 @@ def do_transmission_update(model, tick) -> None:
     np.multiply(contagion, beta_effective, out=forces)
     np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection
 
+    if np.count_nonzero( population.susceptibility == 1 ) == 0:
+        print( "WARNING: Nobody is susceptible. That seems odd." )
+        pdb.set_trace()
+
     tx_inner(
         population.susceptibility,
         population.nodeid,
