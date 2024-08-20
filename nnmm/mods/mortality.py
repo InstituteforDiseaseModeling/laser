@@ -37,7 +37,8 @@ def init( model ):
         # Find index of first value after eula_dob
         split_index = np.searchsorted(model.population.dob, eula_dob)
         # Get list of indices we would EULA-ify
-        dod_filtered = model.population.dod[0:split_index]
+        # If pop is age order, lowest to highest, we keep the "left chunk" and eula-ify the middle chunk
+        dod_filtered = model.population.dod[split_index:model.population.count]
         # Convert these all to "simulation year of death"
         death_years = dod_filtered // 365
         # Now invoke function in Population class to calculate the expected deaths by simulation year
@@ -89,7 +90,11 @@ def do_non_disease_deaths(model, tick):
     year = tick // 365
     if model.population.expected_new_deaths_per_year is not None:
         for nodeid in range(len(model.population.expected_new_deaths_per_year)):
-            model.nodes.population[nodeid,tick+1] -= (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+            # converting yearly number to daily basically sucks
+            deaths = (model.population.expected_new_deaths_per_year[nodeid][year]/365)
+            model.nodes.population[nodeid,tick+1] -= deaths 
+            # Reporting only
+            model.nodes.deaths[nodeid,year] += deaths
 
     pq = model.nddq
     while len(pq) > 0 and pq.peekv() <= tick:

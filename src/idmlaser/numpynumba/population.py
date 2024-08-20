@@ -326,7 +326,7 @@ class Population:
         death_years[death_years > sim_years] = sim_years  # Cap deaths at years-1
 
         # Initialize the expected_new_deaths array
-        nodeids_filtered = self.nodeid[0:split_index]
+        nodeids_filtered = self.nodeid[split_index:self.count]
         unique_nodeids = np.unique(nodeids_filtered) # slow way of calculating node count
         nodeid_indices = {nodeid: i for i, nodeid in enumerate(unique_nodeids)}
         self.expected_new_deaths_per_year = np.zeros((len(unique_nodeids), sim_years+1), dtype=int)
