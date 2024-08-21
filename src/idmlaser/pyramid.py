@@ -35,18 +35,18 @@ class AliasedDistribution:
         return
 
     @property
-    def alias(self):
+    def alias(self) -> np.ndarray:
         return self._alias
 
     @property
-    def probs(self):
+    def probs(self) -> np.ndarray:
         return self._probs
 
     @property
-    def total(self):
+    def total(self) -> int:
         return self._total
 
-    def sample(self, count=1):
+    def sample(self, count=1) -> int:
         """Generate samples from the distribution."""
 
         if count == 1:
@@ -63,11 +63,11 @@ class AliasedDistribution:
         return i
 
 
-def load_pyramid_csv(file: Path, quiet=False):
+def load_pyramid_csv(file: Path, quiet=False) -> np.ndarray:
     """Load a CSV file with population pyramid data."""
 
     if not quiet:
-        print(f"Reading data from '{file}' ...")
+        print(f"Reading population pyramid data from '{file}' ...")
     # Expected file schema:
     # "Age,M,F"
     # "low-high,#males,#females"

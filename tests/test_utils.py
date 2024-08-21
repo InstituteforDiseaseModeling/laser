@@ -8,10 +8,13 @@ import pytest
 
 from idmlaser.utils import PriorityQueuePy
 from idmlaser.utils import PropertySet
+from idmlaser.utils import Queue
 from idmlaser.utils import daily_births_deaths_from_annual
 from idmlaser.utils import pop_from_cbr_and_mortality
 from idmlaser.utils import predicted_day_of_death
 from idmlaser.utils import predicted_year_of_death
+
+messages = []
 
 
 class TestPopFromCbrAndMortality(unittest.TestCase):
@@ -436,6 +439,16 @@ class TestPropertySet(unittest.TestCase):
         gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
         assert repr(gb) == f"PropertySet({ {'a': 1, 'b': 2, 'c': 3, 'd': 4}!s})"
 
+    def test_contains(self):
+        """Test the __contains__ method of the PropertySet class."""
+        # assert that the __contains__ method returns the expected results
+        gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        assert "a" in gb
+        assert "b" in gb
+        assert "c" in gb
+        assert "d" in gb
+        assert "e" not in gb
+
 
 class TestPriorityQueuePy(unittest.TestCase):
     """Tests for the PriorityQueuePy class."""
@@ -527,11 +540,9 @@ class TestPriorityQueuePy(unittest.TestCase):
         values = np.random.randint(0, 100, count, dtype=np.int32)
         self.pq = PriorityQueuePy(len(values), values)
         elapsed = timeit.timeit("for i in range(len(values)): self.pq.push(i)", globals={"values": values, "self": self}, number=1)
-        print(
-            f"\n PriorityQueuePy.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        messages.append(
+            f"PriorityQueuePy.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
-
-        # print(timeit.timeit("self.pq.popv()", globals=globals(), number=1024))
 
     def test_pop_timing(self):
         """Test the timing of the pop method."""
@@ -545,8 +556,8 @@ class TestPriorityQueuePy(unittest.TestCase):
             self.pq.push(i)
 
         elapsed = timeit.timeit("while len(self.pq): self.pq.popv()", globals={"self": self}, number=1)
-        print(
-            f"\n PriorityQueuePy.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        messages.append(
+            f"PriorityQueuePy.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
 
@@ -566,11 +577,9 @@ class TestPythonHeapQ(unittest.TestCase):
             globals={"values": values, "heap": heap, "heapq": heapq},
             number=1,
         )
-        print(
-            f"\n heapq.heappush() timing:       {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        messages.append(
+            f"heapq.heappush() timing:       {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
-
-        # print(timeit.timeit("self.pq.popv()", globals=globals(), number=1024))
 
     def test_pop_timing(self):
         """Test the timing of the pop method."""
@@ -584,10 +593,147 @@ class TestPythonHeapQ(unittest.TestCase):
             heapq.heappush(heap, i)
 
         elapsed = timeit.timeit("while len(heap): heapq.heappop(heap)", globals={"heap": heap, "heapq": heapq}, number=1)
-        print(
-            f"\n heapq.heappop() timing:        {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        messages.append(
+            f"heapq.heappop() timing:        {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        )
+
+
+class TestQueueImpl(unittest.TestCase):
+    """Tests for the Queue class."""
+
+    def test_queue123_exact(self):
+        """Test the Queue class."""
+        q = Queue(3)
+        assert len(q) == 0
+        q.push(1)
+        q.push(2)
+        q.push(3)
+        assert len(q) == 3
+        assert q.pop() == 1
+        assert q.pop() == 2
+        assert q.pop() == 3
+        assert len(q) == 0
+
+        return
+
+    def test_queue123_partial(self):
+        """Test the Queue class."""
+        q = Queue(32)
+        assert len(q) == 0
+        q.push(1)
+        q.push(2)
+        q.push(3)
+        assert len(q) == 3
+        assert q.pop() == 1
+        assert q.pop() == 2
+        assert q.pop() == 3
+        assert len(q) == 0
+
+        return
+
+    def test_queue_random(self):
+        """Test the Queue class with random values."""
+        count = 16
+        q = Queue(count)
+        values = np.random.randint(0, 100, count)
+        for value in values:
+            q.push(value)
+        assert len(q) == count
+        check = [q.pop() for _ in range(count)]
+        assert check == values.tolist()
+
+        return
+
+    def test_queue_peek(self):
+        """Test the Queue class with peek method."""
+        q = Queue(32)
+        assert len(q) == 0
+        q.push(1)
+        q.push(2)
+        q.push(3)
+        assert len(q) == 3
+        assert q.peek() == 1
+        assert q.pop() == 1
+        assert q.peek() == 2
+        assert q.pop() == 2
+        assert q.peek() == 3
+        assert q.pop() == 3
+        assert len(q) == 0
+
+        return
+
+    def test_queue_empty(self):
+        """Test the Queue class with empty queue."""
+        q = Queue(32)
+        assert len(q) == 0
+        with pytest.raises(IndexError):
+            q.pop()
+
+        return
+
+    def test_queue_full(self):
+        """Test the Queue class with full queue."""
+        q = Queue(3)
+        q.push(1)
+        q.push(2)
+        q.push(3)
+        assert len(q) == 3
+        with pytest.raises(IndexError):
+            q.push(4)
+
+        return
+
+    def test_queue_rollover(self):
+        capacity = 127
+        count = 16
+        q = Queue(capacity)
+        values = np.random.randint(0, 100, count)
+        for _rep in range(100):
+            for value in values:
+                q.push(value)
+            check = [q.pop() for _ in range(count)]
+            assert check == values.tolist()
+        assert len(q) == 0
+
+        return
+
+    def test_push_timing(self):
+        """Test the timing of the push method."""
+        import timeit
+
+        np.random.seed(20240701)
+        count = 1 << 20
+        values = np.random.randint(0, 100, count, dtype=np.int32)
+        q = Queue(count)
+        elapsed = timeit.timeit(
+            "for i in range(len(values)): q.push(values[i])",
+            globals={"values": values, "q": q},
+            number=1,
+        )
+        messages.append(
+            f"q.push() timing:               {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
+        )
+
+        return
+
+    def test_pop_timing(self):
+        """Test the timing of the pop method."""
+        import timeit
+
+        np.random.seed(20240701)
+        count = 1 << 20
+        values = np.random.randint(0, 100, count, dtype=np.int32)
+        q = Queue(count)
+        for i in range(len(values)):
+            q.push(i)
+
+        elapsed = timeit.timeit("for i in range(count): q.pop()", globals={"count": count, "q": q}, number=1)
+        messages.append(
+            f"q.pop() timing:                {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(exit=False)
+    for message in messages:
+        print(message)

@@ -272,6 +272,9 @@ class PropertySet:
     def __repr__(self) -> str:
         return f"PropertySet({self.__dict__!s})"
 
+    def __contains__(self, key):
+        return key in self.__dict__
+
 
 class PriorityQueuePy:
     """
@@ -397,3 +400,40 @@ def _siftup(indices, values, pos, size):
 # |PriorityQueuePy|1,865,557|  934,897|
 # |PythonHeapQ    |5,581,031|3,202,212|
 # """
+
+
+class Queue:
+    """Circular buffer queue for indices with push/pop operations."""
+
+    def __init__(self, capacity: int, dtype=np.uint32):
+        self.capacity = capacity
+        self.indices = np.zeros(capacity, dtype=dtype)
+        self.size = 0
+        self.head = 0
+        self.tail = 0
+
+    def push(self, index: np.uint32) -> None:
+        if self.size == self.capacity:
+            raise IndexError("Queue is full")
+        self.indices[self.tail] = index
+        self.tail = (self.tail + 1) % self.capacity
+        self.size += 1
+
+        return
+
+    def peek(self) -> np.uint32:
+        if self.size == 0:
+            raise IndexError("Queue is empty")
+        return self.indices[self.head]
+
+    def pop(self) -> np.uint32:
+        if self.size == 0:
+            raise IndexError("Queue is empty")
+        index = self.indices[self.head]
+        self.head = (self.head + 1) % self.capacity
+        self.size -= 1
+
+        return index
+
+    def __len__(self):
+        return self.size
