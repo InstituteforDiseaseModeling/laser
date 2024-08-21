@@ -1,6 +1,9 @@
 import numpy as np
 import numba as nb
+import ctypes
 import pdb
+
+use_nb = True
 
 # ## Transmission Part I - Setup
 # 
@@ -41,6 +44,43 @@ def init( model ):
         locations[i, 0] = latitude
         locations[i, 1] = longitude
     locations = np.radians(locations)
+
+    try:
+        # Load the shared library
+        lib = ctypes.CDLL('./libtx.so')
+
+        # Define the function argument types
+        lib.tx_inner.argtypes = [
+            ctypes.POINTER(ctypes.c_uint8),  # susceptibilities
+            ctypes.POINTER(ctypes.c_uint16), # nodeids
+            ctypes.POINTER(ctypes.c_float),  # forces
+            ctypes.POINTER(ctypes.c_uint8),  # etimers
+            ctypes.c_uint32,                 # count
+            ctypes.c_float,                  # exp_mean
+            ctypes.c_float,                  # exp_std
+            ctypes.POINTER(ctypes.c_uint32)  # incidence
+        ]
+        use_nb = False
+    except Exception as ex:
+        print( "Failed to load libtx.so. Using numba." )
+
+def tx_inner_c(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, incidence):
+# Call the function
+    lib.tx_inner(
+        susceptibilities.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+        nodeids.ctypes.data_as(ctypes.POINTER(ctypes.c_uint16)),
+        forces.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        etimers.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+        count,
+        ctypes.c_float(exp_mean),
+        ctypes.c_float(exp_std),
+        incidence.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32))
+    )
+
+    # Check results
+    #print("Incidence:", incidence)
+    return
+
 
 # TODO: Consider keeping the distances and periodically recalculating the network values as the populations change
     a = model.params.a
@@ -86,7 +126,7 @@ def init( model ):
     nogil=True,
     cache=True,
 )
-def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, incidence):
+def tx_inner_nb(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, incidence):
     for i in nb.prange(count):
         susceptibility = susceptibilities[i]
         if susceptibility > 0:
@@ -125,17 +165,27 @@ def do_transmission_update(model, tick) -> None:
     np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection
     # we haven't multiplied by susceptibility fraction yet?
 
-    tx_inner(
-        population.susceptibility,
-        population.nodeid,
-        forces,
-        population.etimer,
-        population.count,
-        model.params.exp_mean,
-        model.params.exp_std,
-        model.nodes.incidence[:, tick],
-    )
-
+    if use_nb:
+        tx_inner_nb(
+            population.susceptibility,
+            population.nodeid,
+            forces,
+            population.etimer,
+            population.count,
+            model.params.exp_mean,
+            model.params.exp_std,
+            model.nodes.incidence[:, tick],
+        )
+    else:
+        tx_inner_c(
+            population.susceptibility,
+            population.nodeid,
+            forces,
+            population.etimer,
+            population.count,
+            model.params.exp_mean,
+            model.params.exp_std,
+            model.nodes.incidence[:, tick],
+        )
     return
-
 
