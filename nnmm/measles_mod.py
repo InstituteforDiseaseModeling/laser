@@ -169,10 +169,8 @@ ages.init( model )
 # In[24]:
 
 
-import pdb
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
-    ages.update_ages, # type: ignore
     propagate_population,
     fertility.do_births, # type: ignore
     mortality.do_non_disease_deaths, # type: ignore
@@ -182,6 +180,8 @@ model.phases = [
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
     sia.do_interventions, # type: ignore
+    # update_ages is also "census report". It's last for a reason
+    ages.update_ages, # type: ignore
 ]
 
 
@@ -192,13 +192,14 @@ model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     metrics = [tick]
     for phase in model.phases:
+        #print( f"Executing phase {phase.__name__}." )
         tstart = datetime.now(tz=None)  # noqa: DTZ005
         phase(model, tick)
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
-    # age_and_report should go last so we can use tick but for some reason it won't fire when put later.
-    if tick>0 and sum(model.nodes.I[tick-1]) == 0 and sum(model.nodes.E[tick-1]) == 0:
+    #print( f"Prevalence = {sum(model.nodes.I[tick])/sum(model.nodes.population[:,tick])}" )
+    if sum(model.nodes.I[tick]) == 0 and sum(model.nodes.E[tick]) == 0:
         print( f"WARNING: Elimination achieved at t={tick}. Reimporting." )
         init_prev.init(model) 
     model.metrics.append(metrics)
