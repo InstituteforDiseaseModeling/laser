@@ -73,18 +73,18 @@ void update_ages_simd(unsigned long int stop_idx, float *ages) {
 void update_ages_and_report(
     unsigned long int count,
     int num_nodes,
-    int *ages,
-    u_int16_t *node,
-    unsigned char *infectious_timer,
-    unsigned char *incubation_timer,
-    bool *susceptibility,
-    int *age,
-    int *dod,
+    int32_t *age,
+    uint16_t *node,
+    unsigned char *infectious_timer, // max 255
+    unsigned char *incubation_timer, // max 255
+    bool *susceptibility, // yes or no
+    unsigned char *susceptibility_timer, // max 255
+    int *dod, // sim day
     uint32_t *susceptible_count,
     uint32_t *incubating_count,
     uint32_t *infectious_count,
-    uint32_t *recovered_count,
-    uint32_t *dead_count
+    uint32_t *waning_count,
+    uint32_t *recovered_count 
 ) {
     //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
     #pragma omp parallel
@@ -94,51 +94,57 @@ void update_ages_and_report(
         int *local_incubating_count = (int*) calloc(num_nodes, sizeof(int));
         int *local_recovered_count = (int*) calloc(num_nodes, sizeof(int));
         int *local_susceptible_count = (int*) calloc(num_nodes, sizeof(int));
-        int *local_dead_count = (int*) calloc(num_nodes, sizeof(int));
+        int *local_waning_count = (int*) calloc(num_nodes, sizeof(int));
 
         #pragma omp for
         for (size_t i = 0; i <= count; i++) {
             // Update ages
-            if (ages[i] >= 0) {
-                ages[i]++;
+            if (age[i] >= 0) {
+                age[i]++;
             }
 
-            // Collect report
-            if (node[i] >= 0 ) {
+            // Collect report 
+            if (dod[i]>0) {
                 int node_id = node[i];
-                //printf( "node_id=%d.\n", node_id );
-                if (dod[i]==0) {
-                    local_dead_count[node_id]++;
-                } else if (incubation_timer[i] > 0) {
+                //printf( "Found live person at node %d: etimer=%d, itimer=%d, sus=%d.\n", node_id, incubation_timer[i], infectious_timer[i], susceptibility[i] );
+                if (incubation_timer[i] > 0) {
+                    //printf( "Found E in node %d.\n", node_id );
                     local_incubating_count[node_id]++;
-                } else if (infectious_timer[i]) {
+                } else if (infectious_timer[i] > 0) {
+                    //printf( "Found I in node %d.\n", node_id );
                     local_infectious_count[node_id]++;
                 } else if (susceptibility[i]==0) {
-                    local_recovered_count[node_id]++;
+                    //printf( "Found R in node %d.\n", node_id );
+                    if (susceptibility_timer[i]>0) {
+                        local_waning_count[node_id]++;
+                    } else {
+                        local_recovered_count[node_id]++;
+                    }
                 } else {
+                    //printf( "Found S in node %d.\n", node_id );
                     local_susceptible_count[node_id]++;
                 }
             }
         }
 
         // Combine local counts into global counts
-        #pragma omp critical
+#pragma omp critical
         {
             for (int j = 0; j < num_nodes; ++j) {
-                infectious_count[j] += local_infectious_count[j];
+                susceptible_count[j] += local_susceptible_count[j]; 
                 incubating_count[j] += local_incubating_count[j];
+                infectious_count[j] += local_infectious_count[j];
+                waning_count[j] += local_waning_count[j];
                 recovered_count[j] += local_recovered_count[j];
-                susceptible_count[j] += local_susceptible_count[j];
-                dead_count[j] += local_dead_count[j];
             }
         }
 
         // Free local buffers
-        free(local_infectious_count);
-        free(local_incubating_count);
-        free(local_recovered_count);
         free(local_susceptible_count);
-        free(local_dead_count);
+        free(local_incubating_count);
+        free(local_infectious_count);
+        free(local_waning_count);
+        free(local_recovered_count);
     }
 }
 

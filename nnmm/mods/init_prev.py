@@ -16,22 +16,29 @@ import numba as nb
 
 # initial_infections = np.random.randint(0, 11, model.nodes.count, dtype=np.uint32)
 
-@nb.njit((nb.uint32, nb.uint32[:], nb.uint16[:], nb.uint8[:], nb.float32, nb.float32), parallel=True)
-def initialize_infections(count, infections, nodeid, itimer, inf_mean, inf_std):
+@nb.njit((nb.uint32, nb.uint32[:], nb.uint16[:], nb.uint8[:], nb.uint8[:], nb.uint8[:], nb.float32, nb.float32), parallel=True)
+def initialize_infections(count, infections, nodeid, itimer, etimer, susceptibility, inf_mean, inf_std):
 
     for i in nb.prange(count):
-        if infections[nodeid[i]] > 0:
-            infections[nodeid[i]] -= 1
-            itimer[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(inf_mean, inf_std)))) # must be at least 1 day
+        # Only seed susceptible uninfecteds
+        if itimer[i] == 0 and etimer[i] == 0 and susceptibility[i] == 1:
+            if infections[nodeid[i]] > 0:
+                infections[nodeid[i]] -= 1
+                itimer[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(inf_mean, inf_std)))) # must be at least 1 day
 
     return
 
 def init( model ):
+    init_pop = model.nodes.population[:,0] # should probably be 'now', not t=0
+    model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(model.params.prevalence*init_pop)))
+    #print( f"Seeding infections: {model.nodes.initial_infections}" )
     return initialize_infections(
             np.uint32(model.population.count),
             model.nodes.initial_infections,
             model.population.nodeid,
             model.population.itimer,
+            model.population.etimer,
+            model.population.susceptibility,
             model.params.inf_mean,
             model.params.inf_std
         )

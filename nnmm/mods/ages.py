@@ -28,23 +28,23 @@ try:
         np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # infectious_timer
         np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # incubation_timer
         np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # immunity
-        np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),    # age
+        np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # susceptibility_timer
         np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),    # expected_lifespan
         np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # infectious_count
         np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # incubating_count
         np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # susceptible_count
-        np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count
-        np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS')      # dead_count
+        np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # waning_count 
+        np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count 
     ]
 except Exception as ex:
     print( f"Failed to load libages.so." )
 
 def init( model ):
-    model.nodes.add_vector_property("S", model.params.ticks, dtype=np.uint32)
-    model.nodes.add_vector_property("E", model.params.ticks, dtype=np.uint32)
-    model.nodes.add_vector_property("I", model.params.ticks, dtype=np.uint32)
-    model.nodes.add_vector_property("R", model.params.ticks, dtype=np.uint32)
-    model.nodes.add_vector_property("D", model.params.ticks, dtype=np.uint32)
+    model.nodes.add_report_property("S", model.params.ticks, dtype=np.uint32)
+    model.nodes.add_report_property("E", model.params.ticks, dtype=np.uint32)
+    model.nodes.add_report_property("I", model.params.ticks, dtype=np.uint32)
+    model.nodes.add_report_property("W", model.params.ticks, dtype=np.uint32) 
+    model.nodes.add_report_property("R", model.params.ticks, dtype=np.uint32) 
 
 
 def update_ages( model, tick ):
@@ -54,11 +54,6 @@ def update_ages( model, tick ):
             model.population.age,
         )
     """
-    S = np.zeros( len( model.nodes.S), dtype=np.uint32 )
-    E = np.zeros( len( model.nodes.S), dtype=np.uint32 )
-    I = np.zeros( len( model.nodes.S), dtype=np.uint32 )
-    R = np.zeros( len( model.nodes.S), dtype=np.uint32 )
-    D = np.zeros( len( model.nodes.S), dtype=np.uint32 )
     lib.update_ages_and_report(
             ctypes.c_int64(model.population.count),
             len(model.nodes.nn_nodes),
@@ -67,17 +62,13 @@ def update_ages( model, tick ):
             model.population.itimer,
             model.population.etimer,
             model.population.susceptibility,
-            model.population.age,
+            model.population.susceptibility_timer,
             model.population.dod,
-            S,
-            E,
-            I,
-            R,
-            D
+            model.nodes.S[tick],
+            model.nodes.E[tick],
+            model.nodes.I[tick],
+            model.nodes.W[tick],
+            model.nodes.R[tick],
         )
-    model.nodes.S[:,tick]=S
-    model.nodes.E[:,tick]=E
-    model.nodes.I[:,tick]=I
-    model.nodes.R[:,tick]=R
-    model.nodes.D[:,tick]=D
+
 

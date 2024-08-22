@@ -29,10 +29,10 @@ meta_params = PropertySet({
     "ticks": int(365*10),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
-    "eula_age": 5
+    "eula_age": 5,
+    "prevalence": 0.025 # 2.5% prevalence
 })
 # parameter?
-prevalence = 0.025 # 2.5% prevalence
 
 measles_params = PropertySet({
     "exp_mean": np.float32(7.0),
@@ -42,7 +42,7 @@ measles_params = PropertySet({
     "r_naught": np.float32(14.0),
     "seasonality_factor": np.float32(0.125),
     "seasonality_phase": np.float32(182),
-    "ri_coverage": np.float32(0.75),
+    "ri_coverage": np.float32(0.25),
 })
 
 network_params = PropertySet({
@@ -120,7 +120,6 @@ model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    
 model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
 model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
 # ri coverages and init prev seem to be the same "kind of thing"?
-model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
 
 
 # ## Population per Tick
@@ -170,10 +169,11 @@ ages.init( model )
 # In[24]:
 
 
+import pdb
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
-    propagate_population,
     ages.update_ages, # type: ignore
+    propagate_population,
     fertility.do_births, # type: ignore
     mortality.do_non_disease_deaths, # type: ignore
     intrahost.do_infection_update, # type: ignore
@@ -188,7 +188,6 @@ model.phases = [
 # ## Running the Simulation
 # 
 # We iterate over the specified number of ticks, keeping track, in `metrics`, of the time spent in each phase at each tick.
-
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     metrics = [tick]
@@ -198,6 +197,10 @@ for tick in tqdm(range(model.params.ticks)):
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
+    # age_and_report should go last so we can use tick but for some reason it won't fire when put later.
+    if tick>0 and sum(model.nodes.I[tick-1]) == 0 and sum(model.nodes.E[tick-1]) == 0:
+        print( f"WARNING: Elimination achieved at t={tick}. Reimporting." )
+        init_prev.init(model) 
     model.metrics.append(metrics)
 
 
