@@ -70,3 +70,75 @@ void update_ages_simd(unsigned long int stop_idx, float *ages) {
     }
 }
 
+void update_ages_and_report(
+    unsigned long int count,
+    int num_nodes,
+    int *ages,
+    u_int16_t *node,
+    unsigned char *infectious_timer,
+    unsigned char *incubation_timer,
+    bool *susceptibility,
+    int *age,
+    int *dod,
+    uint32_t *susceptible_count,
+    uint32_t *incubating_count,
+    uint32_t *infectious_count,
+    uint32_t *recovered_count,
+    uint32_t *dead_count
+) {
+    //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
+    #pragma omp parallel
+    {
+        // Thread-local buffers
+        int *local_infectious_count = (int*) calloc(num_nodes, sizeof(int));
+        int *local_incubating_count = (int*) calloc(num_nodes, sizeof(int));
+        int *local_recovered_count = (int*) calloc(num_nodes, sizeof(int));
+        int *local_susceptible_count = (int*) calloc(num_nodes, sizeof(int));
+        int *local_dead_count = (int*) calloc(num_nodes, sizeof(int));
+
+        #pragma omp for
+        for (size_t i = 0; i <= count; i++) {
+            // Update ages
+            if (ages[i] >= 0) {
+                ages[i]++;
+            }
+
+            // Collect report
+            if (node[i] >= 0 ) {
+                int node_id = node[i];
+                //printf( "node_id=%d.\n", node_id );
+                if (dod[i]==0) {
+                    local_dead_count[node_id]++;
+                } else if (incubation_timer[i] > 0) {
+                    local_incubating_count[node_id]++;
+                } else if (infectious_timer[i]) {
+                    local_infectious_count[node_id]++;
+                } else if (susceptibility[i]==0) {
+                    local_recovered_count[node_id]++;
+                } else {
+                    local_susceptible_count[node_id]++;
+                }
+            }
+        }
+
+        // Combine local counts into global counts
+        #pragma omp critical
+        {
+            for (int j = 0; j < num_nodes; ++j) {
+                infectious_count[j] += local_infectious_count[j];
+                incubating_count[j] += local_incubating_count[j];
+                recovered_count[j] += local_recovered_count[j];
+                susceptible_count[j] += local_susceptible_count[j];
+                dead_count[j] += local_dead_count[j];
+            }
+        }
+
+        // Free local buffers
+        free(local_infectious_count);
+        free(local_incubating_count);
+        free(local_recovered_count);
+        free(local_susceptible_count);
+        free(local_dead_count);
+    }
+}
+

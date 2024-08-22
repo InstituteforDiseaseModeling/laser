@@ -161,6 +161,7 @@ from mods import sia
 sia.init( model )
 from mods import fertility
 from mods import ages
+ages.init( model )
 
 # ## Tick/Step Processing Phases
 # 

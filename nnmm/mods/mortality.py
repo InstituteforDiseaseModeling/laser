@@ -99,6 +99,8 @@ def do_non_disease_deaths(model, tick):
     while len(pq) > 0 and pq.peekv() <= tick:
         i = pq.popi()
         nodeid = model.population.nodeid[i]
+        model.population.susceptibility[i] = 0
+        model.population.dod[i] = 0 # let's use dod=0 to mean "died already", without having to check against current tick.
         model.nodes.population[nodeid,tick+1] -= 1
         model.nodes.deaths[nodeid,year] += 1
 
