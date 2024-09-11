@@ -43,6 +43,8 @@ measles_params = PropertySet({
     "seasonality_factor": np.float32(0.125),
     "seasonality_phase": np.float32(182),
     "ri_coverage": np.float32(0.75),
+    "beta_env": np.float32(0.1), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
+    "kappa": np.float32(5e5), # The concentration (number of cells per mL) of V. cholerae required for a 50% probability of infection.
 })
 
 network_params = PropertySet({
@@ -109,12 +111,24 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
 save_pops_in_nodes( model, nn_nodes, initial_populations )
 
 # Some of these are inputs and some are outputs
+# static inputs
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
+# The climatically driven environmental suitability of V. cholerae by node and time
+model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
+model.nodes.psi[:] = 0.001 # placeholder, probably load from csv
+# theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
+model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
+
+# report outputs
 model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
-model.nodes.add_scalar_property("forces", dtype=np.float32)
 model.nodes.add_vector_property("incidence", model.params.ticks, dtype=np.uint32)
 model.nodes.add_vector_property("births", (model.params.ticks + 364) // 365)    # births per year
 model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    # deaths per year
+
+# transient for calculations
+model.nodes.add_scalar_property("forces", dtype=np.float32)
+model.nodes.add_scalar_property("enviro_contagion", dtype=np.float32)
+
 # Add new property "ri_coverages", just randomly for demonstration purposes
 # Replace with values from data
 model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
