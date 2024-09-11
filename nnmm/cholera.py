@@ -26,7 +26,7 @@ nn_nodes, initial_populations = ipn.run()
 from idmlaser.utils import PropertySet
 
 meta_params = PropertySet({
-    "ticks": int(365*2),
+    "ticks": int(365*10),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
     #"eula_age": 5
@@ -148,6 +148,8 @@ def propagate_population(model, tick):
 
 from mods import age_init
 age_init.init( model )
+from mods import ages
+ages.init( model )
 
 from mods import mortality
 mortality.init( model )
@@ -193,6 +195,7 @@ model.phases = [
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
     sia.do_interventions, # type: ignore 
+    ages.update_ages
 ]
 
 

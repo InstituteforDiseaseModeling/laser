@@ -31,12 +31,39 @@ def do_exposure_update(model, tick):
 
 @nb.njit((nb.uint32, nb.uint8[:], nb.uint16[:], nb.uint8[:]), parallel=True)
 def _infection_update(count, itimer, sus_timer, susceptibility):
+        """
+    Updates infection and susceptibility timers for a population of agents.
+
+    Parameters:
+    -----------
+    count : uint32
+        The number of agents to process.
+    itimer : uint8[:]
+        An array of infection timers, where each element represents the remaining time (in days)
+        until the infection ends for a given agent. A value of 0 indicates that the agent is no longer infected.
+    sus_timer : uint16[:]
+        An array of susceptibility timers, where each element represents the time (in days) until
+        the agent becomes susceptible again after recovering from an infection.
+    susceptibility : uint8[:]
+        An array representing the susceptibility status of each agent. A value of 1 indicates that
+        the agent is susceptible to infection, while 0 indicates that the agent is not susceptible.
+
+    Behavior:
+    ---------
+    - For each infected agent (i.e., those with `itimer[i] > 0`), the infection timer (`itimer[i]`) is decremented by 1 day.
+    - If the infection timer reaches 0, the agent recovers, their susceptibility is set to 0, and their susceptibility timer (`sus_timer[i]`) is set to a random value between 3 and 6 years (1095 to 2190 days).
+    - TBD: Replace the uniform draw from 3 to 6 years with appropriate calculation.
+
+    Notes:
+    ------
+    - This function is optimized using Numba's Just-In-Time (JIT) compilation for parallel execution, which improves performance when processing large populations.
+    """
     for i in nb.prange(count):
         if itimer[i] > 0:
             itimer[i] -= 1
             if itimer[i] <= 0:
                 susceptibility = 0
-                sus_timer[i] = 1*365
+                sus_timer[i] = np.random.randint(3*365, 6*365)
 
     return
 

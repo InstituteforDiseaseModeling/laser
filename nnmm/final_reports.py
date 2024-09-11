@@ -1,11 +1,31 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py
+
+def save_seird( model ):
+    # Assuming the arrays are numpy arrays with shape (3651, 420)
+    arrays = {
+        'S': model.nodes.S,
+        'E': model.nodes.E,
+        'I': model.nodes.I,
+        'W': model.nodes.W,
+        'R': model.nodes.R
+    }
+
+    # Save the arrays to an HDF5 file
+    with h5py.File('node_arrays.h5', 'w') as hf:
+        for name, array in arrays.items():
+            hf.create_dataset(name, data=array)
+
+    print("Arrays saved successfully.")
+
 
 def report( model, initial_populations ):
     metrics = pd.DataFrame(model.metrics, columns=["tick"] + [phase.__name__ for phase in model.phases])
     metrics.head()
 
+    save_seird( model )
 
 # ## Timing Metrics Part II
 # 

@@ -20,15 +20,17 @@ import numba as nb
 
 
 # initialize susceptibility based on age
-@nb.njit((nb.uint32, nb.int32[:], nb.uint8[:]), parallel=True)
-def initialize_susceptibility(count, dob, susceptibility):
+@nb.njit((nb.uint32, nb.int32[:], nb.uint8[:], nb.uint16[:]), parallel=True)
+def initialize_susceptibility(count, dob, susceptibility, susceptibility_timer):
 
     # If EULA=5, this is everyone. Anybody younger than 5 is susceptible
     for i in nb.prange(count):
-        if dob[i] >= -365*5:
-            susceptibility[i] = 1
+        susceptibility[i] = 1
+        # Initialize everyone's immunity timer uniformly from 0 to 10 years
+        # TBD: Replace this with correct formula
+        susceptibility_timer[i] = np.random.randint(0, 3651)
 
     return
 
 def init( model ):
-    return initialize_susceptibility( model.population.count, model.population.dob, model.population.susceptibility )
+    return initialize_susceptibility( model.population.count, model.population.dob, model.population.susceptibility, model.population.susceptibility_timer )

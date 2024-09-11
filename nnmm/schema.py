@@ -2,6 +2,7 @@ import numpy as np
 
 schema = {
     "nodeid": np.uint16,
+    "age": np.int32,
     "dob": np.int32,
     "dod": np.int32,
     "susceptibility": np.uint8,
