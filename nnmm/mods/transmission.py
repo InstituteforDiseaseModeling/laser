@@ -139,12 +139,14 @@ def do_transmission_update(model, tick) -> None:
     # This reduces the amount of environmental contagion each timestep
     # HARDCODE FOR NOW
     nodes.enviro_contagion *= (1 - 0.5)
-    
+
     # Add newly shed contagion to the environmental contagion
     # This accumulates the current infections into the environmental contagion
     # (Assuming `contagion` represents newly shed contagion at each node)
     # TBD: Use zeta to calculate environmentally shed contagion vs contact shed contagion
     nodes.enviro_contagion += contagion
+
+    nodes.enviro_contagion *= 1-model.nodes.WASH_fraction
     
     # Calculate the effective environmental transmission rate for all nodes at the current timestep
     beta_env_effective = get_enviro_beta_from_psi(model.params.beta_env, model.nodes.psi[:, tick])
@@ -155,17 +157,17 @@ def do_transmission_update(model, tick) -> None:
     
     # Normalize the environmental forces by dividing by the population at each node
     # This scales the environmental forces to be a probability per individual
-    forces_environmental /= model.nodes.population[:, tick]
+    #forces_environmental /= model.nodes.population[:, tick]
     
     # Combine the contact transmission forces with the environmental transmission forces
     # `forces` are the contact transmission forces calculated elsewhere
     # `forces_environmental` are the environmental transmission forces computed in this section
-    total_forces = forces + forces_environmental
+    total_forces = (forces + forces_environmental).astype(np.float32)
 
     tx_inner(
         population.susceptibility,
         population.nodeid,
-        forces,
+        total_forces,
         population.etimer,
         population.count,
         model.params.exp_mean,

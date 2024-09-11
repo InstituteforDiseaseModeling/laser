@@ -754,9 +754,9 @@ for tick in tqdm(range(model.params.ticks)):
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
         delta = tfinish - tstart
         metrics.append(delta.seconds * 1_000_000 + delta.microseconds)  # delta is a timedelta object, let's convert it to microseconds
-        #if tick == 1824: # 365*5:
-            #model.population.save(filename="pop_5yrs.hd5", tail_number=total_births)
-            #model.population.save_npz(filename="pop_5yrs.npz", tail_number=total_births)
+    #if tick == 1824: # 365*5:
+        #model.population.save(filename="pop_5yrs.hd5", tail_number=total_births)
+        #model.population.save_npz(filename="pop_5yrs.npz", tail_number=total_births)
     model.metrics.append(metrics)
 
 

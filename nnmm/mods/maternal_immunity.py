@@ -13,7 +13,7 @@ def init( model, istart, iend ):
     model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months
 
 # Define the function to decrement susceptibility_timer and update susceptibility
-@nb.njit((nb.uint32, nb.uint8[:], nb.uint8[:]), parallel=True)
+@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:]), parallel=True)
 def _update_susceptibility_based_on_sus_timer_nb(count, susceptibility_timer, susceptibility):
     for i in nb.prange(count):
         if susceptibility_timer[i] > 0:

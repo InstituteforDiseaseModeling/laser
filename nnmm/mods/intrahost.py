@@ -29,17 +29,20 @@ def do_exposure_update(model, tick):
     return
 
 
-@nb.njit((nb.uint32, nb.uint8[:]), parallel=True)
-def _infection_update(count, itimers):
+@nb.njit((nb.uint32, nb.uint8[:], nb.uint16[:], nb.uint8[:]), parallel=True)
+def _infection_update(count, itimer, sus_timer, susceptibility):
     for i in nb.prange(count):
-        if itimers[i] > 0:
-            itimers[i] -= 1
+        if itimer[i] > 0:
+            itimer[i] -= 1
+            if itimer[i] <= 0:
+                susceptibility = 0
+                sus_timer[i] = 1*365
 
     return
 
 def do_infection_update(model, tick):
 
-    _infection_update(nb.uint32(model.population.count), model.population.itimer)
+    _infection_update(nb.uint32(model.population.count), model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility)
 
     return
 

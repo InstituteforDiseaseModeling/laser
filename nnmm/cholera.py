@@ -26,24 +26,24 @@ nn_nodes, initial_populations = ipn.run()
 from idmlaser.utils import PropertySet
 
 meta_params = PropertySet({
-    "ticks": int(365*10),
+    "ticks": int(365*2),
     "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
-    "eula_age": 5
+    #"eula_age": 5
 })
 # parameter?
 prevalence = 0.025 # 2.5% prevalence
 
 measles_params = PropertySet({
-    "exp_mean": np.float32(7.0),
+    "exp_mean": np.float32(2.0),
     "exp_std": np.float32(1.0),
-    "inf_mean": np.float32(7.0),
-    "inf_std": np.float32(1.0),
+    "inf_mean": np.float32(6.0),
+    "inf_std": np.float32(2.0),
     "r_naught": np.float32(14.0),
     "seasonality_factor": np.float32(0.125),
     "seasonality_phase": np.float32(182),
     "ri_coverage": np.float32(0.75),
-    "beta_env": np.float32(0.1), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
+    "beta_env": np.float32(1.0), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
     "kappa": np.float32(5e5), # The concentration (number of cells per mL) of V. cholerae required for a 50% probability of infection.
 })
 

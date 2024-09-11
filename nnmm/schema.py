@@ -8,7 +8,7 @@ schema = {
     "ri_timer": np.uint16,
     "etimer": np.uint8,
     "itimer": np.uint8,
-    "susceptibility_timer": np.uint8,
+    "susceptibility_timer": np.uint16,
     "accessibility": np.uint8
 }
 

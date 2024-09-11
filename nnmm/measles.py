@@ -1,15 +1,3 @@
-commit 2ce4764876daa91d69b2212c02d1bec3b5b8ec7e
-Author: Christopher Lorton <christopher.lorton@gatesfoundation.org>
-Date:   Fri Aug 2 15:45:04 2024 -0700
-
-    Add plain script of FUSION code.
-
-diff --git a/nnmm/measles.py b/nnmm/measles.py
-new file mode 100644
-index 0000000..3ec43ae
---- /dev/null
-++ b/nnmm/measles.py
-@@ -0,0 +1,1194 @@
 #!/usr/bin/env python
 # coding: utf-8
 
