@@ -39,13 +39,15 @@ measles_params = PropertySet({
     "exp_std": np.float32(1.0),
     "inf_mean": np.float32(6.0),
     "inf_std": np.float32(2.0),
-    "r_naught": np.float32(14.0),
+    #"r_naught": np.float32(14.0),
+    "r_naught": np.float32(7.0),
     "seasonality_factor": np.float32(0.125),
     "seasonality_phase": np.float32(182),
     "ri_coverage": np.float32(0.75),
     "beta_env": np.float32(1.0), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
     "kappa": np.float32(5e5), # The concentration (number of cells per mL) of V. cholerae required for a 50% probability of infection.
-    "zeta": np.float32(0.1), # Rate that infected individuals shed V. cholerae into the environment.
+    "zeta": np.float32(1.0), # Rate that infected individuals shed V. cholerae into the environment.
+    "enviro_base_decay_rate": np.float32(0.25)
 })
 
 network_params = PropertySet({

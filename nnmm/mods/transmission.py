@@ -138,7 +138,7 @@ def do_transmission_update(model, tick) -> None:
     # Decay existing contagion by applying decay rate derived from psi for this node and timestep (TBD)
     # This reduces the amount of environmental contagion each timestep
     # HARDCODE FOR NOW
-    nodes.enviro_contagion *= (1 - 0.5)
+    nodes.enviro_contagion *= (1 - model.params.enviro_base_decay_rate)
 
     # Add newly shed contagion to the environmental contagion
     # This accumulates the current infections into the environmental contagion
