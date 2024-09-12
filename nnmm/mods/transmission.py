@@ -137,13 +137,12 @@ def do_transmission_update(model, tick) -> None:
     
     # Decay existing contagion by applying decay rate derived from psi for this node and timestep (TBD)
     # This reduces the amount of environmental contagion each timestep
-    # HARDCODE FOR NOW
     nodes.enviro_contagion *= (1 - model.params.enviro_base_decay_rate)
 
     # Add newly shed contagion to the environmental contagion
     # This accumulates the current infections into the environmental contagion
     # (Assuming `contagion` represents newly shed contagion at each node)
-    # TBD: Use zeta to calculate environmentally shed contagion vs contact shed contagion
+    # Use zeta to calculate environmentally shed contagion vs contact shed contagion
     nodes.enviro_contagion += contagion * model.params.zeta
 
     nodes.enviro_contagion *= 1-model.nodes.WASH_fraction
