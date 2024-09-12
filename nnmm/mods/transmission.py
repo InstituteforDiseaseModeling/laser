@@ -112,6 +112,51 @@ def get_enviro_beta_from_psi( beta_env0, psi ):
     beta_env = beta_env0 * (1 + (psi - psi_avg[-1]) / psi_avg[-1])
     return beta_env 
 
+@nb.njit(
+    nb.float64[:](
+        nb.uint32[:],
+        nb.float32[:],
+        nb.float32[:],
+        nb.float32[:],
+        nb.float32,
+        nb.float32,
+        nb.float32,
+        nb.float32
+    ),
+    parallel=True, nogil=True, cache=True
+)
+def get_enviro_foi(
+    new_contagion,
+    enviro_contagion, 
+    WASH_fraction, 
+    psi, 
+    enviro_base_decay_rate, 
+    zeta, 
+    beta_env, 
+    kappa
+):
+    num_nodes = enviro_contagion.shape[0]
+    forces_environmental = np.zeros(num_nodes)
+    psi_mean = np.mean(psi)
+    
+    for i in nb.prange(num_nodes):
+        # Decay the environmental contagion by the base decay rate
+        enviro_contagion[i] *= (1 - enviro_base_decay_rate)
+        
+        # Add newly shed contagion to the environmental contagion, adjusted by zeta
+        enviro_contagion[i] += new_contagion[i] * zeta
+        
+        # Apply WASH fraction to reduce environmental contagion
+        enviro_contagion[i] *= (1 - WASH_fraction[i])
+        
+        # Calculate beta_env_effective using psi
+        beta_env_effective = beta_env * (1 + (psi[i] - psi_mean) / psi_mean)
+        
+        # Calculate the environmental transmission forces
+        forces_environmental[i] = beta_env_effective * (enviro_contagion[i] / (kappa + enviro_contagion[i]))
+   
+    return forces_environmental
+
 def do_transmission_update(model, tick) -> None:
 
     nodes = model.nodes
@@ -128,40 +173,29 @@ def do_transmission_update(model, tick) -> None:
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
 
     forces = nodes.forces
-    # TBD: We're going to combine contact tx with enviro tx
+    # Compute the effective beta considering seasonality
     beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+    
+    # Update forces based on contagion and beta_effective
     np.multiply(contagion, beta_effective, out=forces)
     np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
 
-    # Environmental transmission
-    
-    # Decay existing contagion by applying decay rate derived from psi for this node and timestep (TBD)
-    # This reduces the amount of environmental contagion each timestep
-    nodes.enviro_contagion *= (1 - model.params.enviro_base_decay_rate)
+    forces_environmental = get_enviro_foi(
+        new_contagion=contagion,
+        enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
+        WASH_fraction=model.nodes.WASH_fraction,    # WASH fraction at each node
+        psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
+        enviro_base_decay_rate=model.params.enviro_base_decay_rate,  # Decay rate
+        zeta=model.params.zeta,             # Shedding multiplier
+        beta_env=model.params.beta_env,     # Base environmental transmission rate
+        kappa=model.params.kappa            # Environmental scaling factor
+    )
 
-    # Add newly shed contagion to the environmental contagion
-    # This accumulates the current infections into the environmental contagion
-    # (Assuming `contagion` represents newly shed contagion at each node)
-    # Use zeta to calculate environmentally shed contagion vs contact shed contagion
-    nodes.enviro_contagion += contagion * model.params.zeta
-
-    nodes.enviro_contagion *= 1-model.nodes.WASH_fraction
-    
-    # Calculate the effective environmental transmission rate for all nodes at the current timestep
-    beta_env_effective = get_enviro_beta_from_psi(model.params.beta_env, model.nodes.psi[:, tick])
-    
-    # Compute the environmental transmission force for each node
-    # This is based on the formula provided, where environmental contagion is divided by the sum of kappa and the environmental contagion
-    forces_environmental = beta_env_effective * (nodes.enviro_contagion / (model.params.kappa + nodes.enviro_contagion))
-    
-    # Normalize the environmental forces by dividing by the population at each node
-    # This scales the environmental forces to be a probability per individual
-    #forces_environmental /= model.nodes.population[:, tick]
-    
     # Combine the contact transmission forces with the environmental transmission forces
     # `forces` are the contact transmission forces calculated elsewhere
     # `forces_environmental` are the environmental transmission forces computed in this section
     total_forces = (forces + forces_environmental).astype(np.float32)
+    #total_forces = (forces_environmental).astype(np.float32) # enviro only
 
     tx_inner(
         population.susceptibility,
@@ -176,4 +210,6 @@ def do_transmission_update(model, tick) -> None:
 
     return
 
+
+    return forces_environmental
 
