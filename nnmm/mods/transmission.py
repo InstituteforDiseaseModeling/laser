@@ -144,7 +144,7 @@ def do_transmission_update(model, tick) -> None:
     # This accumulates the current infections into the environmental contagion
     # (Assuming `contagion` represents newly shed contagion at each node)
     # TBD: Use zeta to calculate environmentally shed contagion vs contact shed contagion
-    nodes.enviro_contagion += contagion
+    nodes.enviro_contagion += contagion * model.params.zeta
 
     nodes.enviro_contagion *= 1-model.nodes.WASH_fraction
     

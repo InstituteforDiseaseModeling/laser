@@ -84,6 +84,12 @@ class Population:
         setattr(self, name, np.full((self._capacity, length), default, dtype=dtype))
         return
 
+    def add_report_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
+        """Add a vector property to the class"""
+        # initialize the property to a NumPy array with of size self._count, dtype, and default value
+        setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        return
+
     # Add scalar properties to model.population
     def add_properties_from_schema( self, schema ):
         for name, dtype in schema.items():

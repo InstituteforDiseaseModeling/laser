@@ -31,7 +31,7 @@ def do_exposure_update(model, tick):
 
 @nb.njit((nb.uint32, nb.uint8[:], nb.uint16[:], nb.uint8[:]), parallel=True)
 def _infection_update(count, itimer, sus_timer, susceptibility):
-        """
+    """
     Updates infection and susceptibility timers for a population of agents.
 
     Parameters:
