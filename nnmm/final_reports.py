@@ -25,6 +25,9 @@ def report( model, initial_populations ):
     metrics = pd.DataFrame(model.metrics, columns=["tick"] + [phase.__name__ for phase in model.phases])
     metrics.head()
 
+    # Save the metrics DataFrame as a CSV file
+    metrics.to_csv('metrics.csv', index=False)
+
     save_seird( model )
 
 # ## Timing Metrics Part II

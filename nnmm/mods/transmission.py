@@ -1,6 +1,9 @@
 import numpy as np
 import numba as nb
+import ctypes
 import pdb
+
+use_nb = True
 
 # ## Transmission Part I - Setup
 # 
@@ -63,6 +66,27 @@ def init( model ):
             network[row] *= max_frac / maximum
 
     print(f"Upper left corner of network looks like this (after limiting to max_frac):\n{network[:4,:4]}")
+
+    try:
+        lib = ctypes.CDLL('./libtx.so')
+
+        # Define the argument types for the C function
+        lib.tx_inner.argtypes = [
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
+            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # nodeids
+            np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'), # forces
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # itimers
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # etimers
+            ctypes.c_uint32,                                                        # count
+            ctypes.c_float,                                                           # exp_mean
+            ctypes.c_float,                                                           # exp_std
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # incidence,
+            ctypes.c_uint32,                                                        # num_nodes
+        ]
+        use_nb = False
+    except Exception as ex:
+        print( "Failed to load libtx.so. Will use numba." )
+    return
 
 
 # ## Transmission Part II - Tick/Step Processing Phase
@@ -145,10 +169,10 @@ def get_enviro_foi(
         
         # Add newly shed contagion to the environmental contagion, adjusted by zeta
         enviro_contagion[i] += new_contagion[i] * zeta
-        
+
         # Apply WASH fraction to reduce environmental contagion
         enviro_contagion[i] *= (1 - WASH_fraction[i])
-        
+
         # Calculate beta_env_effective using psi
         beta_env_effective = beta_env * (1 + (psi[i] - psi_mean) / psi_mean)
         
@@ -172,44 +196,56 @@ def do_transmission_update(model, tick) -> None:
     contagion += transfer.sum(axis=1)   # increment by incoming "migration"
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
 
-    forces = nodes.forces
-    # Compute the effective beta considering seasonality
-    beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
-    
-    # Update forces based on contagion and beta_effective
-    np.multiply(contagion, beta_effective, out=forces)
-    np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
+    if True: # contact tx
+        # Compute the effective beta considering seasonality
+        beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
 
-    forces_environmental = get_enviro_foi(
-        new_contagion=contagion,
-        enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
-        WASH_fraction=model.nodes.WASH_fraction,    # WASH fraction at each node
-        psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
-        enviro_base_decay_rate=model.params.enviro_base_decay_rate,  # Decay rate
-        zeta=model.params.zeta,             # Shedding multiplier
-        beta_env=model.params.beta_env,     # Base environmental transmission rate
-        kappa=model.params.kappa            # Environmental scaling factor
-    )
+        # Update forces based on contagion and beta_effective
+        forces = nodes.forces
+        np.multiply(contagion, beta_effective, out=forces)
+        np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
+
+    if True:
+        forces_environmental = get_enviro_foi(
+            new_contagion=contagion,
+            enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
+            WASH_fraction=model.nodes.WASH_fraction,    # WASH fraction at each node
+            psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
+            enviro_base_decay_rate=model.params.enviro_base_decay_rate,  # Decay rate
+            zeta=model.params.zeta,             # Shedding multiplier
+            beta_env=model.params.beta_env,     # Base environmental transmission rate
+            kappa=model.params.kappa            # Environmental scaling factor
+        )
 
     # Combine the contact transmission forces with the environmental transmission forces
     # `forces` are the contact transmission forces calculated elsewhere
     # `forces_environmental` are the environmental transmission forces computed in this section
     total_forces = (forces + forces_environmental).astype(np.float32)
     #total_forces = (forces_environmental).astype(np.float32) # enviro only
+    #total_forces = forces
 
-    tx_inner(
-        population.susceptibility,
-        population.nodeid,
-        total_forces,
-        population.etimer,
-        population.count,
-        model.params.exp_mean,
-        model.params.exp_std,
-        model.nodes.incidence[:, tick],
-    )
-
+    if use_nb:
+        tx_inner(
+            population.susceptibility,
+            population.nodeid,
+            total_forces,
+            population.etimer,
+            population.count,
+            model.params.exp_mean,
+            model.params.exp_std,
+            model.nodes.incidence[:, tick],
+        )
+    else:
+        lib.tx_inner(
+            population.susceptibility,
+            population.nodeid,
+            total_forces,
+            population.etimer,
+            population.count,
+            model.params.exp_mean,
+            model.params.exp_std,
+            model.nodes.incidence[:, tick],
+            len(total_forces)
+        )
     return
-
-
-    return forces_environmental
 
