@@ -12,7 +12,7 @@ def read(*names, **kwargs):
 
 
 setup(
-    name="idmlaser",
+    name="idmlaser_cholera",
     version="0.0.1",
     license="MIT",
     description="Light Agent Spatial modeling for ERadication.",
@@ -71,6 +71,8 @@ setup(
         "pandas",
         "taichi",
         "pytest",
+        "h5py",
+        "scipy"
     ],
     extras_require={
         # eg:
