@@ -2,9 +2,8 @@ import numpy as np
 import numba as nb
 from datetime import datetime
 from tqdm import tqdm
-import pdb
 
-from idmlaser.kmcurve import pdsod
+from idmlaser_cholera.kmcurve import pdsod
 
 
 # ## Non-Disease Mortality 
@@ -58,7 +57,7 @@ def init( model ):
 
 
     def queue_deaths():
-        from idmlaser.utils import PriorityQueuePy
+        from idmlaser_cholera.utils import PriorityQueuePy
 
         tstart = datetime.now(tz=None)  # noqa: DTZ005
         dods = population.dod

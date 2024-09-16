@@ -23,7 +23,7 @@ nn_nodes, initial_populations = ipn.run()
 # Also, we will set the parameters separately as `meta_params` and `measles_params` but combine them into one parameter set for future use. We _could_ create `model.params = PropertySet({"meta":meta_params, "measles":measles_params})` and then reference them "by path" in the subsequent code, e.g., `params.meta.ticks` and `params.measles.inf_mean`.
 
 
-from idmlaser.utils import PropertySet
+from idmlaser_cholera.utils import PropertySet
 
 meta_params = PropertySet({
     "ticks": int(365*5),
@@ -66,7 +66,7 @@ model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 # 
 # We have our initial populations, but we need to allocate enough space to handle growth during the simulation.
 
-from idmlaser.numpynumba import Population
+from idmlaser_cholera.numpynumba import Population
 
 # We're going to create the human/agent population from the capacity (expansion slots based on births)
 # It will be in model.population
@@ -119,6 +119,20 @@ model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 model.nodes.psi[:] = 0.001 # placeholder, probably load from csv
+def init_psi_from_data():
+    suitability_filename = "suitability_data_random_419_5yr.csv"
+    import pandas as pd 
+    data = pd.read_csv(suitability_filename)
+
+    # Convert the DataFrame into a NumPy array
+    suitability_data = data.values
+
+    # Ensure the shape matches the expected dimensions
+    assert suitability_data.shape == (419, model.params.ticks), "Data dimensions do not match expected shape."
+
+    # Assign the data to the "psi" vector in the model
+    model.nodes.psi[:] = suitability_data
+#init_psi_from_data()
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
 
@@ -198,7 +212,7 @@ model.phases = [
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
     sia.do_interventions, # type: ignore 
-    #ages.update_ages
+    ages.update_ages
 ]
 
 
@@ -228,6 +242,6 @@ print(f"{model.population.count=:,} (vs. requested capacity {model.population.ca
 # 
 # Let's convert the timing information to a DataFrame and peek at the first few entries.
 
-import final_reports
+from . import final_reports
 final_reports.report( model, initial_populations )
 

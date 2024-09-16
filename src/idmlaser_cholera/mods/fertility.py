@@ -4,7 +4,7 @@ from . import access_groups as ag
 from . import ri
 from . import maternal_immunity as mi
 
-from idmlaser.kmcurve import pdsod
+from idmlaser_cholera.kmcurve import pdsod
 
 # ## Vital Dynamics: Births
 # 

@@ -1,2 +1,4 @@
 include idmlaser_cholera/USA-pyramid-2023.csv
+include src/idmlaser_cholera/mods/libtx.so
+include src/idmlaser_cholera/mods/libages.so
 

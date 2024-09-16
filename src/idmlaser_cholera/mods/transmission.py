@@ -107,8 +107,8 @@ def init( model ):
 @nb.njit(
     (nb.uint8[:], nb.uint16[:], nb.float32[:], nb.uint8[:], nb.uint32, nb.float32, nb.float32, nb.uint32[:]),
     parallel=True,
-    nogil=True,
-    cache=True,
+    #nogil=True,
+    #cache=True,
 )
 def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, incidence):
     for i in nb.prange(count):
@@ -147,7 +147,8 @@ def get_enviro_beta_from_psi( beta_env0, psi ):
         nb.float32,
         nb.float32
     ),
-    parallel=True, nogil=True, cache=True
+    parallel=True
+    #, nogil=True, cache=True
 )
 def get_enviro_foi(
     new_contagion,
@@ -196,6 +197,7 @@ def do_transmission_update(model, tick) -> None:
     contagion += transfer.sum(axis=1)   # increment by incoming "migration"
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
 
+    # Code-based ways of toggling contact and enviro transmission routes on and off during perf investigations.
     if True: # contact tx
         # Compute the effective beta considering seasonality
         beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
