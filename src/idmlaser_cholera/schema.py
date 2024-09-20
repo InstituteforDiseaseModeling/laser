@@ -10,6 +10,10 @@ schema = {
     "etimer": np.uint8,
     "itimer": np.uint8,
     "susceptibility_timer": np.uint16,
-    "accessibility": np.uint8
+    "accessibility": np.uint8,
+    # below are for line-list in-place reporting experiment
+    #"age_at_infection": np.int32,
+    #"time_at_infection": np.int16,
+    #"node_at_infection": np.uint16
 }
 
