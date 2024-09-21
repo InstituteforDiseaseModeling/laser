@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .. import manifest
 
 # Define the dimensions of the CSV
 rows = 419  # Number of nodes
@@ -24,11 +25,8 @@ sin_data_clipped = np.clip(sin_data, 0, 1)
 # Create a DataFrame from the sinusoidal values
 df = pd.DataFrame(sin_data_clipped)
 
-# Define the filename for the CSV
-csv_filename = "synthetic_psi_data.csv"
-
 # Save the DataFrame to a CSV file
-df.to_csv(csv_filename, index=False)
+df.to_csv(manifest.psi_data, index=False)
 
-csv_filename
+manifest.psi_data
 
