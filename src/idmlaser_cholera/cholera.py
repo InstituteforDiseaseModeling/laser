@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 from datetime import datetime
 from tqdm import tqdm
+from . import manifest
 
 # Very simple!
 class Model:
@@ -119,11 +120,18 @@ save_pops_in_nodes( model, nn_nodes, initial_populations )
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
-model.nodes.psi[:] = 0.001 # placeholder, probably load from csv
+#model.nodes.psi[:] = 0.001 # placeholder, probably load from csv
 def init_psi_from_data():
-    suitability_filename = "suitability_data_random_419_5yr.csv"
+    suitability_filename = manifest.psi_data
     import pandas as pd 
-    data = pd.read_csv(suitability_filename)
+    try:
+        data = pd.read_csv(suitability_filename)
+    except Exception as ex:
+        print( str( ex ) )
+        print( "Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
+        import idmlaser_cholera.tools.make_suitability_random_data
+        data = pd.read_csv(suitability_filename)
+
 
     # Convert the DataFrame into a NumPy array
     suitability_data = data.values
@@ -133,7 +141,7 @@ def init_psi_from_data():
 
     # Assign the data to the "psi" vector in the model
     model.nodes.psi[:] = suitability_data
-#init_psi_from_data()
+init_psi_from_data()
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
 
