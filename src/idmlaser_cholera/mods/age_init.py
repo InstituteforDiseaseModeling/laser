@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 import idmlaser_cholera.pyramid as pyramid
-import importlib.resources as pkg_resources
+from .. import manifest
 
 # ## Non-Disease Mortality 
 # ### Part I
@@ -15,7 +15,7 @@ import importlib.resources as pkg_resources
 def init( model ):
     initial_populations = model.nodes.population[:,0]
     capacity = model.population.capacity
-    with pkg_resources.path('idmlaser_cholera', 'USA-pyramid-2023.csv') as pyramid_file:
+    with manifest.age_data as pyramid_file:
         print(f"Loading pyramid from '{pyramid_file}'...")
         # Convert it to a string if needed
         age_distribution = pyramid.load_pyramid_csv(pyramid_file)
