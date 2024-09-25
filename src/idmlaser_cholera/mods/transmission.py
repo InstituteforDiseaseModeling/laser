@@ -2,8 +2,10 @@ import numpy as np
 import numba as nb
 import ctypes
 import pdb
+from pkg_resources import resource_filename
 
 use_nb = True
+lib = None
 psi_means = None
 
 # ## Transmission Part I - Setup
@@ -71,7 +73,10 @@ def init( model ):
     print(f"Upper left corner of network looks like this (after limiting to max_frac):\n{network[:4,:4]}")
 
     try:
-        lib = ctypes.CDLL('./libtx.so')
+        shared_lib_path = resource_filename('idmlaser_cholera', 'mods/libtx.so')
+        #lib = ctypes.CDLL('./libtx.so')
+        global lib
+        lib = ctypes.CDLL(shared_lib_path)
 
         # Define the argument types for the C function
         lib.tx_inner.argtypes = [
@@ -86,6 +91,19 @@ def init( model ):
             np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # incidence,
             ctypes.c_uint32,                                                        # num_nodes
         ]
+        lib.tx_inner_nodes.argtypes = [
+            ctypes.c_uint32,                                                        # count
+            ctypes.c_uint32,                                                        # num_nodes
+            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # nodeids
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # itimers
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # etimers
+            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # new_infections,
+            ctypes.c_float,                                                           # exp_mean
+            #ctypes.c_float,                                                           # exp_std
+            #np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # incidence,
+        ]
+        global use_nb
         use_nb = False
     except Exception as ex:
         print( "Failed to load libtx.so. Will use numba." )
@@ -106,6 +124,7 @@ def init( model ):
 
 # In[22]:
 
+
 @nb.njit(
     (
         nb.uint8[:], # susceptibilities, 
@@ -115,27 +134,78 @@ def init( model ):
         nb.int64, # nb.uint32, # count, 
         nb.float32, # exp_mean, 
         nb.float32, # exp_std, 
-        # nb.uint32[:], # incidence, 
+        nb.uint16[:], # expected_incidence, 
     ),
     parallel=True,
     fastmath=True
     #nogil=True,
     #cache=True,
 )
-def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std):
+def tx_inner_nodes(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, new_infections_by_node ):
+    num_nodes = len(new_infections_by_node)  # Assume number of nodes is the length of new_infections_by_node
+
+    for nodeid in nb.prange(num_nodes):  # Parallelize by node
+        infections_left = new_infections_by_node[nodeid]  # New infections required for this node
+
+        if infections_left > 0:
+            for i in range(count):  # Loop over all agents
+                if infections_left == 0:
+                    break  # Stop once we've infected the required number of agents
+
+                if nodeids[i] == nodeid and susceptibilities[i] > 0:  # Check if the agent belongs to the current node and is susceptible
+                    # Infect the agent
+                    etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
+                    susceptibilities[i] = 0.0  # Set susceptibility to 0
+                    infections_left -= 1  # Decrement the infections count for this node
+
+            # Update the number of remaining infections for this node in case the node wasn't fully exhausted
+            new_infections_by_node[nodeid] = infections_left
+
+    return
+
+@nb.njit(
+    (
+        nb.uint8[:], # susceptibilities, 
+        nb.uint16[:], # nodeids, 
+        nb.float32[:], # forces, 
+        nb.uint8[:], # etimers, 
+        nb.int64, # nb.uint32, # count, 
+        nb.float32, # exp_mean, 
+        nb.float32, # exp_std, 
+        nb.uint16[:], # expected_incidence, 
+    ),
+    parallel=True,
+    fastmath=True
+    #nogil=True,
+    #cache=True,
+)
+def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, new_infections_by_node ):
     #print( f"Looping over {count} elements." )
+    #incidence = np.zeros( len( forces ) )
     for i in nb.prange(count):
         susceptibility = susceptibilities[i]
         if susceptibility > 0:
             nodeid = nodeids[i]
+            if new_infections_by_node[nodeid] > 0:
+                #etimers[i] = 2
+                etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
+                susceptibilities[i] = 0.0  # set susceptibility to 0.0
+                # This is probably blocking; we need to send each node to its own process
+                new_infections_by_node[nodeid] -= 1
+                #if np.sum( new_infections_by_node ) == 0:
+                #    break
+            """
             force = susceptibility * forces[nodeid] # force of infection attenuated by personal susceptibility
             if (force > 0) and (np.random.random_sample() < force):  # draw random number < force means infection
                 susceptibilities[i] = 0.0  # set susceptibility to 0.0
                 # set exposure timer for newly infected individuals to a draw from a normal distribution, must be at least 1 day
                 etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
                 #print( f"Individual {i} in node {nodeid} just got infected" )
-                #incidence[nodeid] += 1
-    return
+                incidence[nodeid] += 1
+            """
+
+    #print( incidence - new_infections_by_node )
+    return # incidence
 
 
 def get_enviro_beta_from_psi( beta_env0, psi ):
@@ -264,6 +334,48 @@ def get_enviro_foi(
    
     return forces_environmental
 
+def calculate_new_infections_by_node(total_forces, susceptibles):
+    """
+    Calculate new infections per node.
+
+    Parameters:
+    - total_forces: array of FOI (force of infection) for each node.
+    - model.nodes.S: 2D array where each row corresponds to a node and contains the number of susceptibles in that node.
+
+    Returns:
+    - new_infections: array of new infections per node.
+    """
+
+    # Get the number of nodes (assuming each row of model.nodes.S corresponds to a node)
+    num_nodes = len(susceptibles)
+
+    # Initialize an array to hold the new infections for each node
+    new_infections = np.zeros(num_nodes, dtype=np.uint16)
+
+    """
+    # Loop over each node to calculate new infections
+    for j in range(num_nodes):
+        S_j = susceptibles[j]  # Susceptibles in node j
+        FOI_j = min(FOI_j, 1.0)
+        FOI_j = total_forces[j]  # Force of infection in node j
+
+        # Calculate the expected number of new infections in node j
+        try:
+            new_infections[j] = np.random.binomial(S_j, FOI_j)
+        except Exception as ex:
+            print( str( ex ) )
+            pdb.set_trace()
+    """
+
+    # Cap the total forces at 1.0 using np.minimum
+    capped_forces = np.minimum(total_forces, 1.0)
+
+    # Calculate new infections in a vectorized way
+    new_infections = np.random.binomial(susceptibles, capped_forces).astype(np.uint16)
+
+
+    return new_infections
+
 def do_transmission_update(model, tick) -> None:
 
     nodes = model.nodes
@@ -316,8 +428,14 @@ def do_transmission_update(model, tick) -> None:
     #total_forces = (forces_environmental).astype(np.float32) # enviro only
     #total_forces = forces
 
+    #new_infections = np.zeros( len(total_forces), dtype=np.uint16 )
+    #if tick>0:
+    new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
+    #else:
+        #new_infections = np.random.randint(0, 101, size=len(total_forces), dtype=np.uint16 )
     if use_nb:
-        tx_inner(
+        #calculated_incidence = 
+        tx_inner_nodes(
             population.susceptibility,
             population.nodeid,
             total_forces,
@@ -325,19 +443,22 @@ def do_transmission_update(model, tick) -> None:
             population.count,
             model.params.exp_mean,
             model.params.exp_std,
+            new_infections 
             #model.nodes.incidence[:, tick],
         )
     else:
-        lib.tx_inner(
-            population.susceptibility,
-            population.nodeid,
-            total_forces,
-            population.etimer,
+        num_nodes = len(new_infections)  # Assume number of nodes is the length of new_infections_by_node
+        global lib
+        lib.tx_inner_nodes(
             population.count,
-            model.params.exp_mean,
-            model.params.exp_std,
-            model.nodes.incidence[:, tick],
-            len(total_forces)
+            num_nodes,
+            population.nodeid, # uint32_t * agent_node,
+            population.susceptibility,# uint8_t *susceptibility,
+            population.etimer,# unsigned char  * incubation_timer,
+            population.itimer,# unsigned char  * infection_timer,
+            new_infections, # int * new_infections_array,
+            model.params.exp_mean # unsigned char incubation_period_constant
         )
+
     return
 

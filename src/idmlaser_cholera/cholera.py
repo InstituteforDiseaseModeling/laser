@@ -214,6 +214,7 @@ from idmlaser_cholera.mods import fertility
 model.phases = [
     propagate_population,
     fertility.do_births, # type: ignore
+    ages.update_ages,
     mortality.do_non_disease_deaths, # type: ignore
     intrahost.do_infection_update, # type: ignore
     intrahost.do_exposure_update, # type: ignore
@@ -221,7 +222,6 @@ model.phases = [
     ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
     sia.do_interventions, # type: ignore 
-    ages.update_ages
 ]
 
 
