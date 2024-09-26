@@ -168,9 +168,8 @@ def init( model ):
         nb.uint16[:], # expected_incidence, 
     ),
     parallel=True,
-    fastmath=True
-    #nogil=True,
-    #cache=True,
+    nogil=True,
+    cache=True,
 )
 def tx_inner_nodes(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, new_infections_by_node ):
     num_nodes = len(new_infections_by_node)  # Assume number of nodes is the length of new_infections_by_node
@@ -206,36 +205,21 @@ def tx_inner_nodes(susceptibilities, nodeids, forces, etimers, count, exp_mean, 
         nb.uint16[:], # expected_incidence, 
     ),
     parallel=True,
-    fastmath=True
-    #nogil=True,
-    #cache=True,
+    nogil=True,
+    cache=True,
 )
 def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, new_infections_by_node ):
-    #print( f"Looping over {count} elements." )
-    #incidence = np.zeros( len( forces ) )
     for i in nb.prange(count):
         susceptibility = susceptibilities[i]
         if susceptibility > 0:
             nodeid = nodeids[i]
             if new_infections_by_node[nodeid] > 0:
-                #etimers[i] = 2
+                #etimers[i] = 2 # didn't make anything faster
                 etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
                 susceptibilities[i] = 0.0  # set susceptibility to 0.0
                 # This is probably blocking; we need to send each node to its own process
                 new_infections_by_node[nodeid] -= 1
-                #if np.sum( new_infections_by_node ) == 0:
-                #    break
-            """
-            force = susceptibility * forces[nodeid] # force of infection attenuated by personal susceptibility
-            if (force > 0) and (np.random.random_sample() < force):  # draw random number < force means infection
-                susceptibilities[i] = 0.0  # set susceptibility to 0.0
-                # set exposure timer for newly infected individuals to a draw from a normal distribution, must be at least 1 day
-                etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
-                #print( f"Individual {i} in node {nodeid} just got infected" )
-                incidence[nodeid] += 1
-            """
 
-    #print( incidence - new_infections_by_node )
     return # incidence
 
 
@@ -422,7 +406,6 @@ def do_transmission_update(model, tick) -> None:
         np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
 
     delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
-    #delta = np.ones( model.nodes.psi.shape[0], dtype=np.float32 )*0.5
 
     if True:
         forces_environmental = get_enviro_foi(
@@ -444,11 +427,7 @@ def do_transmission_update(model, tick) -> None:
     #total_forces = (forces_environmental).astype(np.float32) # enviro only
     #total_forces = forces
 
-    #new_infections = np.zeros( len(total_forces), dtype=np.uint16 )
-    #if tick>0:
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
-    #else:
-        #new_infections = np.random.randint(0, 101, size=len(total_forces), dtype=np.uint16 )
     if use_nb:
         #calculated_incidence = 
         tx_inner_nodes(
@@ -464,14 +443,9 @@ def do_transmission_update(model, tick) -> None:
         )
     else:
         num_nodes = len(new_infections)  # Assume number of nodes is the length of new_infections_by_node
-        #infected_ids = (infected_ids_type * num_nodes)()  # Array of pointers
 
         # Total number of infections (sum of new_infections)
         total_infections = np.sum(new_infections)
-        #print( f"Creating a total of {total_infections}." )
-
-        # Allocate a 1D array for the infected IDs
-        #infected_ids_buffer = (ctypes.c_uint32 * total_infections)()
 
         global lib
         lib.tx_inner_nodes(
@@ -489,16 +463,6 @@ def do_transmission_update(model, tick) -> None:
 
         def report_linelist():
             current_index = 0
-            """
-            # for printing/debugging
-            for node, num_infections in enumerate(new_infections):
-                if num_infections > 0:
-                    node_infected_ids = infected_ids_buffer[current_index:current_index + num_infections]
-                    #print(f"Node {node}: Infected IDs: {node_infected_ids}")
-                    current_index += num_infections
-                else:
-                    #print(f"Node {node}: No infections")
-            """
             global ll_lib
             infected_ids_arr = np.ctypeslib.as_array(infected_ids_buffer)[:total_infections]
             ages_at_infection = model.population.age[infected_ids_arr].astype( np.uint32 )
