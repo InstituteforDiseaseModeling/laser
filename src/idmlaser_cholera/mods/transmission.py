@@ -6,7 +6,15 @@ from pkg_resources import resource_filename
 
 use_nb = True
 lib = None
+ll_lib = None
 psi_means = None
+#infected_ids_type = ctypes.POINTER(ctypes.c_uint32)
+
+# Define the maximum number of infections you expect
+MAX_INFECTIONS = 100000  # Adjust this to your expected maximum
+
+# Allocate a flat array for infected IDs
+infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
 
 # ## Transmission Part I - Setup
 # 
@@ -101,12 +109,35 @@ def init( model ):
             np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # new_infections,
             ctypes.c_float,                                                           # exp_mean
             #ctypes.c_float,                                                           # exp_std
-            #np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # incidence,
+            #np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # new_ids_out,
+            #ctypes.POINTER(ctypes.POINTER(ctypes.c_uint32)),                        # new_ids_out
+            ctypes.POINTER(ctypes.c_uint32)  # new_ids_out (pointer to uint32)
         ]
         global use_nb
         use_nb = False
     except Exception as ex:
         print( "Failed to load libtx.so. Will use numba." )
+
+    try:
+        global ll_lib
+        ll_lib = ctypes.CDLL('./ll_record_writer.so')
+
+        # Define the argument types for the C functions
+        filename = 'output_records_preallocated.bin'
+        ll_lib.init_writer.argtypes = [ctypes.c_char_p]
+        ll_lib.write_record.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
+        ll_lib.write_records_batch.argtypes = [
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # agent_ids array
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # ages_at_infection array
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # times_at_infection array
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # nodes_at_infection array
+            ctypes.c_size_t  # num_records
+        ]
+        ll_lib.close_writer.argtypes = []
+        ll_lib.init_writer(filename.encode('utf-8'))  
+    except Exception as ex:
+        print( "Failed to load ll_record_writer.so. No backup." )
+
     return
 
 
@@ -448,6 +479,15 @@ def do_transmission_update(model, tick) -> None:
         )
     else:
         num_nodes = len(new_infections)  # Assume number of nodes is the length of new_infections_by_node
+        #infected_ids = (infected_ids_type * num_nodes)()  # Array of pointers
+
+        # Total number of infections (sum of new_infections)
+        total_infections = np.sum(new_infections)
+        #print( f"Creating a total of {total_infections}." )
+
+        # Allocate a 1D array for the infected IDs
+        #infected_ids_buffer = (ctypes.c_uint32 * total_infections)()
+
         global lib
         lib.tx_inner_nodes(
             population.count,
@@ -457,8 +497,34 @@ def do_transmission_update(model, tick) -> None:
             population.etimer,# unsigned char  * incubation_timer,
             population.itimer,# unsigned char  * infection_timer,
             new_infections, # int * new_infections_array,
-            model.params.exp_mean # unsigned char incubation_period_constant
+            model.params.exp_mean, # unsigned char incubation_period_constant
+            infected_ids_buffer
         )
+        # Call our ctypes module function to report these ids, and the current time, and agent ages and nodes to the linelist reporter
+
+        def report_linelist():
+            current_index = 0
+            """
+            # for printing/debugging
+            for node, num_infections in enumerate(new_infections):
+                if num_infections > 0:
+                    node_infected_ids = infected_ids_buffer[current_index:current_index + num_infections]
+                    #print(f"Node {node}: Infected IDs: {node_infected_ids}")
+                    current_index += num_infections
+                else:
+                    #print(f"Node {node}: No infections")
+            """
+            global ll_lib
+            ages_fake = np.random.randint( 0, 101, size=total_infections, dtype=np.uint32 )
+            ll_lib.write_records_batch(
+                np.ctypeslib.as_array(infected_ids_buffer),
+                ages_fake,
+                #ages_at_infection[i],
+                np.ones( total_infections ).astype( np.uint32 ) * tick,
+                np.repeat(np.arange(num_nodes), new_infections).astype( np.uint32 ),
+                total_infections
+            )
+        #report_linelist()
 
     return
 

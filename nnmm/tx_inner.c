@@ -180,10 +180,19 @@ void tx_inner_nodes(
     uint8_t  * incubation_timer,
     uint8_t  * infection_timer,
     uint16_t * new_infections_array,
-    float incubation_period_constant
+    float incubation_period_constant,
+    uint32_t * infected_ids // Output: an array of arrays for storing infected IDs
 ) {
     // Local maps for each thread
     std::vector<std::vector<int>> local_node2sus(num_nodes);
+
+    uint32_t offsets[num_nodes];   // To store starting index for each node
+
+    // Calculate offsets
+    offsets[0] = 0;
+    for (unsigned int node = 1; node < num_nodes; ++node) {
+        offsets[node] = offsets[node - 1] + new_infections_array[node - 1];
+    }
 
     // First pass: gather susceptible individuals by node in parallel
 #pragma omp parallel
@@ -220,11 +229,17 @@ void tx_inner_nodes(
             int num_susceptible = susceptible_indices.size();
             int step = (new_infections >= num_susceptible) ? 1 : num_susceptible / new_infections;
 
+            // Get the starting index for this node's infections
+            unsigned int start_index = offsets[node];
+
             for (int i = 0, selected_count = 0; i < num_susceptible && selected_count < new_infections; i += step) {
                 unsigned long int selected_id = susceptible_indices[i];
                 incubation_timer[selected_id] = incubation_period_constant;
                 susceptibility[selected_id] = 0;
                 selected_count++;
+                // Write the infected ID into the pre-allocated array
+                //printf( "Writing new infected id to index %d.\n", start_index + selected_count );
+                infected_ids[start_index + selected_count] = selected_id;
             }
         }
     }
