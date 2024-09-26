@@ -5,6 +5,8 @@
 
 #define BUFFER_SIZE 1024 * 1024 // Size of buffer in bytes (1 MB)
 
+extern "C" {
+
 static uint32_t* buffer = NULL;
 static size_t buffer_count = 0;
 static size_t max_buffer_count;
@@ -78,4 +80,4 @@ void close_writer() {
         buffer = NULL;
     }
 }
-
+}

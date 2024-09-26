@@ -82,7 +82,6 @@ def init( model ):
 
     try:
         shared_lib_path = resource_filename('idmlaser_cholera', 'mods/libtx.so')
-        #lib = ctypes.CDLL('./libtx.so')
         global lib
         lib = ctypes.CDLL(shared_lib_path)
 
@@ -116,14 +115,15 @@ def init( model ):
         global use_nb
         use_nb = False
     except Exception as ex:
-        print( "Failed to load libtx.so. Will use numba." )
+        print( f"Failed to load {shared_lib_path}. Will use numba." )
 
     try:
+        shared_lib_path = resource_filename('idmlaser_cholera', 'mods/libll_reporter.so')
         global ll_lib
-        ll_lib = ctypes.CDLL('./ll_record_writer.so')
+        ll_lib = ctypes.CDLL(shared_lib_path)
 
         # Define the argument types for the C functions
-        filename = 'output_records_preallocated.bin'
+        filename = 'incidence_linelist.bin' # put in manifest
         ll_lib.init_writer.argtypes = [ctypes.c_char_p]
         ll_lib.write_record.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32]
         ll_lib.write_records_batch.argtypes = [
@@ -136,7 +136,7 @@ def init( model ):
         ll_lib.close_writer.argtypes = []
         ll_lib.init_writer(filename.encode('utf-8'))  
     except Exception as ex:
-        print( "Failed to load ll_record_writer.so. No backup." )
+        print( f"Failed to load {shared_lib_path}. No backup." )
 
     return
 
@@ -383,21 +383,6 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
     # Initialize an array to hold the new infections for each node
     new_infections = np.zeros(num_nodes, dtype=np.uint16)
 
-    """
-    # Loop over each node to calculate new infections
-    for j in range(num_nodes):
-        S_j = susceptibles[j]  # Susceptibles in node j
-        FOI_j = min(FOI_j, 1.0)
-        FOI_j = total_forces[j]  # Force of infection in node j
-
-        # Calculate the expected number of new infections in node j
-        try:
-            new_infections[j] = np.random.binomial(S_j, FOI_j)
-        except Exception as ex:
-            print( str( ex ) )
-            pdb.set_trace()
-    """
-
     # Cap the total forces at 1.0 using np.minimum
     capped_forces = np.minimum(total_forces, 1.0)
 
@@ -515,16 +500,16 @@ def do_transmission_update(model, tick) -> None:
                     #print(f"Node {node}: No infections")
             """
             global ll_lib
-            ages_fake = np.random.randint( 0, 101, size=total_infections, dtype=np.uint32 )
+            infected_ids_arr = np.ctypeslib.as_array(infected_ids_buffer)[:total_infections]
+            ages_at_infection = model.population.age[infected_ids_arr].astype( np.uint32 )
             ll_lib.write_records_batch(
-                np.ctypeslib.as_array(infected_ids_buffer),
-                ages_fake,
-                #ages_at_infection[i],
+                infected_ids_arr,
+                ages_at_infection,
                 np.ones( total_infections ).astype( np.uint32 ) * tick,
                 np.repeat(np.arange(num_nodes), new_infections).astype( np.uint32 ),
                 total_infections
             )
-        #report_linelist()
+        report_linelist()
 
     return
 

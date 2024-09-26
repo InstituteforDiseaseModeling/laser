@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 import idmlaser_cholera.pyramid as pyramid
+import pdb
 from .. import manifest
 
 # ## Non-Disease Mortality 
@@ -35,4 +36,6 @@ def init( model ):
         mask[:count_active] = (buckets == i)    # indices of agents in this age group bucket
         # draw uniformly between the start and end of the age group bucket
         model.population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
+        # Not negative actually
+        model.population.age[mask] = model.population.dob[mask]
 
