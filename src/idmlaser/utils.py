@@ -254,6 +254,24 @@ class PropertySet:
             for key, value in (bag.__dict__ if isinstance(bag, type(self)) else bag).items():
                 setattr(self, key, value)
 
+    def to_dict(self):
+        result = {}
+
+        for key, value in self.__dict__.items():
+            if isinstance(value, PropertySet):
+                result[key] = value.to_dict()
+            else:
+                result[key] = value
+
+        return result
+
+    def save(self, filename):
+        file = Path(filename)
+        with file.open("w") as file:
+            file.write(str(self))
+
+        return
+
     def __add__(self, other):
         return PropertySet(self, other)
 

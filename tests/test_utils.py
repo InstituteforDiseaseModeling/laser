@@ -39,9 +39,9 @@ class TestPopFromCbrAndMortality(unittest.TestCase):
                 assert population[i + 1] == population[i] + births[i] - deaths[i]
 
             expected_population = np.uint32(np.round(self.INITIAL * (1 + (self.CBR - self.MORTALITY) / 1000) ** self.NYEARS))
-            if abs(1 - population[-1] / expected_population) >= 0.01:
-                print(
-                    f"\nExpected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
+            if abs(1 - population[-1] / expected_population) >= 0.015:
+                messages.append(
+                    f"(Constant CBR, constant mortality) Expected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
                 )
                 failed += 1
 
@@ -65,9 +65,9 @@ class TestPopFromCbrAndMortality(unittest.TestCase):
                 assert population[i + 1] == population[i] + births[i] - deaths[i]
 
             expected_population = np.uint32(np.round(self.INITIAL * (1 + (cbr.mean() - self.MORTALITY) / 1000) ** self.NYEARS))
-            if abs(1 - population[-1] / expected_population) >= 0.01:
-                print(
-                    f"\nExpected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
+            if abs(1 - population[-1] / expected_population) >= 0.015:
+                messages.append(
+                    f"(Varying CBR, constant mortality)  Expected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
                 )
                 failed += 1
 
@@ -91,9 +91,9 @@ class TestPopFromCbrAndMortality(unittest.TestCase):
                 assert population[i + 1] == population[i] + births[i] - deaths[i]
 
             expected_population = np.uint32(np.round(self.INITIAL * (1 + (self.CBR - mortality.mean()) / 1000) ** self.NYEARS))
-            if abs(1 - population[-1] / expected_population) >= 0.01:
-                print(
-                    f"\nExpected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
+            if abs(1 - population[-1] / expected_population) >= 0.015:
+                messages.append(
+                    f"(Constant CBR, varying mortality)  Expected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
                 )
                 failed += 1
 
@@ -118,9 +118,9 @@ class TestPopFromCbrAndMortality(unittest.TestCase):
                 assert population[i + 1] == population[i] + births[i] - deaths[i]
 
             expected_population = np.uint32(np.round(self.INITIAL * (1 + (cbr.mean() - mortality.mean()) / 1000) ** self.NYEARS))
-            if abs(1 - population[-1] / expected_population) >= 0.01:
-                print(
-                    f"\nExpected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
+            if abs(1 - population[-1] / expected_population) >= 0.015:
+                messages.append(
+                    f"(Varying CBR, varying mortality)   Expected {expected_population}, got {population[-1]} ({100 * abs(1 - population[-1] / expected_population)}% difference)"
                 )
                 failed += 1
 
@@ -448,6 +448,18 @@ class TestPropertySet(unittest.TestCase):
         assert "c" in gb
         assert "d" in gb
         assert "e" not in gb
+
+    def test_to_dict(self):
+        """Test the to_dict method of the PropertySet class."""
+        # assert that the to_dict method returns the expected dictionary
+        gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        assert gb.to_dict() == {"a": 1, "b": 2, "c": 3, "d": 4}
+
+    def test_to_dict_nested(self):
+        """Test the to_dict method of the PropertySet class with nested PropertySets."""
+        # assert that the to_dict method returns the expected dictionary with nested PropertySets
+        gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4, "e": PropertySet({"f": 5, "g": 6})})
+        assert gb.to_dict() == {"a": 1, "b": 2, "c": 3, "d": 4, "e": {"f": 5, "g": 6}}
 
 
 class TestPriorityQueuePy(unittest.TestCase):

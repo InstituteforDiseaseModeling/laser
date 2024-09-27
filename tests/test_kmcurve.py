@@ -26,6 +26,14 @@ class TestPdsod(unittest.TestCase):
         assert all(result >= ages_days), f"pdsod should be >= current age (in days) {result=}, {ages_days=}"
         assert all(result <= ((max_year + 1) * 365)), f"pdsod should be <= max year + 1 (in days) {result=}, {max_year=}"
 
+    def test_pdsod_max(self):
+        ages_days = np.array([100 * 365 + 364], dtype=np.int32)
+        max_year = 100
+
+        result = pdsod(ages_days, max_year)
+        assert all(result >= ages_days), f"pdsod should be >= current age (in days) {result=}, {ages_days=}"
+        assert all(result <= ((max_year + 1) * 365)), f"pdsod should be <= max year + 1 (in days) {result=}, {max_year=}"
+
 
 if __name__ == "__main__":
     unittest.main()
