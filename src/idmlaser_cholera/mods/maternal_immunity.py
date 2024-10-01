@@ -13,12 +13,24 @@ def init( model, istart, iend ):
     model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months
 
 # Define the function to decrement susceptibility_timer and update susceptibility
-@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:]), parallel=True)
-def _update_susceptibility_based_on_sus_timer_nb(count, susceptibility_timer, susceptibility):
-    for i in nb.prange(count):
+@nb.njit((nb.uint32, nb.uint16[:], nb.uint8[:], nb.uint8, nb.uint8 ), parallel=True)
+def _update_susceptibility_based_on_sus_timer_nb(count, susceptibility_timer, susceptibility, tick, delta):
+    shard_size = count // delta
+
+    # Determine the start and end indices for the current shard
+    shard_index = tick % delta
+    start_index = shard_index * shard_size
+    end_index = start_index + shard_size
+
+    # Handle the case where the last shard might be slightly larger due to rounding
+    if shard_index == delta - 1:
+        end_index = count
+
+    # Loop through the current shard
+    for i in nb.prange(start_index, end_index):
         if susceptibility_timer[i] > 0:
-            susceptibility_timer[i] -= 1
-            if susceptibility_timer[i] == 0:
+            susceptibility_timer[i] = max(0, susceptibility_timer[i] - delta)
+            if susceptibility_timer[i] <= 0:
                 susceptibility[i] = 1
 
 try:
@@ -43,9 +55,11 @@ def _update_susceptibility_based_on_sus_timer_c(count, susceptibility_timer, sus
 
 """
 
+delta = 30
 def do_susceptibility_decay(model, tick):
+
     if use_nb:
-        _update_susceptibility_based_on_sus_timer_nb(model.population.count, model.population.susceptibility_timer, model.population.susceptibility)
+        _update_susceptibility_based_on_sus_timer_nb(model.population.count, model.population.susceptibility_timer, model.population.susceptibility, tick, delta)
     else:
         # These should not be necessary
         susceptibility_timer_ctypes = model.population.susceptibility_timer.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)) 
@@ -54,6 +68,8 @@ def do_susceptibility_decay(model, tick):
         lib.update_susceptibility_based_on_sus_timer(
                 model.population.count,
                 susceptibility_timer_ctypes,
-                susceptibility_ctypes
+                susceptibility_ctypes,
+                tick,
+                delta
             )
     return
