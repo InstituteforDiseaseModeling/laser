@@ -27,7 +27,12 @@ def initialize_susceptibility(count, dob, susceptibility, susceptibility_timer):
         susceptibility[i] = 0
         # Initialize everyone's immunity timer uniformly from 0 to 10 years
         # TBD: Replace this with correct formula
-        susceptibility_timer[i] = np.random.randint(0, 3651)
+        timer = np.random.randint(-5*365, 5*365)
+        if timer <= 0:
+            timer = 0
+            susceptibility[i] = 1
+        else:
+            susceptibility_timer[i] = timer
 
     return
 
