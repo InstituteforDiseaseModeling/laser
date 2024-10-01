@@ -90,11 +90,11 @@ void update_ages_and_report(
     #pragma omp parallel
     {
         // Thread-local buffers
-        int *local_infectious_count = (int*) calloc(num_nodes, sizeof(int));
-        int *local_incubating_count = (int*) calloc(num_nodes, sizeof(int));
-        int *local_recovered_count = (int*) calloc(num_nodes, sizeof(int));
-        int *local_susceptible_count = (int*) calloc(num_nodes, sizeof(int));
-        int *local_waning_count = (int*) calloc(num_nodes, sizeof(int));
+        static int *local_infectious_count = (int*) calloc(num_nodes, sizeof(int));
+        static int *local_incubating_count = (int*) calloc(num_nodes, sizeof(int));
+        static int *local_recovered_count = (int*) calloc(num_nodes, sizeof(int));
+        static int *local_susceptible_count = (int*) calloc(num_nodes, sizeof(int));
+        static int *local_waning_count = (int*) calloc(num_nodes, sizeof(int));
 
         #pragma omp for
         for (size_t i = 0; i <= count; i++) {
@@ -140,11 +140,13 @@ void update_ages_and_report(
         }
 
         // Free local buffers
+        /*
         free(local_susceptible_count);
         free(local_incubating_count);
         free(local_infectious_count);
         free(local_waning_count);
         free(local_recovered_count);
+        */
     }
 }
 
