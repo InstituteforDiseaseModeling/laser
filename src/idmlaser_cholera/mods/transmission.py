@@ -11,7 +11,7 @@ psi_means = None
 #infected_ids_type = ctypes.POINTER(ctypes.c_uint32)
 
 # Define the maximum number of infections you expect
-MAX_INFECTIONS = 100000  # Adjust this to your expected maximum
+MAX_INFECTIONS = 10000000  # Adjust this to your expected maximum
 
 # Allocate a flat array for infected IDs
 infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
@@ -371,7 +371,11 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
     capped_forces = np.minimum(total_forces, 1.0)
 
     # Calculate new infections in a vectorized way
-    new_infections = np.random.binomial(susceptibles, capped_forces).astype(np.uint16)
+    try:
+        new_infections = np.random.binomial(susceptibles, capped_forces).astype(np.uint16)
+    except Exception as ex:
+        pdb.set_trace()
+    #print( f"new_infections = {new_infections}" )
 
 
     return new_infections
@@ -399,6 +403,7 @@ def do_transmission_update(model, tick) -> None:
     if True: # contact tx
         # Compute the effective beta considering seasonality
         beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+        #beta_effective = model.params.beta
 
         # Update forces based on contagion and beta_effective
         forces = nodes.forces
@@ -428,6 +433,11 @@ def do_transmission_update(model, tick) -> None:
     #total_forces = forces
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
+
+    total_infections = np.sum(new_infections)
+    if total_infections > MAX_INFECTIONS:
+        raise ValueError( f"Number of new infections ({total_infections}) > than allocated array size (MAX_INFECTIONS)!" )
+
     if use_nb:
         #calculated_incidence = 
         tx_inner_nodes(
@@ -443,9 +453,6 @@ def do_transmission_update(model, tick) -> None:
         )
     else:
         num_nodes = len(new_infections)  # Assume number of nodes is the length of new_infections_by_node
-
-        # Total number of infections (sum of new_infections)
-        total_infections = np.sum(new_infections)
 
         global lib
         lib.tx_inner_nodes(
@@ -473,7 +480,7 @@ def do_transmission_update(model, tick) -> None:
                 np.repeat(np.arange(num_nodes), new_infections).astype( np.uint32 ),
                 total_infections
             )
-        report_linelist()
+        #report_linelist()
 
     return
 
