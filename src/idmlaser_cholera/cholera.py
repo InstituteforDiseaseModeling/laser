@@ -33,7 +33,7 @@ meta_params = PropertySet({
     #"eula_age": 5
 })
 # parameter?
-prevalence = 0.025 # 2.5% prevalence
+prevalence = 0.0025 # 2.5% prevalence
 
 measles_params = PropertySet({
     "exp_mean": np.float32(2.0),
