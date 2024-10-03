@@ -343,12 +343,10 @@ def get_enviro_foi(
     num_nodes = enviro_contagion.shape[0]
     forces_environmental = np.zeros(num_nodes, dtype=np.float32)
 
-    #decay_rate_mult = (1 - enviro_base_decay_rate)
     for node in nb.prange(num_nodes):
         # Decay the environmental contagion by the base decay rate
         enviro_contagion[node] *= (1 - enviro_base_decay_rate[node])
-        #enviro_contagion[node] *= decay_rate_mult 
-        
+
         # Add newly shed contagion to the environmental contagion, adjusted by zeta
         enviro_contagion[node] += new_contagion[node] * zeta
 
