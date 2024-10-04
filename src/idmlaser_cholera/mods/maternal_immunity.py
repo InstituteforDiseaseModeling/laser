@@ -23,15 +23,18 @@ try:
     lib = ctypes.CDLL(shared_lib_path)
 
 # Define the function prototype
-    lib.update_susceptibility_based_on_sus_timer.argtypes = [ctypes.c_int32,
-                                                             ctypes.POINTER(ctypes.c_uint8),
-                                                             ctypes.POINTER(ctypes.c_uint8)]
+    lib.update_susceptibility_based_on_sus_timer.argtypes = [
+        ctypes.c_int32,
+        np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'), # susceptibility_timer
+        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'), # susceptibility
+    ]
+        
     lib.update_susceptibility_based_on_sus_timer.restype = None
 
     lib.update_susceptibility_timer_strided_shards.argtypes = [
         ctypes.c_int32,
-        ctypes.POINTER(ctypes.c_uint8),
-        ctypes.POINTER(ctypes.c_uint8),
+        np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'), # susceptibility_timer
+        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'), # susceptibility
         ctypes.c_int32,
         ctypes.c_int32,
     ]
@@ -71,23 +74,19 @@ def _update_susceptibility_based_on_sus_timer_c(count, susceptibility_timer, sus
 
 """
 
-delta = 1
+delta = 8
 def do_susceptibility_decay(model, tick):
 
     global lib, use_nb
     if use_nb:
         _update_susceptibility_based_on_sus_timer_nb(model.population.count, model.population.susceptibility_timer, model.population.susceptibility, tick, delta)
     else:
-        # These should not be necessary
-        susceptibility_timer_ctypes = model.population.susceptibility_timer.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)) 
-        susceptibility_ctypes = model.population.susceptibility.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-
-        #lib.update_susceptibility_timer_strided_shards(
-        lib.update_susceptibility_based_on_sus_timer(
+        lib.update_susceptibility_timer_strided_shards(
+        #lib.update_susceptibility_based_on_sus_timer(
                 model.population.count,
-                susceptibility_timer_ctypes,
-                susceptibility_ctypes#,
-                #delta,
-                #tick
+                model.population.susceptibility_timer,
+                model.population.susceptibility,
+                delta,
+                tick
             )
     return
