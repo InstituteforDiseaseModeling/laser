@@ -233,9 +233,9 @@ void report(
     uint16_t *node,
     unsigned char *infectious_timer, // max 255
     unsigned char *incubation_timer, // max 255
-    bool *susceptibility, // yes or no
-    unsigned char *susceptibility_timer, // max 255
-    int *dod, // sim day
+    unsigned char *susceptibility, // yes or no
+    uint16_t *susceptibility_timer, // max 255
+    int32_t *dod, // sim day
     uint32_t *susceptible_count,
     uint32_t *incubating_count,
     uint32_t *infectious_count,
@@ -265,7 +265,7 @@ void report(
         //for (size_t i = 0; i <= count; i++) {
         for (uint32_t i = shard_index; i < count; i += delta) {
             // Collect report 
-            if (dod[i]>0) {
+            if (dod[i]>tick) {
                 int node_id = node[i];
                 //printf( "Found live person at node %d: etimer=%d, itimer=%d, sus=%d.\n", node_id, incubation_timer[i], infectious_timer[i], susceptibility[i] );
                 if (incubation_timer[i] > 0) {
@@ -281,6 +281,7 @@ void report(
                     } else {
                         //printf( "ERROR? recording %lu as recovered: susceptibility_timer = %d.\n", i, susceptibility_timer[i] );
                         local_recovered_count[node_id]++;
+                        //printf( "Recovered person found: age=%d, node=%d, dod=%d, inc=%d, inf=%d.\n", age[i], node[i], dod[i], incubation_timer[i], infectious_timer[i] );
                     }
                 } else {
                     //printf( "Found S in node %d.\n", node_id );
