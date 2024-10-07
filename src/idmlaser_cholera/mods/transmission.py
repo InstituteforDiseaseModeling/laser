@@ -11,7 +11,7 @@ psi_means = None
 #infected_ids_type = ctypes.POINTER(ctypes.c_uint32)
 
 # Define the maximum number of infections you expect
-MAX_INFECTIONS = 10000000  # Adjust this to your expected maximum
+MAX_INFECTIONS = 100000000  # Adjust this to your expected maximum
 
 # Allocate a flat array for infected IDs
 infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
@@ -101,16 +101,28 @@ def init( model ):
         lib.tx_inner_nodes.argtypes = [
             ctypes.c_uint32,                                                        # count
             ctypes.c_uint32,                                                        # num_nodes
-            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # nodeids
             np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
-            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # itimers
             np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # etimers
             np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # new_infections,
             ctypes.c_float,                                                           # exp_mean
-            #ctypes.c_float,                                                           # exp_std
-            #np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # new_ids_out,
-            #ctypes.POINTER(ctypes.POINTER(ctypes.c_uint32)),                        # new_ids_out
             ctypes.POINTER(ctypes.c_uint32)  # new_ids_out (pointer to uint32)
+        ]
+        lib.report.argtypes = [
+            ctypes.c_int64,                  # count
+            ctypes.c_int,                     # num_nodes
+            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # age
+            np.ctypeslib.ndpointer(dtype=np.uint16, flags='C_CONTIGUOUS'),      # node
+            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # infectious_timer
+            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # incubation_timer
+            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # immunity
+            np.ctypeslib.ndpointer(dtype=np.uint16, flags='C_CONTIGUOUS'),      # susceptibility_timer
+            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),    # expected_lifespan
+            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # infectious_count
+            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # incubating_count
+            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # susceptible_count
+            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # waning_count 
+            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count 
+            ctypes.c_int                     # delta
         ]
         global use_nb
         use_nb = False
@@ -234,7 +246,8 @@ def get_enviro_beta_from_psi( beta_env0, psi ):
     beta_env = beta_env0 * (1 + (psi - psi_avg[-1]) / psi_avg[-1])
     return beta_env 
 
-
+# Sometimes I think it might be faster not numba-ing this function but I
+# want to try a compiled C version of it at some point.
 @nb.njit(
     nb.float32[:](
         nb.float32[:],
@@ -382,13 +395,31 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
 
 def do_transmission_update(model, tick) -> None:
 
+    delta = 1
     nodes = model.nodes
     population = model.population
 
+    global lib
+    lib.report(
+        len(population),
+        len(nodes),
+        model.population.age,
+        model.population.nodeid,
+        model.population.itimer,
+        model.population.etimer,
+        model.population.susceptibility,
+        model.population.susceptibility_timer,
+        model.population.dod,
+        model.nodes.S[tick],
+        model.nodes.E[tick],
+        model.nodes.I[tick],
+        model.nodes.W[tick],
+        model.nodes.R[tick],
+        delta
+    )
+
     contagion = nodes.cases[:, tick].astype(np.float32)    # we will accumulate current infections into this array
-    nodeids = population.nodeid[:population.count]  # just look at the active agent indices
-    itimers = population.itimer[:population.count] # just look at the active agent indices
-    np.add.at(contagion, nodeids[itimers > 0], 1)   # increment by the number of active agents with non-zero itimer
+    contagion += model.nodes.I[tick]
 
     network = nodes.network
     transfer = (contagion * network).round().astype(np.uint32)
@@ -433,13 +464,14 @@ def do_transmission_update(model, tick) -> None:
     #total_forces = forces
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
+    
 
     total_infections = np.sum(new_infections)
+    #print( f"total new infections={total_infections}" )
     if total_infections > MAX_INFECTIONS:
-        raise ValueError( f"Number of new infections ({total_infections}) > than allocated array size (MAX_INFECTIONS)!" )
+        raise ValueError( f"Number of new infections ({total_infections}) > than allocated array size ({MAX_INFECTIONS})!" )
 
     if use_nb:
-        #calculated_incidence = 
         tx_inner_nodes(
             population.susceptibility,
             population.nodeid,
@@ -453,15 +485,11 @@ def do_transmission_update(model, tick) -> None:
         )
     else:
         num_nodes = len(new_infections)  # Assume number of nodes is the length of new_infections_by_node
-
-        global lib
         lib.tx_inner_nodes(
             population.count,
             num_nodes,
-            population.nodeid, # uint32_t * agent_node,
             population.susceptibility,# uint8_t *susceptibility,
             population.etimer,# unsigned char  * incubation_timer,
-            population.itimer,# unsigned char  * infection_timer,
             new_infections, # int * new_infections_array,
             model.params.exp_mean, # unsigned char incubation_period_constant
             infected_ids_buffer
@@ -484,3 +512,13 @@ def do_transmission_update(model, tick) -> None:
 
     return
 
+"""
+Latest design thought:
+
+    - Skip current census reporting in ages code.
+    - Do census to get number of active infections by node, and number of susceptibles by node. Probably in C. save this somewhere.
+    - Calculate foi in Python
+    - Calculate number of new infections by node. Python.
+    - Do new infections.
+    - See if this can all be time-sharded. Divide population into 7 or 8. Process 1/7 of population each day of the week.
+"""
