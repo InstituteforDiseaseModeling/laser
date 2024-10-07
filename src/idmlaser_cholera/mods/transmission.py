@@ -122,6 +122,7 @@ def init( model ):
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # susceptible_count
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # waning_count 
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count 
+            ctypes.c_int,                     # delta
             ctypes.c_int                     # delta
         ]
         global use_nb
@@ -415,7 +416,8 @@ def do_transmission_update(model, tick) -> None:
         model.nodes.I[tick],
         model.nodes.W[tick],
         model.nodes.R[tick],
-        delta
+        delta,
+        tick
     )
 
     contagion = nodes.cases[:, tick].astype(np.float32)    # we will accumulate current infections into this array
