@@ -395,7 +395,7 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
 
 def do_transmission_update(model, tick) -> None:
 
-    delta = 1
+    delta = 7
     nodes = model.nodes
     population = model.population
 
@@ -425,6 +425,7 @@ def do_transmission_update(model, tick) -> None:
     transfer = (contagion * network).round().astype(np.uint32)
     contagion += transfer.sum(axis=1)   # increment by incoming "migration"
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
+    contagion *= delta
 
     global psi_means
     if psi_means is None:

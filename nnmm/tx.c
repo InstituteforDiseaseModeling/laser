@@ -241,8 +241,11 @@ void report(
     uint32_t *infectious_count,
     uint32_t *waning_count,
     uint32_t *recovered_count,
-    unsigned int delta = 1
+    unsigned int delta,
+    unsigned int tick
 ) {
+    uint32_t shard_index = tick % delta;
+
     //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
     #pragma omp parallel
     {
@@ -259,7 +262,8 @@ void report(
         int *local_waning_count = (int*) calloc(num_nodes, sizeof(int));
 
         #pragma omp for
-        for (size_t i = 0; i <= count; i++) {
+        //for (size_t i = 0; i <= count; i++) {
+        for (uint32_t i = shard_index; i < count; i += delta) {
             // Collect report 
             if (dod[i]>0) {
                 int node_id = node[i];
