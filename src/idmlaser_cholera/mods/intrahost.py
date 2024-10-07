@@ -62,8 +62,8 @@ def _infection_update(count, itimer, sus_timer, susceptibility):
         if itimer[i] > 0:
             itimer[i] -= 1
             if itimer[i] <= 0:
-                susceptibility = 0
-                sus_timer[i] = np.random.randint(2*365, 4*365)
+                susceptibility[i] = 0
+                sus_timer[i] = np.random.randint(2*365, 4*365) # waning
 
     return
 
