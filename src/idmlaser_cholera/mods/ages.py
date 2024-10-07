@@ -38,7 +38,15 @@ def init( model ):
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # susceptible_count
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # waning_count 
             np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count 
+            ctypes.c_int                     # delta
         ]
+        lib.update_ages_strided_shards.argtypes = [
+            ctypes.c_int64,                  # count
+            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
+            ctypes.c_int,                     # delta
+            ctypes.c_int                     # tick
+        ]
+
     except Exception as ex:
         print( f"Failed to load libages.so." )
 
@@ -49,14 +57,25 @@ def init( model ):
     model.nodes.add_report_property("W", model.params.ticks, dtype=np.uint32) 
     model.nodes.add_report_property("R", model.params.ticks, dtype=np.uint32) 
 
+delta = 8
 
 def update_ages( model, tick ):
-    """
-    lib.update_ages(
+    lib.update_ages_strided_shards(
             ctypes.c_int64(model.population.count),
             model.population.age,
+            delta,
+            tick
         )
     """
+    if tick % delta != 0:
+        # copy model.nodes.[SEIWR] from tick-1 to tick
+        model.nodes.S[tick] = model.nodes.S[tick - 1] # .copy()
+        model.nodes.E[tick] = model.nodes.E[tick - 1] # .copy()
+        model.nodes.I[tick] = model.nodes.I[tick - 1] # .copy()
+        model.nodes.W[tick] = model.nodes.W[tick - 1] # .copy()
+        model.nodes.R[tick] = model.nodes.R[tick - 1] # .copy()
+        return
+
     global lib # didn't use to have to do this
     lib.update_ages_and_report(
             ctypes.c_int64(model.population.count),
@@ -73,6 +92,8 @@ def update_ages( model, tick ):
             model.nodes.I[tick],
             model.nodes.W[tick],
             model.nodes.R[tick],
+            delta
         )
+    """
 
 

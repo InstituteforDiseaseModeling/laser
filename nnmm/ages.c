@@ -33,6 +33,7 @@ unsigned recovered_counter = 0;
  * AND index >= start_idx AND index <= stop_idx;
  */
 const float one_day = 1.0f/365.0f;
+extern "C" {
 //void update_ages(unsigned long int stop_idx, float *ages) {
 void update_ages(unsigned long int stop_idx, int *ages) {
     //printf( "%s: from %d to %d.\n", __FUNCTION__, start_idx, stop_idx );
@@ -84,7 +85,8 @@ void update_ages_and_report(
     uint32_t *incubating_count,
     uint32_t *infectious_count,
     uint32_t *waning_count,
-    uint32_t *recovered_count 
+    uint32_t *recovered_count,
+    unsigned int delta = 1
 ) {
     //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
     #pragma omp parallel
@@ -100,7 +102,7 @@ void update_ages_and_report(
         for (size_t i = 0; i <= count; i++) {
             // Update ages
             if (age[i] >= 0) {
-                age[i]++;
+                age[i]+=delta;
             }
 
             // Collect report 
@@ -118,6 +120,7 @@ void update_ages_and_report(
                     if (susceptibility_timer[i]>0) {
                         local_waning_count[node_id]++;
                     } else {
+                        printf( "ERROR? recording %lu as recovered: susceptibility_timer = %d.\n", i, susceptibility_timer[i] );
                         local_recovered_count[node_id]++;
                     }
                 } else {
@@ -150,3 +153,16 @@ void update_ages_and_report(
     }
 }
 
+void update_ages_strided_shards(unsigned long int count, int *ages, uint32_t delta, uint32_t tick) {
+    // Calculate shard index based on current tick
+    uint32_t shard_index = tick % delta;
+
+    // Use OpenMP to parallelize over the strided access
+    #pragma omp parallel for
+    for (unsigned long int i = shard_index; i < count; i += delta) {
+        if (ages[i] >= 0) {
+            ages[i]+=delta;
+        }
+    }
+}
+}
