@@ -114,7 +114,7 @@ def _update_susceptibility_based_on_ri_timer(count, ri_timer, susceptibility, do
             # TBD: It's perfectly possible that the individual got infected (or recovered) while this timer
             # was counting down and we might want to abort the timer.
             if ri_timer[i] == 0:
-                susceptibility[i] = 0
+                susceptibility[i] = 1
                 #age_at_vax[i] = tick-dob[i] # optional for reporting
 
 
