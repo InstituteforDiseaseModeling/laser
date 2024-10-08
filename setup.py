@@ -12,15 +12,10 @@ def read(*names, **kwargs):
 
 
 setup(
-    name="laser-core",
-    version="0.0.1",
     long_description="{}\n{}".format(
         re.compile("^.. start-badges.*^.. end-badges", re.M | re.S).sub("", read("README.rst")),
         re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
     ),
-    author="Christopher Lorton",
-    author_email="christopher.lorton@gatesfoundation.org",
-    url="https://github.com/InstituteforDiseaseModeling/laser",
     packages=find_packages("src"),
     package_dir={"": "src"},
     py_modules=[path.stem for path in Path("src").glob("*.py")],

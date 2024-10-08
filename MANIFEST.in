@@ -21,4 +21,4 @@ include README.rst
 
 include *.md
 
-global-exclude *.py[cod] __pycache__/* *.so *.dylib
+global-exclude *.py[cod] __pycache__/* *.so *.dylib .DS_Store
