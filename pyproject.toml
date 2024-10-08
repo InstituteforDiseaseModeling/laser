@@ -1,7 +1,68 @@
-[build-system]
-requires = [
-    "setuptools>=30.3.0",
+[project]
+name = "laser-core"
+version = "0.0.1"
+authors = [
+  { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
+  { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },
 ]
+maintainers = [
+  { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
+  { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },
+]
+description = "Core functionality for the Light Agent Spatial modeling for ERadication toolkit (LASER)."
+readme = "README.rst"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+keywords = ["spatial modeling", "disease eradication", "agent-based modeling"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = [
+    "click",  # ==8.1.7",
+    "numpy",  # ==1.26.2",
+    "numba",  # ==0.58.1",
+    "polars",  # ==0.19.19",
+    "tqdm",  # ==4.66.1",
+    "matplotlib",
+    "pandas",
+    "taichi",
+    "pytest",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black",
+    "flake8"
+]
+docs = [
+    "sphinx>=1.3",
+    "sphinx-rtd-theme",
+    "furo"
+]
+test = [
+    "pytest",
+    "pytest-cov"
+]
+
+[project.urls]
+Homepage = "https://github.com/InstituteforDiseaseModeling/laser"
+Issues = "https://github.com/InstituteforDiseaseModeling/laser/issues"
+Documentation = "https://idmlaser.readthedocs.io/en/latest/"
+Changelog = "https://idmlaser.readthedocs.io/en/latest/changelog.html"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff.per-file-ignores]
 "ci/*" = ["S"]
@@ -37,7 +98,7 @@ select = [
     "W", # pycodestyle warnings
 ]
 src = ["src", "tests"]
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.flake8-pytest-style]
 fixture-parentheses = false
@@ -49,4 +110,4 @@ force-single-line = true
 
 [tool.black]
 line-length = 140
-target-version = ["py38"]
+target-version = ["py39"]
