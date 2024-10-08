@@ -6,7 +6,7 @@ source =
 [run]
 branch = true
 source =
-    idmlaser
+    laser_core
     tests
 parallel = true
 
