@@ -4,4 +4,4 @@ Reference
 .. toctree::
     :glob:
 
-    idmlaser*
+    laser_core*

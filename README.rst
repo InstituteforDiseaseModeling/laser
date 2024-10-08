@@ -60,7 +60,7 @@ Installation
 
 ::
 
-    pip install idmlaser
+    pip install laser-core
 
 You can also install the in-development version with::
 

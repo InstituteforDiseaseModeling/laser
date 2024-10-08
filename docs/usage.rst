@@ -4,4 +4,4 @@ Usage
 
 To use LASER in a project::
 
-	import idmlaser
+	import laser_core

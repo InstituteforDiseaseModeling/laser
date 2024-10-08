@@ -17,7 +17,7 @@
 default_context:
     allow_tests_inside_package: "no"
     c_extension_function: "longest"
-    c_extension_module: "_idmlaser"
+    c_extension_module: "_lasercore"
     c_extension_optional: "no"
     c_extension_support: "no"
     codacy: "no"
