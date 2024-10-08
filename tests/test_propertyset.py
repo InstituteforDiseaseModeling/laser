@@ -6,8 +6,6 @@ from pathlib import Path
 
 from laser_core.propertyset import PropertySet
 
-messages = []
-
 
 class TestPropertySet(unittest.TestCase):
     """Tests for the PropertySet class."""
@@ -156,5 +154,3 @@ class TestPropertySet(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(exit=False)
-    for message in messages:
-        print(message)
