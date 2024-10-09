@@ -1,8 +1,12 @@
 """Tests for the PropertySet class."""
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from laser_core.propertyset import PropertySet
+
+messages = []
 
 
 class TestPropertySet(unittest.TestCase):
@@ -138,3 +142,19 @@ class TestPropertySet(unittest.TestCase):
         # assert that the to_dict method returns the expected dictionary with nested PropertySets
         gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4, "e": PropertySet({"f": 5, "g": 6})})
         assert gb.to_dict() == {"a": 1, "b": 2, "c": 3, "d": 4, "e": {"f": 5, "g": 6}}
+
+    # Test save() method on temporary file
+    def test_save(self):
+        """Test the save method of the PropertySet class."""
+        # assert that the save method writes the expected string to the file
+        gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
+            filename = Path(file.name)
+            gb.save(filename)
+            assert filename.read_text() == str(gb)
+
+
+if __name__ == "__main__":
+    unittest.main(exit=False)
+    for message in messages:
+        print(message)
