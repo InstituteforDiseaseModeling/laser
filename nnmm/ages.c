@@ -165,4 +165,31 @@ void update_ages_strided_shards(unsigned long int count, int *ages, uint32_t del
         }
     }
 }
+
+void update_ages_contiguous_shards(unsigned long int count, int *ages, uint32_t delta, uint32_t tick) {
+    // Calculate the size of each shard
+    unsigned long int shard_size = count / delta;
+    unsigned long int remainder = count % delta;
+
+    // Calculate the shard index based on the current tick
+    uint32_t shard_index = tick % delta;
+
+    // Determine the start and end index for the contiguous shard
+    unsigned long int start = shard_index * shard_size;
+    unsigned long int end = start + shard_size;
+
+    // Handle the remainder (extra elements that don’t fit evenly into shards)
+    if (shard_index == delta - 1) {
+        end += remainder;  // Add remaining elements to the last shard
+    }
+
+    // Use OpenMP to parallelize over contiguous shards
+    #pragma omp parallel for
+    for (unsigned long int i = start; i < end; i++) {
+        if (ages[i] >= 0) {
+            ages[i] += delta;
+        }
+    }
+}
+
 }

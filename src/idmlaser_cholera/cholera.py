@@ -219,7 +219,7 @@ model.phases = [
     intrahost.do_infection_update, # type: ignore
     intrahost.do_exposure_update, # type: ignore
     transmission.do_transmission_update, # type: ignore
-    ri.do_ri, # type: ignore
+    #ri.do_ri, # type: ignore
     mi.do_susceptibility_decay, # type: ignore
     sia.do_interventions, # type: ignore 
 ]

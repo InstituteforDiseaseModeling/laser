@@ -46,6 +46,12 @@ def init( model ):
             ctypes.c_int,                     # delta
             ctypes.c_int                     # tick
         ]
+        lib.update_ages_contiguous_shards.argtypes = [
+            ctypes.c_int64,                  # count
+            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
+            ctypes.c_int,                     # delta
+            ctypes.c_int                     # tick
+        ]
 
     except Exception as ex:
         print( f"Failed to load libages.so." )
@@ -60,7 +66,8 @@ def init( model ):
 delta = 8
 
 def update_ages( model, tick ):
-    lib.update_ages_strided_shards(
+    #lib.update_ages_strided_shards(
+    lib.update_ages_contiguous_shards(
             ctypes.c_int64(model.population.count),
             model.population.age,
             delta,
