@@ -8,6 +8,7 @@ Contents
    readme
    installation
    usage
+   migration
    reference/index
    contributing
    authors
