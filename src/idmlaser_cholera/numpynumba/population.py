@@ -17,7 +17,7 @@ def accumulate_deaths_parallel(nodeid_filtered, death_year, deaths_per_year):
         node_index = nodeid_filtered[i]
         deaths_per_year[node_index, death_year[i]] += 1
 
-def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age):
+def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age=None):
     if not os.path.exists( hdf5_filename ):
         print( "WARNING: Couldn't find requested file: {hdf5_filename}" )
         return False
@@ -27,7 +27,8 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
             file_initial_populations = hdf.attrs['init_pops']
             file_age_distribution = hdf.attrs['age_dist']
             file_cumulative_deaths = hdf.attrs['cumulative_deaths']
-            file_eula_age = hdf.attrs['eula_age']
+            file_eula_age = hdf.attrs.get('eula_age', None)
+            #print( f"file_eula_age={file_eula_age}" )
 
             # Compare the attributes
             if (np.array_equal(initial_populations, file_initial_populations) and
@@ -43,7 +44,7 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
                 print( f"eula_age? {np.array_equal(eula_age, file_eula_age)} " )
                 return False
         except KeyError as e:
-            print(f"Attribute not found in file: {e}")
+            print(f"Attribute not found in file {hdf5_filename}\nError: {e}")
             return False
 
 class Population:

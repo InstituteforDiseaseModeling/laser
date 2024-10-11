@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 from datetime import datetime
 from tqdm import tqdm
+import pdb
 from . import manifest
 
 # Very simple!
@@ -64,36 +65,22 @@ model.params = PropertySet(meta_params, measles_params, network_params) # type: 
 model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 
 
-# ## Capacity Calculation
-# 
-# We have our initial populations, but we need to allocate enough space to handle growth during the simulation.
-
 from idmlaser_cholera.numpynumba import Population
 
 # We're going to create the human/agent population from the capacity (expansion slots based on births)
 # It will be in model.population
-Population.create_from_capacity(model,initial_populations)
-capacity = model.population.capacity
-from .schema import schema
-model.population.add_properties_from_schema( schema )
+from idmlaser_cholera.mods import ages
+from idmlaser_cholera.mods import mortality
+from idmlaser_cholera.mods import immunity
+from idmlaser_cholera.mods import init_prev
+from idmlaser_cholera.mods import transmission
+from idmlaser_cholera.mods import intrahost
+from idmlaser_cholera.mods import maternal_immunity as mi
+from idmlaser_cholera.mods import ri
+from idmlaser_cholera.mods import sia
+from idmlaser_cholera.mods import fertility
+from idmlaser_cholera.mods import age_init
 
-# we now have our population dataframe!
-# let's give it some values.
-
-# ## Node IDs
-# 
-# Add a property for node id. 419 nodes requires 9 bits so we will allocate a 16 bit value. Negative IDs don't make sense, so, `uint16`.
-
-# In[5]:
-
-
-def assign_node_ids(model,initial_populations):
-    index = 0
-    for nodeid, count in enumerate(initial_populations):
-        model.population.nodeid[index:index+count] = nodeid
-        index += count
-
-assign_node_ids(model,initial_populations)
 
 # ## Node Populations
 # 
@@ -113,14 +100,9 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
     nodes.population[:,0] = initial_populations
     model.nodes.nn_nodes = nn_nodes
 
-save_pops_in_nodes( model, nn_nodes, initial_populations )
 
 # Some of these are inputs and some are outputs
 # static inputs
-model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
-# The climatically driven environmental suitability of V. cholerae by node and time
-model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
-#model.nodes.psi[:] = 0.001 # placeholder, probably load from csv
 def init_psi_from_data():
     suitability_filename = manifest.psi_data
     import pandas as pd 
@@ -141,7 +123,96 @@ def init_psi_from_data():
 
     # Assign the data to the "psi" vector in the model
     model.nodes.psi[:] = suitability_data
+
+
+# ## Population per Tick
+# 
+# We will propagate the current populations forward on each tick. Vital dynamics of births and non-disease deaths will update the current values. The argument signature for per tick step phases is (`model`, `tick`). This lets functions access model specific properties and use the current tick, if necessary, e.g. record information or decide to act.
+
+def propagate_population(model, tick):
+    model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
+
+    return
+
+def init_from_data():
+    Population.create_from_capacity(model,initial_populations)
+    capacity = model.population.capacity
+    from .schema import schema
+    model.population.add_properties_from_schema( schema )
+
+    def assign_node_ids(model,initial_populations):
+        index = 0
+        for nodeid, count in enumerate(initial_populations):
+            model.population.nodeid[index:index+count] = nodeid
+            index += count
+    assign_node_ids(model,initial_populations)
+
+    save_pops_in_nodes( model, nn_nodes, initial_populations )
+
+    # ri coverages and init prev seem to be the same "kind of thing"?
+    model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
+
+    age_init.init( model )
+    immunity.init(model)
+    init_prev.init( model )
+
+    return capacity
+
+def init_from_file( filename ):
+    population = Population.load( filename )
+    model.population = population
+
+    def extend_capacity_after_loading( model ):
+        capacity = model.population.capacity
+        print(f"Allocating capacity for {capacity:,} individuals")
+        model.population.set_capacity( capacity )
+
+        ifirst, ilast = model.population.current()
+        print(f"{ifirst=:,}, {ilast=:,}")
+        return capacity
+    extend_capacity_after_loading( model )
+
+    save_pops_in_nodes( model, nn_nodes, initial_populations )
+
+from idmlaser_cholera.numpynumba.population import check_hdf5_attributes
+from idmlaser_cholera.kmcurve import cumulative_deaths
+
+def check_for_cached():
+    hdf5_directory = "laser_cache"
+    import os
+    if not os.path.exists(hdf5_directory):
+        os.makedirs(hdf5_directory)
+    for filename in os.listdir(hdf5_directory):
+        if filename.endswith(".h5"):
+            hdf5_filepath = os.path.join(hdf5_directory, filename)
+            cached = check_hdf5_attributes(
+                hdf5_filename=hdf5_filepath,
+                initial_populations=initial_populations,
+                age_distribution=age_init.age_distribution,
+                cumulative_deaths=cumulative_deaths
+            )
+            if cached:
+                init_from_file( hdf5_filepath )
+                return True
+    return False
+
+not_cached = True
+if check_for_cached():
+    print( "*\nFound cached file. Using it.\n*" )
+    not_cached = False # sorry for double negative
+else:
+    capacity = init_from_data()
+
+ages.init( model )
+mortality.init( model )
+sia.init( model )
+
+model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
+transmission.init( model )
+# The climatically driven environmental suitability of V. cholerae by node and time
+model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 init_psi_from_data()
+
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
 
@@ -159,49 +230,7 @@ model.nodes.add_scalar_property("enviro_contagion", dtype=np.float32)
 # Replace with values from data
 model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
 model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
-# ri coverages and init prev seem to be the same "kind of thing"?
-model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
 
-
-# ## Population per Tick
-# 
-# We will propagate the current populations forward on each tick. Vital dynamics of births and non-disease deaths will update the current values. The argument signature for per tick step phases is (`model`, `tick`). This lets functions access model specific properties and use the current tick, if necessary, e.g. record information or decide to act.
-
-def propagate_population(model, tick):
-    model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
-
-    return
-
-from idmlaser_cholera.mods import age_init
-age_init.init( model )
-from idmlaser_cholera.mods import ages
-ages.init( model )
-
-from idmlaser_cholera.mods import mortality
-mortality.init( model )
-
-from idmlaser_cholera.mods import immunity
-immunity.init(model)
-
-# Initial Prevalence
-# Print this _before_ initializing infections because `initial_infections` is modified in-place.
-#print(f"{(model.population.itimer > 0).sum()=:,}")
-
-from idmlaser_cholera.mods import init_prev
-# makes reference to specific properties
-init_prev.init( model )
-#print(f"{initial_infections.sum()=:,}")
-
-# Transmission
-from idmlaser_cholera.mods import transmission
-transmission.init( model )
-
-from idmlaser_cholera.mods import intrahost
-from idmlaser_cholera.mods import maternal_immunity as mi
-from idmlaser_cholera.mods import ri
-from idmlaser_cholera.mods import sia
-sia.init( model )
-from idmlaser_cholera.mods import fertility
 
 # ## Tick/Step Processing Phases
 # 
@@ -231,7 +260,12 @@ model.phases = [
 
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
+    """
+    if tick == 50:
+        model.population.save( filename="laser_cache/burnin_cholera.h5", initial_populations=initial_populations, age_distribution=age_init.age_distribution, cumulative_deaths=cumulative_deaths)
+    """
     metrics = [tick]
+     
     for phase in model.phases:
         tstart = datetime.now(tz=None)  # noqa: DTZ005
         phase(model, tick)
