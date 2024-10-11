@@ -4,11 +4,13 @@ from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from laser_core.migration import competing_destinations
 from laser_core.migration import distance
 from laser_core.migration import gravity
 from laser_core.migration import radiation
+from laser_core.migration import row_normalizer
 from laser_core.migration import stouffer
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
@@ -207,6 +209,338 @@ class TestMigrationFunctions(unittest.TestCase):
         assert np.allclose(distances, expected, atol=0.00001), print(
             f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
         )
+
+        return
+
+
+class TestMigrationFunctionSanityChecks(unittest.TestCase):
+    def test_gravity_model_sanity(self):
+        """Test the gravity model migration function with maximum."""
+
+        # Test that pop parameter is a NumPy array
+        with pytest.raises(TypeError):
+            gravity([1, 2, 3], np.ones((3, 3)), 1, 1, 1, 1, None)
+
+        # Test that pop parameter is a 1D array
+        with pytest.raises(TypeError):
+            gravity(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.ones((3, 3)), 1, 1, 1, 1, None)
+
+        # Test that pop parameter is a numeric array
+        with pytest.raises(TypeError):
+            gravity(np.array(["a", "b", "c"]), np.ones((3, 3)), 1, 1, 1, 1, None)
+
+        # Test that pop parameter is a non-negative array
+        with pytest.raises(ValueError, match="pops must contain non-negative values"):
+            gravity(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a NumPy array
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), [1, 2, 3], 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a 2D array
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.array([1, 2, 3]), 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a square array
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.array([[1, 2], [3, 4], [5, 6]]), 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a numeric array
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]), 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a non-negative array
+        with pytest.raises(ValueError, match="distances must contain non-negative values"):
+            gravity(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1, None)
+
+        # Test that distance parameter is a symmetric array
+        with pytest.raises(ValueError, match="distances must be a symmetric matrix"):
+            gravity(np.array([1, 2, 3]), np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1, None)
+
+        # Test that k parameter is a numeric value
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), "1", 1, 1, 1, None)
+
+        # Test that k parameter is a non-negative value
+        with pytest.raises(ValueError, match="k must be a non-negative value"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), -1, 1, 1, 1, None)
+
+        # Test that a parameter is a numeric value
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, "1", 1, 1, None)
+
+        # Test that a is a non-negative value
+        with pytest.raises(ValueError, match="a must be a non-negative value"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, -1, 1, 1, None)
+
+        # Test that b parameter is a numeric value
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, "1", 1, None)
+
+        # Test that b is a non-negative value
+        with pytest.raises(ValueError, match="b must be a non-negative value"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, -1, 1, None)
+
+        # Test that c parameter is a numeric value
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, "1", None)
+
+        # Test that c is a non-negative value
+        with pytest.raises(ValueError, match="c must be a non-negative value"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, -1, None)
+
+        # Test that max_frac parameter is a numeric value
+        with pytest.raises(TypeError):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, "1")
+
+        # Test that max_frac is a non-negative value
+        with pytest.raises(ValueError, match=r"max_frac must be in \[0, 1\]"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, -1)
+
+        # Test that max_frac is less than or equal to 1
+        with pytest.raises(ValueError, match=r"max_frac must be in \[0, 1\]"):
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, 2)
+
+        return
+
+    def test_row_normalizer_sanity(self):
+        """Test the row normalization function."""
+
+        # Test that network parameter is a NumPy array
+        with pytest.raises(TypeError):
+            row_normalizer([1, 2, 3], 0.1)
+
+        # Test that network parameter is a numeric array
+        with pytest.raises(TypeError):
+            row_normalizer(np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]), 0.1)
+
+        # Test that network parameter is a 2D array
+        with pytest.raises(TypeError):
+            row_normalizer(np.array([1, 2, 3]), 0.1)
+
+        # Test that network parameter is a square array
+        with pytest.raises(TypeError):
+            row_normalizer(np.array([[1, 2], [3, 4], [5, 6]]), 0.1)
+
+        # Test that network parameter is a non-negative array
+        with pytest.raises(ValueError, match="network must contain non-negative values"):
+            row_normalizer(np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 0.1)
+
+        # Test that max_rowsum parameter is a numeric value
+        with pytest.raises(TypeError):
+            row_normalizer(np.full((3, 3), 0.0625), "0.1")
+
+        # Test that max_rowsum is a non-negative value
+        with pytest.raises(ValueError, match=r"max_rowsum must be in \[0, 1\]"):
+            row_normalizer(np.full((3, 3), 0.0625), -0.1)
+
+        # Test that max_rowsum is less than or equal to 1
+        with pytest.raises(ValueError, match=r"max_rowsum must be in \[0, 1\]"):
+            row_normalizer(np.full((3, 3), 0.0625), 1.1)
+
+        return
+
+    def test_competing_destinations_sanity(self):
+        """Test the competing destinations migration function."""
+
+        # Test that pop parameter is a NumPy array
+        with pytest.raises(TypeError):
+            competing_destinations([1, 2, 3], np.ones((3, 3)), 1, 1, 1)
+
+        # Test that pop parameter is a 1D array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.ones((3, 3)), 1, 1, 1)
+
+        # Test that pop parameter is a numeric array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array(["a", "b", "c"]), np.ones((3, 3)), 1, 1, 1)
+
+        # Test that pop parameter is a non-negative array
+        with pytest.raises(ValueError, match="pops must contain non-negative values"):
+            competing_destinations(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1)
+
+        # Test that distance parameter is a NumPy array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), [1, 2, 3], 1, 1, 1)
+
+        # Test that distance parameter is a 2D array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.array([1, 2, 3]), 1, 1, 1)
+
+        # Test that distance parameter is a square array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.array([[1, 2], [3, 4], [5, 6]]), 1, 1, 1)
+
+        # Test that distance parameter is a numeric array
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]), 1, 1, 1)
+
+        # Test that distance parameter is a non-negative array
+        with pytest.raises(ValueError, match="distances must contain non-negative values"):
+            competing_destinations(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1)
+
+        # Test that parameter b is a numeric value
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), "1", 1, 1)
+
+        # Test that b is a non-negative value
+        with pytest.raises(ValueError, match="b must be a non-negative value"):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), -1, 1, 1)
+
+        # Test that parameter c is a numeric value
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, "1", 1)
+
+        # Test that c is a non-negative value
+        with pytest.raises(ValueError, match="c must be a non-negative value"):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, -1, 1)
+
+        # Test that parameter delta is a numeric value
+        with pytest.raises(TypeError):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, "1")
+
+        return
+
+    def test_stouffer_sanity(self):
+        """Test the Stouffer migration function."""
+
+        # Test that pop parameter is a NumPy array
+        with pytest.raises(TypeError):
+            stouffer([1, 2, 3], np.ones((3, 3)), 1, 1, 1, False)
+
+        # Test that pop parameter is a 1D array
+        with pytest.raises(TypeError):
+            stouffer(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.ones((3, 3)), 1, 1, 1, False)
+
+        # Test that pop parameter is a numeric array
+        with pytest.raises(TypeError):
+            stouffer(np.array(["a", "b", "c"]), np.ones((3, 3)), 1, 1, 1, False)
+
+        # Test that pop parameter is a non-negative array
+        with pytest.raises(ValueError, match="pops must contain non-negative values"):
+            stouffer(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1, False)
+
+        # Test that distance parameter is a NumPy array
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), [1, 2, 3], 1, 1, 1, False)
+
+        # Test that distance parameter is a 2D array
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.array([1, 2, 3]), 1, 1, 1, False)
+
+        # Test that distance parameter is a square array
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.array([[1, 2], [3, 4], [5, 6]]), 1, 1, 1, False)
+
+        # Test that distance parameter is a numeric array
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]), 1, 1, 1, False)
+
+        # Test that parameter k is a numeric value
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), "1", 1, 1, False)
+
+        # Test that k is a non-negative value
+        with pytest.raises(ValueError, match="k must be a non-negative value"):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), -1, 1, 1, False)
+
+        # Test that parameter a is a numeric value
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), 1, "1", 1, False)
+
+        # Test that a is a non-negative value
+        with pytest.raises(ValueError, match="a must be a non-negative value"):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), 1, -1, 1, False)
+
+        # Test that parameter b is a numeric value
+        with pytest.raises(TypeError):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, "1", False)
+
+        # Test that b is a non-negative value
+        with pytest.raises(ValueError, match="b must be a non-negative value"):
+            stouffer(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, -1, False)
+
+        return
+
+    def test_radiation_sanity(self):
+        """Test the radiation migration function."""
+
+        # Test that pop parameter is a NumPy array
+        with pytest.raises(TypeError):
+            radiation([1, 2, 3], np.ones((3, 3)), 1, False)
+
+        # Test that pop parameter is a 1D array
+        with pytest.raises(TypeError):
+            radiation(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.ones((3, 3)), 1, False)
+
+        # Test that pop parameter is a numeric array
+        with pytest.raises(TypeError):
+            radiation(np.array(["a", "b", "c"]), np.ones((3, 3)), 1, False)
+
+        # Test that pop parameter is a non-negative array
+        with pytest.raises(ValueError, match="pops must contain non-negative values"):
+            radiation(np.array([-1, 2, 3]), np.ones((3, 3)), 1, False)
+
+        # Test that distance parameter is a NumPy array
+        with pytest.raises(TypeError):
+            radiation(np.array([1, 2, 3]), [1, 2, 3], 1, False)
+
+        # Test that distance parameter is a 2D array
+        with pytest.raises(TypeError):
+            radiation(np.array([1, 2, 3]), np.array([1, 2, 3]), 1, False)
+
+        # Test that distance parameter is a square array
+        with pytest.raises(TypeError):
+            radiation(np.array([1, 2, 3]), np.array([[1, 2], [3, 4], [5, 6]]), 1, False)
+
+        # Test that distance parameter is a numeric array
+        with pytest.raises(TypeError):
+            radiation(np.array([1, 2, 3]), np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]), 1, False)
+
+        # Test that parameter k is a numeric value
+        with pytest.raises(TypeError):
+            radiation(np.array([1, 2, 3]), np.ones((3, 3)), "1", False)
+
+        # Test that k is a non-negative value
+        with pytest.raises(ValueError, match="k must be a non-negative value"):
+            radiation(np.array([1, 2, 3]), np.ones((3, 3)), -1, False)
+
+        return
+
+    def test_distance_sanity(self):
+        """Test the distance function."""
+
+        # Test that lat1 parameter is a numeric value
+        with pytest.raises(TypeError):
+            distance("0", 0, 0, 0)
+
+        # Test that lat1 is a valid latitude
+        with pytest.raises(ValueError, match=r"lat1 must be in the range \[-90, 90\]"):
+            distance(91, 0, 0, 0)
+
+        # Test that lon1 parameter is a numeric value
+        with pytest.raises(TypeError):
+            distance(0, "0", 0, 0)
+
+        # Test that lon1 is a valid longitude
+        with pytest.raises(ValueError, match=r"lon1 must be in the range \[-180, 180\]"):
+            distance(0, 181, 0, 0)
+
+        # Test that lat2 parameter is a numeric value
+        with pytest.raises(TypeError):
+            distance(0, 0, "0", 0)
+
+        # Test that lat2 is a valid latitude
+        with pytest.raises(ValueError, match=r"lat2 must be in the range \[-90, 90\]"):
+            distance(0, 0, 91, 0)
+
+        # Test that lon2 parameter is a numeric value
+        with pytest.raises(TypeError):
+            distance(0, 0, 0, "0")
+
+        # Test that lon2 is a valid longitude
+        with pytest.raises(ValueError, match=r"lon2 must be in the range \[-180, 180\]"):
+            distance(0, 0, 0, 181)
 
         return
 
