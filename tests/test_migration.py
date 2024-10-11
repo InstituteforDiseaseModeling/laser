@@ -165,6 +165,51 @@ class TestMigrationFunctions(unittest.TestCase):
 
         return
 
+    def test_distance_with_arrays(self):
+        """Test the distance function with arrays."""
+        lat1 = np.array([0, 0, 40.66, 0.3152])  # 0, 0, New York, Kampala
+        lon1 = np.array([0, 0, 73.94, 32.5816])  # 0, 0, New York, Kampala
+        lat2 = np.array([0, 1, 34.02, -1.3032])  # 0, 1, Los Angeles, Nairobi
+        lon2 = np.array([1, 0, 118.41, 36.8474])  # 1, 0, Los Angeles, Nairobi
+        distances = distance(lat1, lon1, lat2, lon2)
+        expected = np.array([111.19493, 111.19493, 3957.13675, 507.29393])
+        assert np.allclose(distances, expected, atol=0.00001), print(
+            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
+        )
+
+        return
+
+    def test_distance_scalar_array(self):
+        top_ten = self.city_data[0:10]
+        (lat1, lon1) = top_ten[0].lat, top_ten[0].long  # New York
+        lat2 = np.array([city.lat for city in top_ten])
+        lon2 = np.array([city.long for city in top_ten])
+        distances = distance(lat1, lon1, lat2, lon2)
+        expected = np.array(
+            [0.00000, 3957.13675, 1154.88510, 2283.37528, 3444.88038, 124.08572, 2547.74127, 3906.51957, 2206.50912, 1342.25107]
+        )
+        assert np.allclose(distances, expected, atol=0.00001), print(
+            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
+        )
+
+        return
+
+    # TODO? - test with array lat1/lon1 and scalar lat2/lon2
+    def test_distance_array_scalar(self):
+        top_ten = self.city_data[0:10]
+        lat1 = np.array([city.lat for city in top_ten])
+        lon1 = np.array([city.long for city in top_ten])
+        (lat2, lon2) = top_ten[0].lat, top_ten[0].long  # New York
+        distances = distance(lat1, lon1, lat2, lon2)
+        expected = np.array(
+            [0.00000, 3957.13675, 1154.88510, 2283.37528, 3444.88038, 124.08572, 2547.74127, 3906.51957, 2206.50912, 1342.25107]
+        )
+        assert np.allclose(distances, expected, atol=0.00001), print(
+            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
+        )
+
+        return
+
 
 if __name__ == "__main__":
     unittest.main()
