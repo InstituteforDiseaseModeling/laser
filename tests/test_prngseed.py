@@ -9,7 +9,7 @@ from laser_core.random import seed
 
 # Make some calls to various random number generators with Numba threads.
 @nb.njit((nb.uint64, nb.int64[:], nb.float64[:], nb.float64[:], nb.uint64[:]), nogil=True, parallel=True)
-def noise(count, integers, floats, normal, poisson):
+def noise(count, integers, floats, normal, poisson):  # pragma: no cover
     for i in nb.prange(count):
         integers[i] = np.random.randint(0, 100)
         floats[i] = np.random.random()
@@ -21,7 +21,7 @@ def noise(count, integers, floats, normal, poisson):
 
 # Make some calls to the Numba-fied random number generator in non-parallel mode.
 @nb.njit((nb.uint64, nb.int64[:]), nogil=True)
-def nbintegers(count, integers):
+def nbintegers(count, integers):  # pragma: no cover
     for i in range(count):
         integers[i] = np.random.randint(0, 100)
 

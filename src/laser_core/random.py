@@ -7,7 +7,7 @@ _prng = None
 
 
 @nb.jit((nb.uint64,), nopython=True, nogil=True, parallel=True)
-def nbseed(seed):
+def nbseed(seed):  # pragma: no cover
     np.random.seed(seed)  # set the non-parallel Numba PRNG seed
     nthreads = nb.get_num_threads()
     for i in nb.prange(nthreads):
