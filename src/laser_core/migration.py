@@ -49,25 +49,33 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
     """
 
     # Sanity checks
-    assert isinstance(pops, np.ndarray), "pops must be a NumPy array"
-    assert len(pops.shape) == 1, "pops must be a 1D array"
-    assert np.issubdtype(pops.dtype, np.number), "pops must be a numeric array"
-    assert distances.shape[0] == pops.shape[0], "pops and distances must have the same length"
-    assert distances.shape[1] == pops.shape[0], "distances must be a square matrix"
-    assert isinstance(distances, np.ndarray), "distances must be a NumPy array"
-    assert len(distances.shape) == 2, "distances must be a 2D array"
-    assert np.issubdtype(distances.dtype, np.number), "distances must be a numeric array"
-    assert isinstance(k, Number), "k must be a numeric value"
-    assert k >= 0, "k must be a non-negative value"
-    assert isinstance(a, Number), "a must be a numeric value"
-    assert a >= 0, "a must be a non-negative value"
-    assert isinstance(b, Number), "b must be a numeric value"
-    assert b >= 0, "b must be a non-negative value"
-    assert isinstance(c, Number), "c must be a numeric value"
-    assert c >= 0, "c must be a non-negative value"
+    _is_instance(pops, np.ndarray, "pops must be a NumPy array")
+    _has_dimensions(pops, 1, "pops must be a 1D array")
+    _is_dtype(pops, np.number, "pops must be a numeric array")
+    _has_values(pops >= 0, "pops must contain non-negative values")
+
+    _is_instance(distances, np.ndarray, "distances must be a NumPy array")
+    _has_dimensions(distances, 2, "distances must be a 2D array")
+    _has_shape(distances, (pops.shape[0], pops.shape[0]), "distances must be a square matrix")
+    _is_dtype(distances, np.number, "distances must be a numeric array")
+    _has_values(distances >= 0, "distances must contain non-negative values")
+    _has_values(distances == distances.T, "distances must be a symmetric matrix")
+
+    _is_instance(k, Number, "k must be a numeric value")
+    _has_values(k >= 0, "k must be a non-negative value")
+
+    _is_instance(a, Number, "a must be a numeric value")
+    _has_values(a >= 0, "a must be a non-negative value")
+
+    _is_instance(b, Number, "b must be a numeric value")
+    _has_values(b >= 0, "b must be a non-negative value")
+
+    _is_instance(c, Number, "c must be a numeric value")
+    _has_values(c >= 0, "c must be a non-negative value")
+
     if max_frac is not None:
-        assert isinstance(max_frac, Number), "max_frac must be a numeric value"
-        assert 0 <= max_frac <= 1, "max_frac must be in [0, 1]"
+        _is_instance(max_frac, Number, "max_frac must be a numeric value")
+        _has_values(0 <= max_frac <= 1, "max_frac must be in [0, 1]")
 
     distances1 = distances.copy()
     np.fill_diagonal(distances1, 1)  # Prevent division by zero in `distances ** (-1 * c)`
@@ -92,13 +100,14 @@ def row_normalizer(network, max_rowsum):
     """
 
     # Sanity checks
-    assert isinstance(network, np.ndarray), "network must be a NumPy array"
-    assert np.issubdtype(network.dtype, np.number), "network must be a numeric array"
-    assert len(network.shape) == 2, "network must be a 2D array"
-    assert network.shape[0] == network.shape[1], "network must be a square matrix"
-    assert np.all(network >= 0), "network must contain non-negative values"
-    assert isinstance(max_rowsum, Number), "max_rowsum must be a numeric value"
-    assert 0 <= max_rowsum <= 1, "max_rowsum must be in [0, 1]"
+    _is_instance(network, np.ndarray, "network must be a NumPy array")
+    _is_dtype(network, np.number, "network must be a numeric array")
+    _has_dimensions(network, 2, "network must be a 2D array")
+    _has_shape(network, (network.shape[0], network.shape[0]), "network must be a square matrix")
+    _has_values(network >= 0, "network must contain non-negative values")
+
+    _is_instance(max_rowsum, Number, "max_rowsum must be a numeric value")
+    _has_values(0 <= max_rowsum <= 1, "max_rowsum must be in [0, 1]")
 
     rowsums = network.sum(axis=1)
     rows_to_renorm = rowsums > max_rowsum
@@ -125,19 +134,24 @@ def competing_destinations(pops, distances, b, c, delta, **params):
     """
 
     # Sanity checks
-    assert isinstance(pops, np.ndarray), "pops must be a NumPy array"
-    assert len(pops.shape) == 1, "pops must be a 1D array"
-    assert np.issubdtype(pops.dtype, np.number), "pops must be a numeric array"
-    assert distances.shape[0] == pops.shape[0], "pops and distances must have the same length"
-    assert distances.shape[1] == pops.shape[0], "distances must be a square matrix"
-    assert isinstance(distances, np.ndarray), "distances must be a NumPy array"
-    assert len(distances.shape) == 2, "distances must be a 2D array"
-    assert np.issubdtype(distances.dtype, np.number), "distances must be a numeric array"
-    assert isinstance(b, Number), "b must be a numeric value"
-    assert b >= 0, "b must be a non-negative value"
-    assert isinstance(c, Number), "c must be a numeric value"
-    assert c >= 0, "c must be a non-negative value"
-    assert isinstance(delta, Number), "delta must be a numeric value"
+    _is_instance(pops, np.ndarray, "pops must be a NumPy array")
+    _has_dimensions(pops, 1, "pops must be a 1D array")
+    _is_dtype(pops, np.number, "pops must be a numeric array")
+    _has_values(pops >= 0, "pops must contain non-negative values")
+
+    _is_instance(distances, np.ndarray, "distances must be a NumPy array")
+    _has_dimensions(distances, 2, "distances must be a 2D array")
+    _has_shape(distances, (pops.shape[0], pops.shape[0]), "distances must be a square matrix")
+    _is_dtype(distances, np.number, "distances must be a numeric array")
+    _has_values(distances >= 0, "distances must contain non-negative values")
+
+    _is_instance(b, Number, "b must be a numeric value")
+    _has_values(b >= 0, "b must be a non-negative value")
+
+    _is_instance(c, Number, "c must be a numeric value")
+    _has_values(c >= 0, "c must be a non-negative value")
+
+    _is_instance(delta, Number, "delta must be a numeric value")
 
     network = gravity(pops, distances, b=b, c=c, **params)
     interference_matrix = pops**b * distances ** (-1 * c)
@@ -171,20 +185,26 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
     """
 
     # Sanity checks
-    assert isinstance(pops, np.ndarray), "pops must be a NumPy array"
-    assert len(pops.shape) == 1, "pops must be a 1D array"
-    assert np.issubdtype(pops.dtype, np.number), "pops must be a numeric array"
-    assert distances.shape[0] == pops.shape[0], "pops and distances must have the same length"
-    assert distances.shape[1] == pops.shape[0], "distances must be a square matrix"
-    assert isinstance(distances, np.ndarray), "distances must be a NumPy array"
-    assert len(distances.shape) == 2, "distances must be a 2D array"
-    assert np.issubdtype(distances.dtype, np.number), "distances must be a numeric array"
-    assert isinstance(k, Number), "k must be a numeric value"
-    assert k >= 0, "k must be a non-negative value"
-    assert isinstance(a, Number), "a must be a numeric value"
-    assert a >= 0, "a must be a non-negative value"
-    assert isinstance(b, Number), "b must be a numeric value"
-    assert b >= 0, "b must be a non-negative value"
+    _is_instance(pops, np.ndarray, "pops must be a NumPy array")
+    _has_dimensions(pops, 1, "pops must be a 1D array")
+    _is_dtype(pops, np.number, "pops must be a numeric array")
+    _has_values(pops >= 0, "pops must contain non-negative values")
+
+    _is_instance(distances, np.ndarray, "distances must be a NumPy array")
+    _has_dimensions(distances, 2, "distances must be a 2D array")
+    _has_shape(distances, (pops.shape[0], pops.shape[0]), "distances must be a square matrix")
+    _is_dtype(distances, np.number, "distances must be a numeric array")
+    _has_values(distances >= 0, "distances must contain non-negative values")
+
+    _is_instance(k, Number, "k must be a numeric value")
+    _has_values(k >= 0, "k must be a non-negative value")
+
+    _is_instance(a, Number, "a must be a numeric value")
+    _has_values(a >= 0, "a must be a non-negative value")
+
+    _is_instance(b, Number, "b must be a numeric value")
+    _has_values(b >= 0, "b must be a non-negative value")
+
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
     sort_indices = np.argsort(distances, axis=1)
@@ -219,16 +239,20 @@ def radiation(pops, distances, k, include_home, **params):
     """
 
     # Sanity checks
-    assert isinstance(pops, np.ndarray), "pops must be a NumPy array"
-    assert len(pops.shape) == 1, "pops must be a 1D array"
-    assert np.issubdtype(pops.dtype, np.number), "pops must be a numeric array"
-    assert distances.shape[0] == pops.shape[0], "pops and distances must have the same length"
-    assert distances.shape[1] == pops.shape[0], "distances must be a square matrix"
-    assert isinstance(distances, np.ndarray), "distances must be a NumPy array"
-    assert len(distances.shape) == 2, "distances must be a 2D array"
-    assert np.issubdtype(distances.dtype, np.number), "distances must be a numeric array"
-    assert isinstance(k, Number), "k must be a numeric value"
-    assert k >= 0, "k must be a non-negative value"
+    _is_instance(pops, np.ndarray, "pops must be a NumPy array")
+    _has_dimensions(pops, 1, "pops must be a 1D array")
+    _is_dtype(pops, np.number, "pops must be a numeric array")
+    _has_values(pops >= 0, "pops must contain non-negative values")
+
+    _is_instance(distances, np.ndarray, "distances must be a NumPy array")
+    _has_dimensions(distances, 2, "distances must be a 2D array")
+    _has_shape(distances, (pops.shape[0], pops.shape[0]), "distances must be a square matrix")
+    _is_dtype(distances, np.number, "distances must be a numeric array")
+    _has_values(distances >= 0, "distances must contain non-negative values")
+
+    _is_instance(k, Number, "k must be a numeric value")
+    _has_values(k >= 0, "k must be a non-negative value")
+
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
     sort_indices = np.argsort(distances, axis=1)
@@ -265,14 +289,14 @@ def distance(lat1, lon1, lat2, lon2):
     """
 
     # Sanity checks
-    assert isinstance(lat1, (Number, np.ndarray)), "lat1 must be a numeric value or NumPy array"
-    assert isinstance(lon1, (Number, np.ndarray)), "lon1 must be a numeric value or NumPy array"
-    assert isinstance(lat2, (Number, np.ndarray)), "lat2 must be a numeric value or NumPy array"
-    assert isinstance(lon2, (Number, np.ndarray)), "lon2 must be a numeric value or NumPy array"
-    assert np.all((-90 <= lat1) & (lat1 <= 90)), "lat1 must be in the range [-90, 90]"
-    assert np.all((-180 <= lon1) & (lon1 <= 180)), "lon1 must be in the range [-180, 180]"
-    assert np.all((-90 <= lat2) & (lat2 <= 90)), "lat2 must be in the range [-90, 90]"
-    assert np.all((-180 <= lon2) & (lon2 <= 180)), "lon2 must be in the range [-180, 180]"
+    _is_instance(lat1, (Number, np.ndarray), "lat1 must be a numeric value of NumPy array")
+    _is_instance(lon1, (Number, np.ndarray), "lon1 must be a numeric value of NumPy array")
+    _is_instance(lat2, (Number, np.ndarray), "lat2 must be a numeric value of NumPy array")
+    _is_instance(lon2, (Number, np.ndarray), "lon2 must be a numeric value of NumPy array")
+    _has_values((-90 <= lat1) & (lat1 <= 90), "lat1 must be in the range [-90, 90]")
+    _has_values((-180 <= lon1) & (lon1 <= 180), "lon1 must be in the range [-180, 180]")
+    _has_values((-90 <= lat2) & (lat2 <= 90), "lat2 must be in the range [-90, 90]")
+    _has_values((-180 <= lon2) & (lon2 <= 180), "lon2 must be in the range [-180, 180]")
 
     # convert to radians
     lat1 = np.radians(lat1)
@@ -288,3 +312,41 @@ def distance(lat1, lon1, lat2, lon2):
     d = RE * c
 
     return d
+
+
+# Sanity checks
+
+
+def _is_instance(obj, types, message):
+    if not isinstance(obj, types):
+        raise TypeError(message)
+
+    return
+
+
+def _has_dimensions(obj, dimensions, message):
+    if not len(obj.shape) == dimensions:
+        raise TypeError(message)
+
+    return
+
+
+def _is_dtype(obj, dtype, message):
+    if not np.issubdtype(obj.dtype, dtype):
+        raise TypeError(message)
+
+    return
+
+
+def _has_values(check, message):
+    if not np.all(check):
+        raise ValueError(message)
+
+    return
+
+
+def _has_shape(obj, shape, message):
+    if not obj.shape == shape:
+        raise TypeError(message)
+
+    return
