@@ -106,7 +106,7 @@ class SortedQueue:
         """
 
         index = self.peeki()
-        self.pop()
+        self.__pop()
 
         return index
 
@@ -121,7 +121,7 @@ class SortedQueue:
         """
 
         value = self.peekv()
-        self.pop()
+        self.__pop()
 
         return value
 
@@ -134,11 +134,11 @@ class SortedQueue:
             tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
         """
         ivtuple = self.peekiv()
-        self.pop()
+        self.__pop()
 
         return ivtuple
 
-    def pop(self) -> None:
+    def __pop(self) -> None:
         """
         Removes the smallest value element from the sorted queue.
         Raises:
