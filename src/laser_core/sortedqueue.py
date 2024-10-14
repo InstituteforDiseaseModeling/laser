@@ -19,6 +19,19 @@ class SortedQueue:
     # https://github.com/python/cpython/blob/5592399313c963c110280a7c98de974889e1d353/Lib/heapq.py
 
     def __init__(self, capacity: int, values: np.ndarray):
+        """
+        Initializes a new instance of the class with a specified capacity and reference to existing, sortable values.
+
+        This implementation is specific to LASER and the expectation of tracking 10s or 100s of millions of agents.
+        We expect the sortable (or priority) values to already be in a NumPy array, usually a property of a LaserFrame object.
+        The `push()` and `pop()` will take _indices_ into this array and will sort on values[i].
+        This avoids making copies of the sort values.
+
+        Args:
+            capacity (int): The maximum number of elements the queue can hold.
+            values (np.ndarray): A reference to an array of values to be accessed by the queue.
+        """
+
         self.indices = np.zeros(capacity, dtype=np.uint32)
         self.values = values
         self.size = 0

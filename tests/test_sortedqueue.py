@@ -1,21 +1,30 @@
 """Tests for the SortedQueue class."""
 
 import unittest
+from typing import ClassVar
 
 import numpy as np
 import pytest
 
 from laser_core.sortedqueue import SortedQueue
 
-messages = []
-
 
 class TestSortedQueue(unittest.TestCase):
     """Tests for the SortedQueue class."""
 
+    messages: ClassVar = []
+
+    # Called before each test
     def setUp(self):
         # 31 41 59 26 53 58 97
         self.pq = SortedQueue(7, np.array([31, 41, 59, 26, 53, 58, 97], dtype=np.int32))
+
+    # Called once after all tests
+    @classmethod
+    def tearDownClass(cls):
+        print()
+        for message in cls.messages:
+            print(message)
 
     def test_push_pop(self):
         """Test pushing and popping elements from the sorted queue."""
@@ -58,6 +67,7 @@ class TestSortedQueue(unittest.TestCase):
         self.pq.push(6)
 
         assert self.pq.peekiv() == (3, 26)
+        assert self.pq.peekiv() == (3, 26)  # Do it again to prove we didn't modify the queue.
 
     def test_empty_peek(self):
         """Test peeking at the top element of an empty sorted queue. Should raise an IndexError."""
@@ -72,6 +82,7 @@ class TestSortedQueue(unittest.TestCase):
             self.pq.push(i)
         minimum = values.min()
         assert self.pq.peekv() == minimum
+        assert self.pq.peekv() == minimum  # Do it again to prove we didn't modify the queue.
 
     def test_empty_pop(self):
         """Test popping from an empty sorted queue. Should raise an IndexError."""
@@ -100,7 +111,7 @@ class TestSortedQueue(unittest.TestCase):
         values = np.random.randint(0, 100, count, dtype=np.int32)
         self.pq = SortedQueue(len(values), values)
         elapsed = timeit.timeit("for i in range(len(values)): self.pq.push(i)", globals={"values": values, "self": self}, number=1)
-        messages.append(
+        self.messages.append(
             f"SortedQueue.push() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
@@ -116,7 +127,7 @@ class TestSortedQueue(unittest.TestCase):
             self.pq.push(i)
 
         elapsed = timeit.timeit("while len(self.pq): self.pq.popv()", globals={"self": self}, number=1)
-        messages.append(
+        self.messages.append(
             f"SortedQueue.popv() timing: {elapsed:0.4f} seconds for {count:9,} elements = {int(round(count / elapsed)):11,} elements/second"
         )
 
@@ -132,6 +143,7 @@ class TestSortedQueue(unittest.TestCase):
         self.pq.push(6)
 
         assert self.pq.peeki() == 3
+        assert self.pq.peeki() == 3  # Do it again to prove we didn't modify the queue.
 
     # Test for peeki() on empty sorted queue
     def test_empty_peeki(self):
@@ -151,6 +163,7 @@ class TestSortedQueue(unittest.TestCase):
         self.pq.push(6)
 
         assert self.pq.popi() == 3
+        assert self.pq.popi() == 0  # Pop the next one to prove we updated the queue.
 
     # Test for peekv() on empty sorted queue
     def test_empty_peekv(self):
@@ -161,5 +174,3 @@ class TestSortedQueue(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(exit=False)
-    for message in messages:
-        print(message)
