@@ -1,4 +1,4 @@
-"""PriorityQueue implementation using NumPy and Numba."""
+"""SortedQueue implementation using NumPy and Numba."""
 
 from typing import Any
 
@@ -6,13 +6,13 @@ import numba as nb
 import numpy as np
 
 
-class PriorityQueue:
+class SortedQueue:
     """
-    A priority queue implemented using NumPy arrays and sped-up with Numba.
+    A sorted (priority) queue implemented using NumPy arrays and sped-up with Numba.
     Using the algorithm from the Python heapq module.
-    __init__ with an existing array of priority values
-    __push__ with an index into priority values
-    __pop__ returns the index of the highest priority value and its value
+    __init__ with an existing array of sorting values
+    __push__ with an index into sorting values
+    __pop__ returns the index of the lowest sorting value and its value
     """
 
     # https://github.com/python/cpython/blob/5592399313c963c110280a7c98de974889e1d353/Modules/_heapqmodule.c
@@ -27,69 +27,69 @@ class PriorityQueue:
 
     def push(self, index) -> None:
         """
-        Insert an element into the priority queue.
-        This method adds an element at the end of the priority queue and then
-        ensures the heap property is maintained by sifting the element down
+        Insert an element into the sorted queue.
+        This method adds an element at the back of the sorted queue and then
+        ensures the heap property is maintained by sifting the element forward
         to its correct position.
         Args:
-            index (int): The index of the element to be added to the priority queue.
+            index (int): The index of the element to be added to the sorted queue.
         Raises:
-            IndexError: If the priority queue is full.
+            IndexError: If the sorted queue is full.
         """
 
         if self.size >= len(self.indices):
-            raise IndexError("Priority queue is full")
+            raise IndexError("Sorted queue is full")
         self.indices[self.size] = index
-        _siftdown(self.indices, self.values, 0, self.size)
+        _siftforward(self.indices, self.values, 0, self.size)
         self.size += 1
         return
 
     def peeki(self) -> np.uint32:
         """
-        Returns the index of the highest priority element in the priority queue without removing it.
+        Returns the index of the smallest value element in the sorted queue without removing it.
         Raises:
-            IndexError: If the priority queue is empty.
+            IndexError: If the sorted queue is empty.
         Returns:
-            np.uint32: The index of the highest priority element.
+            np.uint32: The index of the smallest value element.
         """
 
         if self.size == 0:
-            raise IndexError("Priority queue is empty")
+            raise IndexError("Sorted queue is empty")
         return self.indices[0]
 
     def peekv(self) -> Any:
         """
-        Return the highest priority value from the priority queue without removing it.
+        Return the smallest value from the sorted queue without removing it.
         Raises:
-            IndexError: If the priority queue is empty.
+            IndexError: If the sorted queue is empty.
         Returns:
-            Any: The value with the highest priority in the priority queue.
+            Any: The value with the smallest value in the sorted queue.
         """
 
         if self.size == 0:
-            raise IndexError("Priority queue is empty")
+            raise IndexError("Sorted queue is empty")
         return self.values[self.indices[0]]
 
     def peekiv(self) -> tuple[np.uint32, Any]:
         """
-        Returns the index and value of the highest priority element in the priority queue without removing it.
+        Returns the index and value of the smallest value element in the sorted queue without removing it.
         Returns:
-            tuple[np.uint32, Any]: A tuple containing the index and value of the highest priority element.
+            tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
         Raises:
-            IndexError: If the priority queue is empty.
+            IndexError: If the sorted queue is empty.
         """
 
         if self.size == 0:
-            raise IndexError("Priority queue is empty")
+            raise IndexError("Sorted queue is empty")
         return (self.indices[0], self.values[self.indices[0]])
 
     def popi(self) -> np.uint32:
         """
-        Removes and returns the index of the highest priority element in the priority queue.
-        This method first retrieves the index of the highest priority element using `peeki()`,
+        Removes and returns the index of the smallest value element in the sorted queue.
+        This method first retrieves the index of the smallest value element using `peeki()`,
         then removes the element from the queue using `pop()`, and finally returns the index.
         Returns:
-            np.uint32: The index of the highest priority element in the priority queue.
+            np.uint32: The index of the smallest value element in the sorted queue.
         """
 
         index = self.peeki()
@@ -99,12 +99,12 @@ class PriorityQueue:
 
     def popv(self) -> Any:
         """
-        Removes and returns the value at the front of the priority queue.
+        Removes and returns the value at the front of the sorted queue.
         This method first retrieves the value at the front of the queue without
         removing it by calling `peekv()`, and then removes the front element
         from the queue by calling `pop()`. The retrieved value is then returned.
         Returns:
-            Any: The value at the front of the priority queue.
+            Any: The value at the front of the sorted queue.
         """
 
         value = self.peekv()
@@ -114,11 +114,11 @@ class PriorityQueue:
 
     def popiv(self) -> tuple[np.uint32, Any]:
         """
-        Removes and returns the index and value of the highest priority element in the priority queue.
-        This method first retrieves the index and value of the highest priority element using `peekiv()`,
+        Removes and returns the index and value of the smallest value element in the sorted queue.
+        This method first retrieves the index and value of the smallest value element using `peekiv()`,
         then removes the element from the queue using `pop()`, and finally returns the index and value.
         Returns:
-            tuple[np.uint32, Any]: A tuple containing the index and value of the highest priority element.
+            tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
         """
         ivtuple = self.peekiv()
         self.pop()
@@ -127,36 +127,36 @@ class PriorityQueue:
 
     def pop(self) -> None:
         """
-        Removes the highest priority element from the priority queue.
+        Removes the smallest value element from the sorted queue.
         Raises:
-            IndexError: If the priority queue is empty.
+            IndexError: If the sorted queue is empty.
         Side Effects:
-            Decreases the size of the priority queue by one.
-            Reorganizes the internal structure of the priority queue to maintain the heap property.
+            Decreases the size of the sorted queue by one.
+            Reorganizes the internal structure of the sorted queue to maintain the heap property.
         """
 
         if self.size == 0:
             raise IndexError("Priority queue is empty")
         self.size -= 1
         self.indices[0] = self.indices[self.size]
-        _siftup(self.indices, self.values, 0, self.size)
+        _siftbackward(self.indices, self.values, 0, self.size)
         return
 
     def __len__(self):
         """
-        Return the number of elements in the priority queue.
+        Return the number of elements in the sorted queue.
         Returns:
-            int: The number of elements in the priority queue.
+            int: The number of elements in the sorted queue.
         """
 
         return self.size
 
 
 @nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
-def _siftdown(indices, values, startpos, pos):  # pragma: no cover
+def _siftforward(indices, values, startpos, pos):  # pragma: no cover
     inewitem = indices[pos]
     vnewitem = values[inewitem]
-    # Follow the path to the root, moving parents down until finding a place newitem fits.
+    # Follow the path to the root, moving parents backward until finding a place newitem fits.
     while pos > startpos:
         parentpos = (pos - 1) >> 1
         iparent = indices[parentpos]
@@ -172,7 +172,7 @@ def _siftdown(indices, values, startpos, pos):  # pragma: no cover
 
 
 @nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
-def _siftup(indices, values, pos, size):  # pragma: no cover
+def _siftbackward(indices, values, pos, size):  # pragma: no cover
     endpos = size
     startpos = pos
     inewitem = indices[pos]
@@ -188,7 +188,7 @@ def _siftup(indices, values, pos, size):  # pragma: no cover
         pos = childpos
         childpos = 2 * pos + 1
     # The leaf at pos is empty now.  Put newitem there, and bubble it up
-    # to its final resting place (by sifting its parents down).
+    # to its final resting place (by sifting its parents forward).
     indices[pos] = inewitem
-    _siftdown(indices, values, startpos, pos)
+    _siftforward(indices, values, startpos, pos)
     return
