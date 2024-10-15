@@ -3,6 +3,8 @@ import unittest
 import numba as nb
 import numpy as np
 
+import laser_core.random as random
+from laser_core.random import get_seed
 from laser_core.random import prng as rng
 from laser_core.random import seed
 
@@ -117,6 +119,161 @@ class TestRandomSeed(unittest.TestCase):
         assert np.array_equal(integers1a, integers2a)
 
         return
+
+    def test_get_seed(self):
+        """Test that the seed returned by `get_seed()` matches the seed set by `seed()`."""
+        seed(20241009)
+        assert get_seed() == 20241009
+
+        return
+
+    def test_uninitialized_prng(self):
+        random._seed = None
+        random._prng = None
+        prng = rng()
+        assert prng is not None, "Calling laser_core.random.prng() should initialize the LASER global prng."
+        assert get_seed() is not None, "Calling laser_core.random.prng() should initialize the LASER global prng seed."
+
+        return
+
+    def test_prng_mix(self):
+        # Call a mix of NumPy default random functions, prng functions, and Numba-fied functions
+        # with a mix of random draw counts.
+        # Verify that re-seeding results in the same random draws.
+        which = np.random.randint(0, 16, 1024)
+        counts = np.random.randint(1, 1025, 1024)
+        prng = seed(20241015)
+        functions = [
+            lambda count: np.random.randint(0, 128, count),
+            lambda count: np.random.random(count),
+            lambda count: np.random.normal(0, 1, count),
+            lambda count: np.random.poisson(5, count),
+            lambda count: prng.integers(0, 128, count),
+            lambda count: prng.random(count),
+            lambda count: prng.normal(0, 1, count),
+            lambda count: prng.poisson(5, count),
+            lambda count: _nbintegers(count),
+            lambda count: _nbfloats(count),
+            lambda count: _nbnormal(count),
+            lambda count: _nbpoisson(count),
+            lambda count: _nbpbintegers(count),
+            lambda count: _nbpbfloats(count),
+            lambda count: _nbpbnormal(count),
+            lambda count: _nbpbpoisson(count),
+        ]
+        results1 = [functions[which[i]](counts[i]) for i in range(1024)]
+        prng = seed(20241015)
+        results2 = [functions[which[i]](counts[i]) for i in range(1024)]
+        for result1, result2 in zip(results1, results2):
+            assert np.array_equal(result1, result2)
+
+        return
+
+    def test_prng_mix_uninitialized(self):
+        # Call a mix of NumPy default random functions, prng functions, and Numba-fied functions
+        # with a mix of random draw counts.
+        # Verify that re-seeding results in the same random draws.
+        which = np.random.randint(0, 16, 1024)
+        counts = np.random.randint(1, 1025, 1024)
+        random._prng = None  # Reset the LASER global prng
+        prng = rng()
+        functions = [
+            lambda count: np.random.randint(0, 128, count),
+            lambda count: np.random.random(count),
+            lambda count: np.random.normal(0, 1, count),
+            lambda count: np.random.poisson(5, count),
+            lambda count: prng.integers(0, 128, count),
+            lambda count: prng.random(count),
+            lambda count: prng.normal(0, 1, count),
+            lambda count: prng.poisson(5, count),
+            lambda count: _nbintegers(count),
+            lambda count: _nbfloats(count),
+            lambda count: _nbnormal(count),
+            lambda count: _nbpoisson(count),
+            lambda count: _nbpbintegers(count),
+            lambda count: _nbpbfloats(count),
+            lambda count: _nbpbnormal(count),
+            lambda count: _nbpbpoisson(count),
+        ]
+        results1 = [functions[which[i]](counts[i]) for i in range(1024)]
+        prng = seed(get_seed())
+        results2 = [functions[which[i]](counts[i]) for i in range(1024)]
+        for result1, result2 in zip(results1, results2):
+            assert np.array_equal(result1, result2)
+
+        return
+
+
+@nb.njit((nb.uint64,))
+def _nbintegers(count):
+    result = np.empty(count, dtype=np.int64)
+    for i in range(count):
+        result[i] = np.random.randint(0, 100)
+
+    return result
+
+
+@nb.njit((nb.uint64,))
+def _nbfloats(count):
+    result = np.empty(count, dtype=np.float64)
+    for i in range(count):
+        result[i] = np.random.random()
+
+    return result
+
+
+@nb.njit((nb.uint64,))
+def _nbnormal(count):
+    result = np.empty(count, dtype=np.float64)
+    for i in range(count):
+        result[i] = np.random.normal(0, 1)
+
+    return result
+
+
+@nb.njit((nb.uint64,))
+def _nbpoisson(count):
+    result = np.empty(count, dtype=np.uint64)
+    for i in range(count):
+        result[i] = np.random.poisson(5)
+
+    return result
+
+
+@nb.njit((nb.uint64,), parallel=True)
+def _nbpbintegers(count):
+    result = np.empty(count, dtype=np.int64)
+    for i in nb.prange(count):
+        result[i] = np.random.randint(0, 100)
+
+    return result
+
+
+@nb.njit((nb.uint64,), parallel=True)
+def _nbpbfloats(count):
+    result = np.empty(count, dtype=np.float64)
+    for i in nb.prange(count):
+        result[i] = np.random.random()
+
+    return result
+
+
+@nb.njit((nb.uint64,), parallel=True)
+def _nbpbnormal(count):
+    result = np.empty(count, dtype=np.float64)
+    for i in nb.prange(count):
+        result[i] = np.random.normal(0, 1)
+
+    return result
+
+
+@nb.njit((nb.uint64,), parallel=True)
+def _nbpbpoisson(count):
+    result = np.empty(count, dtype=np.uint64)
+    for i in nb.prange(count):
+        result[i] = np.random.poisson(5)
+
+    return result
 
 
 if __name__ == "__main__":
