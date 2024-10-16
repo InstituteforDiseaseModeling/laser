@@ -67,7 +67,6 @@ void tx_inner_nodes(
 void report(
     unsigned long int count,
     int num_nodes,
-    int32_t *age,
     uint16_t *node,
     unsigned char *infectious_timer, // max 255
     unsigned char *incubation_timer, // max 255

@@ -16,22 +16,9 @@ MAX_INFECTIONS = 100000000  # Adjust this to your expected maximum
 # Allocate a flat array for infected IDs
 infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
 
-# ## Transmission Part I - Setup
-# 
-# We will add a `network` property to the model to hold the connection weights between the nodes.
-# 
-# We initialize $n_{ij} = n_{ji} = k \frac {P_i^a \cdot P_j^b} {D_{ij}^c}$
-# 
-# Then we limit outgoing migration from any one node to `max_frac`.
-
-# In[21]:
-
-
 # We need to calculate the distances between the centroids of the nodes in northern Nigeria
 
 RE = 6371.0  # Earth radius in km
-#delta = np.ones( 419, dtype=np.float32 )*0.5
-#delta = 0.5
 
 def calc_distance(lat1, lon1, lat2, lon2):
     # convert to radians
@@ -56,7 +43,7 @@ def init( model ):
         (longitude, latitude) = node[1]
         locations[i, 0] = latitude
         locations[i, 1] = longitude
-    locations = np.radians(locations)
+    #locations = np.radians(locations)
 
 # TODO: Consider keeping the distances and periodically recalculating the network values as the populations change
     a = model.params.a
@@ -86,18 +73,6 @@ def init( model ):
         lib = ctypes.CDLL(shared_lib_path)
 
         # Define the argument types for the C function
-        lib.tx_inner.argtypes = [
-            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
-            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # nodeids
-            np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'), # forces
-            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # itimers
-            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # etimers
-            ctypes.c_uint32,                                                        # count
-            ctypes.c_float,                                                           # exp_mean
-            ctypes.c_float,                                                           # exp_std
-            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # incidence,
-            ctypes.c_uint32,                                                        # num_nodes
-        ]
         lib.tx_inner_nodes.argtypes = [
             ctypes.c_uint32,                                                        # count
             ctypes.c_uint32,                                                        # num_nodes
@@ -110,7 +85,6 @@ def init( model ):
         lib.report.argtypes = [
             ctypes.c_int64,                  # count
             ctypes.c_int,                     # num_nodes
-            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # age
             np.ctypeslib.ndpointer(dtype=np.uint16, flags='C_CONTIGUOUS'),      # node
             np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # infectious_timer
             np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # incubation_timer
@@ -402,7 +376,7 @@ def do_transmission_update(model, tick) -> None:
     lib.report(
         len(population),
         len(nodes),
-        model.population.age,
+        #model.population.age,
         model.population.nodeid,
         model.population.itimer,
         model.population.etimer,
