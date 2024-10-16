@@ -15,7 +15,7 @@ from idmlaser_cholera.kmcurve import pdsod
 # Note that we add in initializing the susceptibility after we add that property below.
 
 
-def do_births(model, tick):
+def step(model, tick):
 
     doy = tick % 365 + 1    # day of year 1...365
     year = tick // 365

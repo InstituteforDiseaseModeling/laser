@@ -90,7 +90,7 @@ iv_map = {
     EDUCATION: lambda campaign, model, tick: print(f"Running education {campaign=} at tick {tick}"),
 }
 
-def do_interventions(model, tick):
+def step(model, tick):
     while len(todo) > 0 and todo[0][0] == tick:
         campaign = todo.pop(0)
         iv_map[type(campaign)](campaign, model, tick)

@@ -37,7 +37,7 @@ def init( model ):
     model.nodes.add_report_property("R", model.params.ticks, dtype=np.uint32) 
 
 delta = 8
-def update_ages( model, tick ):
+def step( model, tick ):
     lib.update_ages_contiguous_shards(
             ctypes.c_int64(model.population.count),
             model.population.age,

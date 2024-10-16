@@ -66,7 +66,7 @@ def _update_susceptibility_based_on_sus_timer_nb(count, susceptibility_timer, su
                 susceptibility[i] = 1
 
 delta = 8
-def do_susceptibility_decay(model, tick):
+def step(model, tick):
 
     global lib, use_nb
     if use_nb:

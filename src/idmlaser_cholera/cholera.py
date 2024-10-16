@@ -25,7 +25,6 @@ def load_location_data(data_path=None):
     # Check if the data file is a Python module
     if os.path.isfile(data_path) and data_path.endswith('.py'):
         spec = importlib.util.spec_from_file_location("location_data", data_path)
-        pdb.set_trace()
         location_data = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(location_data)
         return location_data
@@ -261,15 +260,15 @@ model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
 # consider `step_functions` rather than `phases` for the following
 model.phases = [
     propagate_population,
-    fertility.do_births, # type: ignore
-    ages.update_ages,
-    mortality.do_non_disease_deaths, # type: ignore
-    intrahost.do_infection_update, # type: ignore
-    intrahost.do_exposure_update, # type: ignore
-    transmission.do_transmission_update, # type: ignore
-    #ri.do_ri, # type: ignore
-    mi.do_susceptibility_decay, # type: ignore
-    sia.do_interventions, # type: ignore 
+    fertility.step, # type: ignore
+    ages.step,
+    mortality.step, # type: ignore
+    intrahost.step, # type: ignore
+    #intrahost.step2, # type: ignore
+    transmission.step, # type: ignore
+    #ri.step, # type: ignore
+    mi.step, # type: ignore
+    sia.step, # type: ignore 
 ]
 
 

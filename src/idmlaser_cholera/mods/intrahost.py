@@ -79,7 +79,7 @@ def _exposure_update(count, etimer, itimer, sus_timer, sus, inf_mean, inf_std, t
                 itimer[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(inf_mean, inf_std))))    # must be at least 1 day
     return
 
-def do_exposure_update(model, tick):
+def step1(model, tick):
 
     #global lib
     #if use_nb:
@@ -129,7 +129,7 @@ def _infection_update(count, itimer, sus_timer, susceptibility, tick):
 
     return
 
-def do_infection_update(model, tick):
+def step2(model, tick):
 
     global lib
     if True: # use_nb:
@@ -140,4 +140,10 @@ def do_infection_update(model, tick):
 
     return
 
+def step(model, tick):
+    #do_exposure_update( model, tick )
+    #do_infection_update( model, tick )
+    _exposure_update(nb.uint32(model.population.count), model.population.etimer, model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility, model.params.inf_mean, model.params.inf_std, tick)
+    if tick % delta == 0:
+        _infection_update(nb.uint32(model.population.count), model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility, tick)
 

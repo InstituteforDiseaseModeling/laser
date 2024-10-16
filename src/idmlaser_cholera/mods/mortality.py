@@ -84,7 +84,7 @@ def init( model ):
 
 
 
-def do_non_disease_deaths(model, tick):
+def step(model, tick):
 
     # Add eula population
     year = tick // 365

@@ -366,7 +366,7 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
 
     return new_infections
 
-def do_transmission_update(model, tick) -> None:
+def step(model, tick) -> None:
 
     delta = 7
     nodes = model.nodes
