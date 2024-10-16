@@ -14,8 +14,27 @@ class Model:
 model = Model()
 
 # Initialize model nodes and population sizes from data
-from idmlaser_cholera.mods import init_pop_nigeria as ipn
-nn_nodes, initial_populations = ipn.run()
+import importlib.util
+import os
+
+def load_location_data(data_path=None):
+    """Dynamically load location-specific data."""
+    if data_path is None:
+        raise ValueError("A data file path must be specified.")
+
+    # Check if the data file is a Python module
+    if os.path.isfile(data_path) and data_path.endswith('.py'):
+        spec = importlib.util.spec_from_file_location("location_data", data_path)
+        pdb.set_trace()
+        location_data = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(location_data)
+        return location_data
+    else:
+        raise ValueError("Invalid data file. It must be a Python file.")
+
+#import init_pop_nigeria as ipn
+nigeria_data = load_location_data("nigeria.py")
+nn_nodes, initial_populations = nigeria_data.run()
 
 
 # ## Parameters
