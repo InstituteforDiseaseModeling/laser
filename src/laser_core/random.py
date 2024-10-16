@@ -18,7 +18,7 @@ _prng: np.random.Generator = None
 
 
 @nb.jit((nb.uint32,), nopython=True, nogil=True, parallel=True)
-def _nbseed(seed):
+def _nbseed(seed):  # pragma: no cover
     """
     Set the seed for the Numba parallel random number generator (PRNG).
     This function initializes the seed for the non-parallel Numba PRNG and

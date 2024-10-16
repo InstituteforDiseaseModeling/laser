@@ -11,7 +11,7 @@ from laser_core.random import seed
 
 # Make some calls to various random number generators with Numba threads.
 @nb.njit((nb.uint64, nb.int64[:], nb.float64[:], nb.float64[:], nb.uint64[:]), nogil=True, parallel=True)
-def noise(count, integers, floats, normal, poisson):
+def noise(count, integers, floats, normal, poisson):  # pragma: no cover
     for i in nb.prange(count):
         integers[i] = np.random.randint(0, 100)
         floats[i] = np.random.random()
@@ -23,7 +23,7 @@ def noise(count, integers, floats, normal, poisson):
 
 # Make some calls to the Numba-fied random number generator in non-parallel mode.
 @nb.njit((nb.uint64, nb.int64[:]), nogil=True)
-def nbintegers(count, integers):
+def nbintegers(count, integers):  # pragma: no cover
     for i in range(count):
         integers[i] = np.random.randint(0, 100)
 
@@ -205,7 +205,7 @@ class TestRandomSeed(unittest.TestCase):
 
 
 @nb.njit((nb.uint64,))
-def _nbintegers(count):
+def _nbintegers(count):  # pragma: no cover
     result = np.empty(count, dtype=np.int64)
     for i in range(count):
         result[i] = np.random.randint(0, 100)
@@ -214,7 +214,7 @@ def _nbintegers(count):
 
 
 @nb.njit((nb.uint64,))
-def _nbfloats(count):
+def _nbfloats(count):  # pragma: no cover
     result = np.empty(count, dtype=np.float64)
     for i in range(count):
         result[i] = np.random.random()
@@ -223,7 +223,7 @@ def _nbfloats(count):
 
 
 @nb.njit((nb.uint64,))
-def _nbnormal(count):
+def _nbnormal(count):  # pragma: no cover
     result = np.empty(count, dtype=np.float64)
     for i in range(count):
         result[i] = np.random.normal(0, 1)
@@ -232,7 +232,7 @@ def _nbnormal(count):
 
 
 @nb.njit((nb.uint64,))
-def _nbpoisson(count):
+def _nbpoisson(count):  # pragma: no cover
     result = np.empty(count, dtype=np.uint64)
     for i in range(count):
         result[i] = np.random.poisson(5)
@@ -241,7 +241,7 @@ def _nbpoisson(count):
 
 
 @nb.njit((nb.uint64,), parallel=True)
-def _nbpbintegers(count):
+def _nbpbintegers(count):  # pragma: no cover
     result = np.empty(count, dtype=np.int64)
     for i in nb.prange(count):
         result[i] = np.random.randint(0, 100)
@@ -250,7 +250,7 @@ def _nbpbintegers(count):
 
 
 @nb.njit((nb.uint64,), parallel=True)
-def _nbpbfloats(count):
+def _nbpbfloats(count):  # pragma: no cover
     result = np.empty(count, dtype=np.float64)
     for i in nb.prange(count):
         result[i] = np.random.random()
@@ -259,7 +259,7 @@ def _nbpbfloats(count):
 
 
 @nb.njit((nb.uint64,), parallel=True)
-def _nbpbnormal(count):
+def _nbpbnormal(count):  # pragma: no cover
     result = np.empty(count, dtype=np.float64)
     for i in nb.prange(count):
         result[i] = np.random.normal(0, 1)
@@ -268,7 +268,7 @@ def _nbpbnormal(count):
 
 
 @nb.njit((nb.uint64,), parallel=True)
-def _nbpbpoisson(count):
+def _nbpbpoisson(count):  # pragma: no cover
     result = np.empty(count, dtype=np.uint64)
     for i in nb.prange(count):
         result[i] = np.random.poisson(5)
