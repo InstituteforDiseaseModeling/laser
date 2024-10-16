@@ -1,10 +1,6 @@
 import ctypes
 import os
 import numpy as np
-import pdb
-
-# Get the directory where the current script is located
-#script_dir = os.path.dirname(os.path.abspath(__file__))
 from pkg_resources import resource_filename
 
 lib = None
@@ -23,29 +19,6 @@ def init( model ):
             np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
         ]
         # Define the function signature
-        lib.update_ages_and_report.argtypes = [
-            ctypes.c_int64,                  # count
-            ctypes.c_int,                     # num_nodes
-            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
-            np.ctypeslib.ndpointer(dtype=np.uint16, flags='C_CONTIGUOUS'),      # node
-            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # infectious_timer
-            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # incubation_timer
-            np.ctypeslib.ndpointer(dtype=np.uint8, flags='C_CONTIGUOUS'),      # immunity
-            np.ctypeslib.ndpointer(dtype=np.uint16, flags='C_CONTIGUOUS'),      # susceptibility_timer
-            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),    # expected_lifespan
-            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # infectious_count
-            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # incubating_count
-            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # susceptible_count
-            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # waning_count 
-            np.ctypeslib.ndpointer(dtype=np.uint32, flags='C_CONTIGUOUS'),     # recovered_count 
-            ctypes.c_int                     # delta
-        ]
-        lib.update_ages_strided_shards.argtypes = [
-            ctypes.c_int64,                  # count
-            np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
-            ctypes.c_int,                     # delta
-            ctypes.c_int                     # tick
-        ]
         lib.update_ages_contiguous_shards.argtypes = [
             ctypes.c_int64,                  # count
             np.ctypeslib.ndpointer(dtype=np.int32, flags='C_CONTIGUOUS'),      # ages
@@ -64,43 +37,11 @@ def init( model ):
     model.nodes.add_report_property("R", model.params.ticks, dtype=np.uint32) 
 
 delta = 8
-
 def update_ages( model, tick ):
-    #lib.update_ages_strided_shards(
     lib.update_ages_contiguous_shards(
             ctypes.c_int64(model.population.count),
             model.population.age,
             delta,
             tick
         )
-    """
-    if tick % delta != 0:
-        # copy model.nodes.[SEIWR] from tick-1 to tick
-        model.nodes.S[tick] = model.nodes.S[tick - 1] # .copy()
-        model.nodes.E[tick] = model.nodes.E[tick - 1] # .copy()
-        model.nodes.I[tick] = model.nodes.I[tick - 1] # .copy()
-        model.nodes.W[tick] = model.nodes.W[tick - 1] # .copy()
-        model.nodes.R[tick] = model.nodes.R[tick - 1] # .copy()
-        return
-
-    global lib # didn't use to have to do this
-    lib.update_ages_and_report(
-            ctypes.c_int64(model.population.count),
-            len(model.nodes.nn_nodes),
-            model.population.age,
-            model.population.nodeid,
-            model.population.itimer,
-            model.population.etimer,
-            model.population.susceptibility,
-            model.population.susceptibility_timer,
-            model.population.dod,
-            model.nodes.S[tick],
-            model.nodes.E[tick],
-            model.nodes.I[tick],
-            model.nodes.W[tick],
-            model.nodes.R[tick],
-            delta
-        )
-    """
-
 

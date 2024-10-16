@@ -18,11 +18,11 @@ def init( model, istart, iend ):
     model.population.susceptibility_timer[istart:iend] = int(0.5*365) # 6 months
 
 try:
-# Load the shared library
+    # Load the shared library
     shared_lib_path = resource_filename('idmlaser_cholera', 'mods/libmi.so')
     lib = ctypes.CDLL(shared_lib_path)
 
-# Define the function prototype
+    # Define the function prototype
     lib.update_susceptibility_based_on_sus_timer.argtypes = [
         ctypes.c_int32,
         np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'), # susceptibility_timer
@@ -65,15 +65,6 @@ def _update_susceptibility_based_on_sus_timer_nb(count, susceptibility_timer, su
             if susceptibility_timer[i] <= 0:
                 susceptibility[i] = 1
 
-
-"""
-def _update_susceptibility_based_on_sus_timer_c(count, susceptibility_timer, susceptibility):
-    lib._update_susceptibility_based_on_sus_timer(count,
-                                                 susceptibility_timer.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
-                                                 susceptibility.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)))
-
-"""
-
 delta = 8
 def do_susceptibility_decay(model, tick):
 
@@ -82,7 +73,6 @@ def do_susceptibility_decay(model, tick):
         _update_susceptibility_based_on_sus_timer_nb(model.population.count, model.population.susceptibility_timer, model.population.susceptibility, tick, delta)
     else:
         lib.update_susceptibility_timer_strided_shards(
-        #lib.update_susceptibility_based_on_sus_timer(
                 model.population.count,
                 model.population.susceptibility_timer,
                 model.population.susceptibility,
