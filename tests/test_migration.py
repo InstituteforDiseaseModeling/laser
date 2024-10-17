@@ -94,53 +94,105 @@ class TestMigrationFunctions(unittest.TestCase):
 
         return
 
-    @unittest.skip("Not yet implemented")
-    def test_gravity_model_max_frac(self):
-        """Test the gravity model migration function with maximum."""
-        (k, a, b, c) = (0.1, 0.5, 1.0, 2.0)
-        _network = gravity(self.pops, self.distances, k=k, a=a, b=b, c=c, max_frac=0.1)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+    def test_row_normalizer(self):
+        """Test that the row normalizer function works"""
 
-    @unittest.skip("Not yet implemented")
+        network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
+        max_rowsum = 0.1
+        test_network = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
+        network = row_normalizer(network, max_rowsum)
+        for i in range(network.shape[0]):  # check 10 random values
+            for j in range(network.shape[0]):
+                assert np.isclose(network[i, j], test_network[i, j]), print(
+                    f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
+                )
+
+        return
+
     def test_competing_destinations(self):
         """Test the competing destinations migration function."""
-        (b, c, delta) = (1.0, 2.0, 0.5)
-        _network = competing_destinations(self.pops, self.distances, b=b, c=c, delta=delta)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+        (k, a, b, c, delta) = (1.0, 0.5, 1.0, 2.0, 0.5)
+        network = competing_destinations(self.pops, self.distances, k=k, a=a, b=b, c=c, delta=delta)
+        for _ in range(10):  # check 10 random values
+            i = np.random.randint(0, 10)
+            j = np.random.randint(0, 10)
+            if i != j:
+                competition = 0
+                for m in range(len(self.pops)):
+                    if m != i and m != j:
+                        competition = competition + ((self.pops[m] ** b) * self.distances[j][m] ** (-1 * c))
+                dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * (self.distances[i, j] ** (-1 * c)) * ((competition) ** delta)
+                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+            else:
+                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
-    @unittest.skip("Not yet implemented")
     def test_stouffer_exclude_home(self):
         """Test the Stouffer migration function, excluding home."""
         (k, a, b, include_home) = (0.1, 0.5, 1.0, False)
-        _network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+        network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
+        for _ in range(10):  # check 10 random values
+            i = np.random.randint(0, 10)
+            j = np.random.randint(0, 10)
+            if i != j:
+                mysum = 0
+                for m in range(len(self.pops)):
+                    if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
+                        mysum = mysum + self.pops[m]
+                dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
+                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+            else:
+                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
-    @unittest.skip("Not yet implemented")
     def test_stouffer_include_home(self):
-        """Test the Stouffer migration function, excluding home."""
+        """Test the Stouffer migration function, including home."""
         (k, a, b, include_home) = (0.1, 0.5, 1.0, True)
-        _network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+        network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
+        for _ in range(10):  # check 10 random values
+            i = np.random.randint(0, 10)
+            j = np.random.randint(0, 10)
+            if i != j:
+                mysum = 0
+                for m in range(len(self.pops)):
+                    if self.distances[i][m] <= self.distances[i][j]:
+                        mysum = mysum + self.pops[m]
+                dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
+                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+            else:
+                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
-    @unittest.skip("Not yet implemented")
     def test_radiation_exclude_home(self):
         """Test the radiation migration function, excluding home."""
         (k, include_home) = (0.1, False)
-        _network = radiation(self.pops, self.distances, k=k, include_home=include_home)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+        network = radiation(self.pops, self.distances, k=k, include_home=include_home)
+        for _ in range(10):  # check 10 random values
+            i = np.random.randint(0, 10)
+            j = np.random.randint(0, 10)
+            if i != j:
+                mysum = 0
+                for m in range(len(self.pops)):
+                    if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
+                        mysum = mysum + self.pops[m]
+                dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
+                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+            else:
+                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
-    @unittest.skip("Not yet implemented")
     def test_radiation_include_home(self):
         """Test the radiation migration function, including home."""
         (k, include_home) = (0.1, True)
-        _network = radiation(self.pops, self.distances, k=k, include_home=include_home)
-        # TBD
-        raise AssertionError("Test not yet implemented")
+        network = radiation(self.pops, self.distances, k=k, include_home=include_home)
+        for _ in range(10):  # check 10 random values
+            i = np.random.randint(0, 10)
+            j = np.random.randint(0, 10)
+            if i != j:
+                mysum = 0
+                for m in range(len(self.pops)):
+                    if self.distances[i][m] <= self.distances[i][j]:
+                        mysum = mysum + self.pops[m]
+                dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
+                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+            else:
+                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_distance_one_degree_longitude(self):
         """Test the distance function for one degree of longitude."""
@@ -221,104 +273,94 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
         # Test that pop parameter is a NumPy array
         pops = [1, 2, 3]
         with pytest.raises(TypeError, match=re.escape(f"pops must be a NumPy array ({type(pops)=})")):
-            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1, None)
+            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1)
 
         # Test that pop parameter is a 1D array
         pops = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         with pytest.raises(TypeError, match=re.escape(f"pops must be a 1D array ({pops.shape=})")):
-            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1, None)
+            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1)
 
         # Test that pop parameter is a numeric array
         pops = np.array(["a", "b", "c"])
         with pytest.raises(TypeError, match=re.escape(f"pops must be a numeric array ({pops.dtype=})")):
-            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1, None)
+            gravity(pops, np.ones((3, 3)), 1, 1, 1, 1)
 
         # Test that pop parameter is a non-negative array
         with pytest.raises(ValueError, match="pops must contain only non-negative values"):
-            gravity(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, None)
+            gravity(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1)
 
         # Test that distance parameter is a NumPy array
         distances = [1, 2, 3]
         with pytest.raises(TypeError, match=re.escape(f"distances must be a NumPy array ({type(distances)=})")):
-            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1)
 
         # Test that distance parameter is a 2D array
         distances = np.array([1, 2, 3])
         with pytest.raises(TypeError, match=re.escape(f"distances must be a 2D array ({distances.shape=})")):
-            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1)
 
         # Test that distance parameter is a square array
         distances = np.array([[1, 2], [3, 4], [5, 6]])
-        with pytest.raises(TypeError, match=re.escape(f"distances must be a square matrix ({distances.shape=})")):
-            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1, None)
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})"
+            ),
+        ):
+            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1)
 
         # Test that distance parameter is a numeric array
         distances = np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]])
         with pytest.raises(TypeError, match=re.escape(f"distances must be a numeric array ({distances.dtype=})")):
-            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), distances, 1, 1, 1, 1)
 
         # Test that distance parameter is a non-negative array
         with pytest.raises(ValueError, match="distances must contain only non-negative values"):
-            gravity(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1)
 
         # Test that distance parameter is a symmetric array
         with pytest.raises(ValueError, match="distances must be a symmetric matrix"):
-            gravity(np.array([1, 2, 3]), np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1)
 
         # Test that k parameter is a numeric value
         k = "1"
         with pytest.raises(TypeError, match=re.escape(f"k must be a numeric value ({type(k)=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1)
 
         # Test that k parameter is a non-negative value
         k = -1
         with pytest.raises(ValueError, match=re.escape(f"k must be a non-negative value ({k=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1)
 
         # Test that a parameter is a numeric value
         a = "1"
         with pytest.raises(TypeError, match=re.escape(f"a must be a numeric value ({type(a)=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, 1)
 
         # Test that a is a non-negative value
         a = -1
         with pytest.raises(ValueError, match=re.escape(f"a must be a non-negative value ({a=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, 1)
 
         # Test that b parameter is a numeric value
         b = "1"
         with pytest.raises(TypeError, match=re.escape(f"b must be a numeric value ({type(b)=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1)
 
         # Test that b is a non-negative value
         b = -1
         with pytest.raises(ValueError, match=re.escape(f"b must be a non-negative value ({b=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1)
 
         # Test that c parameter is a numeric value
         c = "1"
         with pytest.raises(TypeError, match=re.escape(f"c must be a numeric value ({type(c)=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c, None)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c)
 
         # Test that c is a non-negative value
         c = -1
         with pytest.raises(ValueError, match=re.escape(f"c must be a non-negative value ({c=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c, None)
-
-        # Test that max_frac parameter is a numeric value
-        max_frac = "1"
-        with pytest.raises(TypeError, match=re.escape(f"max_frac must be a numeric value ({type(max_frac)=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, max_frac)
-
-        # Test that max_frac is a non-negative value
-        max_frac = -1
-        with pytest.raises(ValueError, match=re.escape(f"max_frac must be in [0, 1] ({max_frac=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, max_frac)
-
-        # Test that max_frac is less than or equal to 1
-        max_frac = 1.1
-        with pytest.raises(ValueError, match=re.escape(f"max_frac must be in [0, 1] ({max_frac=})")):
-            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, max_frac)
+            gravity(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c)
 
         return
 
@@ -370,70 +412,95 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
         # Test that pop parameter is a NumPy array
         pops = [1, 2, 3]
         with pytest.raises(TypeError, match=re.escape(f"pops must be a NumPy array ({type(pops)=})")):
-            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1)
+            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1, 1, 1)
 
         # Test that pop parameter is a 1D array
         pops = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         with pytest.raises(TypeError, match=re.escape(f"pops must be a 1D array ({pops.shape=})")):
-            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1)
+            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1, 1, 1)
 
         # Test that pop parameter is a numeric array
         pops = np.array(["a", "b", "c"])
         with pytest.raises(TypeError, match=re.escape(f"pops must be a numeric array ({pops.dtype=})")):
-            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1)
+            competing_destinations(pops, np.ones((3, 3)), 1, 1, 1, 1, 1)
 
         # Test that pop parameter is a non-negative array
         with pytest.raises(ValueError, match="pops must contain only non-negative values"):
-            competing_destinations(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1)
+            competing_destinations(np.array([-1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, 1)
 
         # Test that distance parameter is a NumPy array
         distances = [1, 2, 3]
         with pytest.raises(TypeError, match=re.escape(f"distances must be a NumPy array ({type(distances)=})")):
-            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1, 1, 1)
 
         # Test that distance parameter is a 2D array
         distances = np.array([1, 2, 3])
         with pytest.raises(TypeError, match=re.escape(f"distances must be a 2D array ({distances.shape=})")):
-            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1, 1, 1)
 
         # Test that distance parameter is a square array
         distances = np.array([[1, 2], [3, 4], [5, 6]])
-        with pytest.raises(TypeError, match=re.escape(f"distances must be a square matrix ({distances.shape=})")):
-            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1)
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})"
+            ),
+        ):
+            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1, 1, 1)
 
         # Test that distance parameter is a numeric array
         distances = np.array([["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]])
         with pytest.raises(TypeError, match=re.escape(f"distances must be a numeric array ({distances.dtype=})")):
-            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), distances, 1, 1, 1, 1, 1)
 
         # Test that distance parameter is a non-negative array
         with pytest.raises(ValueError, match="distances must contain only non-negative values"):
-            competing_destinations(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), np.array([[-1, 2, 3], [4, 5, 6], [7, 8, 9]]), 1, 1, 1, 1, 1)
+
+        # Test that k parameter is a numeric value
+        k = "1"
+        with pytest.raises(TypeError, match=re.escape(f"k must be a numeric value ({type(k)=})")):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1, 1)
+
+        # Test that k parameter is a non-negative value
+        k = -1
+        with pytest.raises(ValueError, match=re.escape(f"k must be a non-negative value ({k=})")):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), k, 1, 1, 1, 1)
+
+        # Test that a parameter is a numeric value
+        a = "1"
+        with pytest.raises(TypeError, match=re.escape(f"a must be a numeric value ({type(a)=})")):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, 1, 1)
+
+        # Test that a is a non-negative value
+        a = -1
+        with pytest.raises(ValueError, match=re.escape(f"a must be a non-negative value ({a=})")):
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, a, 1, 1, 1)
 
         # Test that parameter b is a numeric value
         b = "1"
         with pytest.raises(TypeError, match=re.escape(f"b must be a numeric value ({type(b)=})")):
-            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), b, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1, 1)
 
         # Test that b is a non-negative value
         b = -1
         with pytest.raises(ValueError, match=re.escape(f"b must be a non-negative value ({b=})")):
-            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), b, 1, 1)
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, b, 1, 1)
 
         # Test that parameter c is a numeric value
         c = "1"
         with pytest.raises(TypeError, match=re.escape(f"c must be a numeric value ({type(c)=})")):
-            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, c, 1)
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c, 1)
 
         # Test that c is a non-negative value
         c = -1
         with pytest.raises(ValueError, match=re.escape(f"c must be a non-negative value ({c=})")):
-            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, c, 1)
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, c, 1)
 
         # Test that parameter delta is a numeric value
         delta = "1"
         with pytest.raises(TypeError, match=re.escape(f"delta must be a numeric value ({type(delta)=})")):
-            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, delta)
+            competing_destinations(np.array([1, 2, 3]), np.ones((3, 3)), 1, 1, 1, 1, delta)
 
         return
 
@@ -471,7 +538,12 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
 
         # Test that distance parameter is a square array
         distances = np.array([[1, 2], [3, 4], [5, 6]])
-        with pytest.raises(TypeError, match=re.escape(f"distances must be a square matrix ({distances.shape=})")):
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})"
+            ),
+        ):
             stouffer(np.array([1, 2, 3]), distances, 1, 1, 1, False)
 
         # Test that distance parameter is a numeric array
@@ -545,7 +617,12 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
 
         # Test that distance parameter is a square array
         distances = np.array([[1, 2], [3, 4], [5, 6]])
-        with pytest.raises(TypeError, match=re.escape(f"distances must be a square matrix ({distances.shape=})")):
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})"
+            ),
+        ):
             radiation(np.array([1, 2, 3]), distances, 1, False)
 
         # Test that distance parameter is a numeric array
