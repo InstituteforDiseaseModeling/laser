@@ -55,7 +55,7 @@ class AliasedDistribution:
     def total(self) -> int:
         return self._total
 
-    def sample(self, count=1) -> int:
+    def sample(self, count=1, dtype=np.int32) -> int:
         """
         Generate samples from the distribution.
         Parameters:
@@ -67,13 +67,13 @@ class AliasedDistribution:
         rng = prng()
 
         if count == 1:
-            i = rng.integers(low=0, high=len(self._alias))
-            d = rng.integers(low=0, high=self._total)
+            i = rng.integers(low=0, high=len(self._alias), dtype=dtype)
+            d = rng.integers(low=0, high=self._total, dtype=dtype)
 
             i = i if d < self._probs[i] else self._alias[i]
         else:
-            i = rng.integers(low=0, high=len(self._alias), size=count)
-            d = rng.integers(low=0, high=self._total, size=count)
+            i = rng.integers(low=0, high=len(self._alias), size=count, dtype=dtype)
+            d = rng.integers(low=0, high=self._total, size=count, dtype=dtype)
             a = d >= self._probs[i]
             i[a] = self._alias[i[a]]
 
