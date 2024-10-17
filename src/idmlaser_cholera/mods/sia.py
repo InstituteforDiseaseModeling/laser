@@ -1,5 +1,6 @@
 import numba as nb
 import numpy as np
+import pdb
 
 
 # ## Interventions : Serosurveys and SIAs
@@ -69,6 +70,7 @@ def _do_sia(count, targets, nodeids, susceptibilities, coverage, dobs, age_min, 
 def invoke_sia(campaign, model, tick):
     print(f"Running SIA {campaign=} at tick {tick}")
     targets = np.zeros(model.nodes.count, dtype=np.uint16)
+    # Use a boolean mask to filter the array
     targets[campaign.nodes] = 1
     _do_sia(
         model.population.count,
@@ -93,5 +95,8 @@ iv_map = {
 def step(model, tick):
     while len(todo) > 0 and todo[0][0] == tick:
         campaign = todo.pop(0)
+        campaign_nodes_np = np.array(campaign.nodes)
+        campaign.nodes.clear()
+        campaign.nodes.extend( campaign_nodes_np[campaign_nodes_np < model.nodes.count].tolist() ) # maybe not permanent code
         iv_map[type(campaign)](campaign, model, tick)
 

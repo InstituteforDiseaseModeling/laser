@@ -10,10 +10,19 @@
 
 extern "C" {
 
-//static std::vector<std::vector<int>> local_node2sus(num_nodes);
-//This is clearly a nasty hardcoding. TBD, don't do this.
 //We are making this static so the container can be written in report and read in tx_inner_nodes.
-static std::vector<std::vector<int>> local_node2sus(419);
+static std::vector<std::vector<int>>& get_local_node2sus(int num_nodes = -1) {
+    static std::vector<std::vector<int>> local_node2sus;
+
+    // Initialize the vector only if it hasn't been initialized yet
+    if (num_nodes != -1 && local_node2sus.empty()) {
+        printf( "Sizing local_node2sus to %d.\n", num_nodes );
+        local_node2sus.resize(num_nodes);
+    }
+
+    return local_node2sus;
+}
+
 
 // This function now assumes that report has been called first. But there is no check for that yet.
 // report is what populates local_node2sus so we don't have to do a second census of susceptibles.
@@ -28,6 +37,7 @@ void tx_inner_nodes(
 ) {
     uint32_t offsets[num_nodes];   // To store starting index for each node
 
+    auto local_node2sus = get_local_node2sus();
     // Calculate offsets
     offsets[0] = 0;
     for (unsigned int node = 1; node < num_nodes; ++node) {
@@ -83,6 +93,7 @@ void report(
 ) {
     uint32_t shard_index = tick % delta;
 
+    auto local_node2sus = get_local_node2sus(num_nodes);
     //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
     #pragma omp parallel
     {

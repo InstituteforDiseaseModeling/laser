@@ -31,8 +31,8 @@ def load_location_data(data_path=None):
     else:
         raise ValueError("Invalid data file. It must be a Python file.")
 
-#import init_pop_nigeria as ipn
 nigeria_data = load_location_data("nigeria.py")
+#nigeria_data = load_location_data("nigeria_onenode.py")
 nn_nodes, initial_populations = nigeria_data.run()
 
 
@@ -67,7 +67,8 @@ measles_params = PropertySet({
     "beta_env": np.float32(1.0), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
     "kappa": np.float32(5e5), # The concentration (number of cells per mL) of V. cholerae required for a 50% probability of infection.
     "zeta": np.float32(1.0), # Rate that infected individuals shed V. cholerae into the environment. 0.75 is about minimum that gets enviro-only tx.
-    "delta_min": np.float32(1/2),
+    #"delta_min": np.float32(1/2),
+    "delta_min": np.float32(1/60),
     "delta_max": np.float32(1/60)
 })
 
@@ -136,11 +137,14 @@ def init_psi_from_data():
     # Convert the DataFrame into a NumPy array
     suitability_data = data.values
 
-    # Ensure the shape matches the expected dimensions
-    assert suitability_data.shape == (419, model.params.ticks), "Data dimensions do not match expected shape."
+    # Get the shape of psi in the model
+    psi_shape = model.nodes.psi.shape
 
-    # Assign the data to the "psi" vector in the model
-    model.nodes.psi[:] = suitability_data
+    # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
+    suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
+
+    # Assign the subset of the data to the "psi" vector in the model
+    model.nodes.psi[:] = suitability_subset
 
 
 # ## Population per Tick
