@@ -37,7 +37,7 @@ void tx_inner_nodes(
 ) {
     uint32_t offsets[num_nodes];   // To store starting index for each node
 
-    auto local_node2sus = get_local_node2sus();
+    auto &local_node2sus = get_local_node2sus();
     // Calculate offsets
     offsets[0] = 0;
     for (unsigned int node = 1; node < num_nodes; ++node) {
@@ -93,7 +93,7 @@ void report(
 ) {
     uint32_t shard_index = tick % delta;
 
-    auto local_node2sus = get_local_node2sus(num_nodes);
+    auto &local_node2sus = get_local_node2sus(num_nodes);
     //printf( "%s: count=%ld, num_nodes=%d", __FUNCTION__, count, num_nodes );
     #pragma omp parallel
     {
