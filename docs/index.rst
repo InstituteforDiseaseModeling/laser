@@ -14,6 +14,7 @@ Contents
    authors
    changelog
    pyramids
+   kmestimator
 
 Indices and tables
 ==================
