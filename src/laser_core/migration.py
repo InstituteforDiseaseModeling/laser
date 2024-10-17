@@ -138,7 +138,7 @@ def row_normalizer(network, max_rowsum):
 
 def competing_destinations(pops, distances, k, a, b, c, delta, **params):
     """
-    Calculate the competing destinations model for a given set of populations and distances. (Fotheringham AS. Spatial flows and spatial patterns. Environment and planning A. 1984;16(4):529–543)
+    Calculate the competing destinations model for a given set of populations and distances. (Fotheringham AS. Spatial flows and spatial patterns. Environment and planning A. 1984;16(4):529-543)
     This function computes a network matrix based on the gravity model and then adjusts it
     using the competing destinations model. The adjustment is done by considering the
     interference from other destinations.
@@ -224,7 +224,7 @@ def sum_populations_as_close_or_closer(sorted_pops, sorted_distance_row):
 
 def stouffer(pops, distances, k, a, b, include_home, **params):
     """
-    Computes a migration network using a modified Stouffer's model.  (Stouffer SA. Intervening opportunities: a theory relating mobility and distance. American sociological review. 1940;5(6):845–867)
+    Computes a migration network using a modified Stouffer's model.  (Stouffer SA. Intervening opportunities: a theory relating mobility and distance. American sociological review. 1940;5(6):845-867)
     Mathematical formula:
         element-by-element: network_{i,j} = k * p_i * p_j / ( (p_i + sum_k p_k) (p_i + p_j + sum_k p_k) )
         the parameter include_home determines whether p_i is included or excluded from the sum
@@ -272,7 +272,7 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
 
 def radiation(pops, distances, k, include_home, **params):
     """
-    Calculate the migration network using the radiation model.  (Simini F, Gonza ́lez MC, Maritan A, Baraba ́si AL. A universal model for mobility and migration patterns. Nature. 2012;484(7392):96–100.)
+    Calculate the migration network using the radiation model.  (Simini F, Gonza ́lez MC, Maritan A, Baraba ́si AL. A universal model for mobility and migration patterns. Nature. 2012;484(7392):96-100.)
     Mathematical formula:
         element-by-element: network_{i,j} = k * p_i^a * (p_j / sum_k (p_k) )^b, where the sum proceeds over all k such that distances_{i,k} <= distances_{i,j}
         the parameter include_home determines whether p_i is included or excluded from the sum
