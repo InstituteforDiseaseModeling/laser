@@ -8,10 +8,12 @@ Contents
    readme
    installation
    usage
+   migration
    reference/index
    contributing
    authors
    changelog
+   pyramids
 
 Indices and tables
 ==================
