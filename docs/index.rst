@@ -13,6 +13,7 @@ Contents
    contributing
    authors
    changelog
+   pyramids
 
 Indices and tables
 ==================
