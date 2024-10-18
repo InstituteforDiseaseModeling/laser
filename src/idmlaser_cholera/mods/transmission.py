@@ -78,7 +78,7 @@ def init( model ):
             ctypes.c_uint32,                                                        # num_nodes
             np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
             np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # etimers
-            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # new_infections,
+            np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='C_CONTIGUOUS'),  # new_infections,
             ctypes.c_float,                                                           # exp_mean
             ctypes.POINTER(ctypes.c_uint32)  # new_ids_out (pointer to uint32)
         ]
@@ -351,17 +351,21 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
     num_nodes = len(susceptibles)
 
     # Initialize an array to hold the new infections for each node
-    new_infections = np.zeros(num_nodes, dtype=np.uint16)
+    new_infections = np.zeros(num_nodes, dtype=np.uint32)
 
     # Cap the total forces at 1.0 using np.minimum
     capped_forces = np.minimum(total_forces, 1.0)
 
+    capped_forces = np.array(capped_forces, dtype=np.float64)
+    susceptibles = np.array(susceptibles, dtype=np.uint32)
+
     # Calculate new infections in a vectorized way
     try:
-        new_infections = np.random.binomial(susceptibles, capped_forces).astype(np.uint16)
+        new_infections = np.random.binomial(susceptibles, capped_forces).astype(np.uint32)
     except Exception as ex:
+        print( str( ex ) )
         pdb.set_trace()
-    #print( f"new_infections = {new_infections}" )
+    print( f"new_infections = {new_infections}" )
 
 
     return new_infections
@@ -439,6 +443,7 @@ def step(model, tick) -> None:
     #total_forces = forces
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
+    #print( f"{new_infections=}" )
     
 
     total_infections = np.sum(new_infections)
@@ -487,13 +492,3 @@ def step(model, tick) -> None:
 
     return
 
-"""
-Latest design thought:
-
-    - Skip current census reporting in ages code.
-    - Do census to get number of active infections by node, and number of susceptibles by node. Probably in C. save this somewhere.
-    - Calculate foi in Python
-    - Calculate number of new infections by node. Python.
-    - Do new infections.
-    - See if this can all be time-sharded. Divide population into 7 or 8. Process 1/7 of population each day of the week.
-"""

@@ -31,7 +31,7 @@ void tx_inner_nodes(
     unsigned int num_nodes,
     uint8_t  * susceptibility,
     uint8_t  * incubation_timer,
-    uint16_t * new_infections_array,
+    uint32_t * new_infections_array,
     float incubation_period_constant,
     uint32_t * infected_ids // Output: an array of arrays for storing infected IDs
 ) {

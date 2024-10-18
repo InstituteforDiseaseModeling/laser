@@ -31,14 +31,13 @@ def load_location_data(data_path=None):
     else:
         raise ValueError("Invalid data file. It must be a Python file.")
 
-nigeria_data = load_location_data("nigeria.py")
-nn_nodes, initial_populations = nigeria_data.run()
-cbrs = {i: 40 for i in range(len(nn_nodes))}
+#nigeria_data = load_location_data("nigeria.py")
+#nn_nodes, initial_populations = nigeria_data.run()
+#cbrs = {i: 40 for i in range(len(nn_nodes))}
 
 #nigeria_data = load_location_data("nigeria_onenode.py")
-#nigeria_data = load_location_data("synth_10.py")
-#nn_nodes, initial_populations, cbrs = nigeria_data.run()
-#nn_nodes, initial_populations, cbrs = nigeria_data.run()
+nigeria_data = load_location_data("synth_10.py")
+nn_nodes, initial_populations, cbrs = nigeria_data.run()
 
 # ## Parameters
 # 
