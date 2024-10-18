@@ -32,9 +32,13 @@ def load_location_data(data_path=None):
         raise ValueError("Invalid data file. It must be a Python file.")
 
 nigeria_data = load_location_data("nigeria.py")
-#nigeria_data = load_location_data("nigeria_onenode.py")
 nn_nodes, initial_populations = nigeria_data.run()
+cbrs = {i: 40 for i in range(len(nn_nodes))}
 
+#nigeria_data = load_location_data("nigeria_onenode.py")
+#nigeria_data = load_location_data("synth_10.py")
+#nn_nodes, initial_populations, cbrs = nigeria_data.run()
+#nn_nodes, initial_populations, cbrs = nigeria_data.run()
 
 # ## Parameters
 # 
@@ -47,7 +51,7 @@ from idmlaser_cholera.utils import PropertySet
 
 meta_params = PropertySet({
     "ticks": int(365*5),
-    "cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
+    #"cbr": 40,  # Nigeria 2015 according to (somewhat random internet source): https://fred.stlouisfed.org/series/SPDYNCBRTINNGA
     "output": Path.cwd() / "outputs",
     #"eula_age": 5
 })
@@ -67,8 +71,7 @@ measles_params = PropertySet({
     "beta_env": np.float32(1.0), # beta(j,0) -- The baseline rate of environment-to-human transmission (all destinations)
     "kappa": np.float32(5e5), # The concentration (number of cells per mL) of V. cholerae required for a 50% probability of infection.
     "zeta": np.float32(1.0), # Rate that infected individuals shed V. cholerae into the environment. 0.75 is about minimum that gets enviro-only tx.
-    #"delta_min": np.float32(1/2),
-    "delta_min": np.float32(1/60),
+    "delta_min": np.float32(1/2),
     "delta_max": np.float32(1/60)
 })
 
@@ -157,7 +160,7 @@ def propagate_population(model, tick):
     return
 
 def init_from_data():
-    Population.create_from_capacity(model,initial_populations)
+    Population.create_from_capacity(model,initial_populations,cbrs)
     capacity = model.population.capacity
     from .schema import schema
     model.population.add_properties_from_schema( schema )
@@ -229,6 +232,8 @@ ages.init( model )
 mortality.init( model )
 sia.init( model )
 
+model.nodes.add_vector_property("cbrs", model.nodes.count, dtype=np.float32)
+model.nodes.cbrs = np.array(list(cbrs.values()))
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
 transmission.init( model )
 # The climatically driven environmental suitability of V. cholerae by node and time
