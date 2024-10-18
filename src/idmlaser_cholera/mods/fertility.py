@@ -21,7 +21,11 @@ def step(model, tick):
     year = tick // 365
 
     if doy == 1:
-        model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.params.cbr / 1000)
+        if model.nodes.cbrs is not None:
+            # cbr by node
+            model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.nodes.cbrs / 1000)
+        else:
+            model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.params.cbr / 1000)
         #print( f"Births for year {year} = {model.nodes.births[:, year]}" )
 
     annual_births = model.nodes.births[:, year]
