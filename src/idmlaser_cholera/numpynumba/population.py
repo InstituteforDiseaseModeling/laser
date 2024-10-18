@@ -136,11 +136,15 @@ class Population:
         return sorted_indices
 
     @staticmethod
-    def create_from_capacity(model,initial_populations):
+    def create_from_capacity(model,initial_populations,cbrs=None):
         capacity = initial_populations.sum()
         print(f"initial {capacity=:,}")
-        print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
-        growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
+        if cbrs:
+            print(f"{cbrs=}, {model.params.ticks=}")    # type: ignore
+            growth = ((1.0 + np.mean(np.array(list(cbrs.values()))/1000))**(model.params.ticks // 365))
+        else:
+            print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
+            growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
         print(f"{growth=}")
         capacity *= growth
         capacity *= 1.01  # 1% buffer
