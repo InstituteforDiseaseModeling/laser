@@ -365,7 +365,7 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
     except Exception as ex:
         print( str( ex ) )
         pdb.set_trace()
-    print( f"new_infections = {new_infections}" )
+    #print( f"new_infections = {new_infections}" )
 
 
     return new_infections
