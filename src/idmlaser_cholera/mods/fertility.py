@@ -21,7 +21,7 @@ def step(model, tick):
     year = tick // 365
 
     if doy == 1:
-        if model.nodes.cbrs is not None:
+        if hasattr( model.nodes, "cbrs" ) and model.nodes.cbrs is not None:
             # cbr by node
             model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.nodes.cbrs / 1000)
         else:
