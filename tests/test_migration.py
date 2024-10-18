@@ -83,14 +83,13 @@ class TestMigrationFunctions(unittest.TestCase):
         """Test the gravity model migration function without maximum."""
         (k, a, b, c) = (0.1, 0.5, 1.0, 2.0)
         network = gravity(self.pops, self.distances, k=k, a=a, b=b, c=c)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * self.distances[i, j] ** (-1 * c)
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * self.distances[i, j] ** (-1 * c)
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
         return
 
@@ -102,7 +101,7 @@ class TestMigrationFunctions(unittest.TestCase):
         test_network = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
         network = row_normalizer(network, max_rowsum)
         for i in range(network.shape[0]):  # check 10 random values
-            for j in range(network.shape[0]):
+            for j in range(network.shape[1]):
                 assert np.isclose(network[i, j], test_network[i, j]), print(
                     f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
                 )
@@ -113,86 +112,123 @@ class TestMigrationFunctions(unittest.TestCase):
         """Test the competing destinations migration function."""
         (k, a, b, c, delta) = (1.0, 0.5, 1.0, 2.0, 0.5)
         network = competing_destinations(self.pops, self.distances, k=k, a=a, b=b, c=c, delta=delta)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                competition = 0
-                for m in range(len(self.pops)):
-                    if m != i and m != j:
-                        competition = competition + ((self.pops[m] ** b) * self.distances[j][m] ** (-1 * c))
-                dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * (self.distances[i, j] ** (-1 * c)) * ((competition) ** delta)
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    competition = 0
+                    for m in range(len(self.pops)):
+                        if m != i and m != j:
+                            competition = competition + ((self.pops[m] ** b) * self.distances[j][m] ** (-1 * c))
+                    dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * (self.distances[i, j] ** (-1 * c)) * ((competition) ** delta)
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_stouffer_exclude_home(self):
         """Test the Stouffer migration function, excluding home."""
         (k, a, b, include_home) = (0.1, 0.5, 1.0, False)
         network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                mysum = 0
-                for m in range(len(self.pops)):
-                    if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
-                        mysum = mysum + self.pops[m]
-                dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(self.pops)):
+                        if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
+                            mysum = mysum + self.pops[m]
+                    dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_stouffer_include_home(self):
         """Test the Stouffer migration function, including home."""
         (k, a, b, include_home) = (0.1, 0.5, 1.0, True)
         network = stouffer(self.pops, self.distances, k=k, a=a, b=b, include_home=include_home)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                mysum = 0
-                for m in range(len(self.pops)):
-                    if self.distances[i][m] <= self.distances[i][j]:
-                        mysum = mysum + self.pops[m]
-                dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(self.pops)):
+                        if self.distances[i][m] <= self.distances[i][j]:
+                            mysum = mysum + self.pops[m]
+                    dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+
+    def test_stouffer_equidistant_nodes(self):
+        """Test that we have appropriately handled the Stouffer model when there are multiple nodes equidistant from a source."""
+        (k, a, b, include_home) = (0.1, 0.5, 1.0, True)
+        pops = np.array([100000.0, 20000.0, 60000.0, 200000.0])
+        distances = np.array(
+            [[0.0, 100.0, 200.0, 300.0], [100.0, 0.0, 200.0, 300.0], [200.0, 200.0, 0.0, 100.0], [300.0, 300.0, 100.0, 0.0]]
+        )
+
+        network = stouffer(pops, distances, k=k, a=a, b=b, include_home=include_home)
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(pops)):
+                        if distances[i][m] <= distances[i][j]:
+                            mysum = mysum + pops[m]
+                    dist = k * (pops[i] ** a) * (pops[j] / mysum) ** b
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_radiation_exclude_home(self):
         """Test the radiation migration function, excluding home."""
         (k, include_home) = (0.1, False)
         network = radiation(self.pops, self.distances, k=k, include_home=include_home)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                mysum = 0
-                for m in range(len(self.pops)):
-                    if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
-                        mysum = mysum + self.pops[m]
-                dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(self.pops)):
+                        if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
+                            mysum = mysum + self.pops[m]
+                    dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_radiation_include_home(self):
         """Test the radiation migration function, including home."""
         (k, include_home) = (0.1, True)
         network = radiation(self.pops, self.distances, k=k, include_home=include_home)
-        for _ in range(10):  # check 10 random values
-            i = np.random.randint(0, 10)
-            j = np.random.randint(0, 10)
-            if i != j:
-                mysum = 0
-                for m in range(len(self.pops)):
-                    if self.distances[i][m] <= self.distances[i][j]:
-                        mysum = mysum + self.pops[m]
-                dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
-                assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
-            else:
-                assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(self.pops)):
+                        if self.distances[i][m] <= self.distances[i][j]:
+                            mysum = mysum + self.pops[m]
+                    dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+
+    def test_radiation_equidistant_nodes(self):
+        """Test that we have appropriately handled the radiation model when there are multiple nodes equidistant from a source."""
+        (k, include_home) = (0.1, False)
+        pops = np.array([100000.0, 20000.0, 60000.0, 200000.0])
+        distances = np.array(
+            [[0.0, 100.0, 200.0, 300.0], [100.0, 0.0, 200.0, 300.0], [200.0, 200.0, 0.0, 100.0], [300.0, 300.0, 100.0, 0.0]]
+        )
+
+        network = radiation(pops, distances, k=k, include_home=include_home)
+        for i in range(network.shape[0]):
+            for j in range(network.shape[1]):
+                if i != j:
+                    mysum = 0
+                    for m in range(len(pops)):
+                        if (m != i) and (distances[i][m] <= distances[i][j]):
+                            mysum = mysum + pops[m]
+                    dist = k * pops[i] * pops[j] / ((pops[i] + mysum) * (pops[i] + pops[j] + mysum))
+                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                else:
+                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
 
     def test_distance_one_degree_longitude(self):
         """Test the distance function for one degree of longitude."""

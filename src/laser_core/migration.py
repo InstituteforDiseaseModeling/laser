@@ -26,52 +26,6 @@ from numbers import Number
 import numpy as np
 
 
-def shared_sanity_checks(pops, distances, **params):
-    _is_instance(pops, np.ndarray, f"pops must be a NumPy array ({type(pops)=})")
-    _has_dimensions(pops, 1, f"pops must be a 1D array ({pops.shape=})")
-    _is_dtype(pops, np.number, f"pops must be a numeric array ({pops.dtype=})")
-    _has_values(pops >= 0, "pops must contain only non-negative values")
-
-    _is_instance(distances, np.ndarray, f"distances must be a NumPy array ({type(distances)=})")
-    _has_dimensions(distances, 2, f"distances must be a 2D array ({distances.shape=})")
-    _has_shape(
-        distances,
-        (pops.shape[0], pops.shape[0]),
-        f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})",
-    )
-    _is_dtype(distances, np.number, f"distances must be a numeric array ({distances.dtype=})")
-    _has_values(distances >= 0, "distances must contain only non-negative values")
-    _has_values(distances == distances.T, "distances must be a symmetric matrix")
-
-    a = params.get("a", None)
-    if a is not None:
-        _is_instance(a, Number, f"a must be a numeric value ({type(a)=})")
-        _has_values(a >= 0, f"a must be a non-negative value ({a=})")
-
-    b = params.get("b", None)
-    if b is not None:
-        _is_instance(b, Number, f"b must be a numeric value ({type(b)=})")
-        _has_values(b >= 0, f"b must be a non-negative value ({b=})")
-
-    c = params.get("c", None)
-    if c is not None:
-        _is_instance(c, Number, f"c must be a numeric value ({type(c)=})")
-        _has_values(c >= 0, f"c must be a non-negative value ({c=})")
-
-    delta = params.get("delta", None)
-    if delta is not None:
-        _is_instance(delta, Number, f"delta must be a numeric value ({type(delta)=})")
-
-    k = params.get("k", None)
-    if k is not None:
-        _is_instance(k, Number, f"k must be a numeric value ({type(k)=})")
-        _has_values(k >= 0, f"k must be a non-negative value ({k=})")
-
-    include_home = params.get("include_home", None)
-    if include_home is not None:
-        _is_instance(include_home, (int, bool), f"include_home must be boolean or integer type ({type(include_home)=})")
-
-
 def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: float, c: float, **kwargs):
     """
     Calculate a gravity model network with an optional maximum export fraction constraint.
@@ -94,11 +48,11 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
     numpy.ndarray: A matrix representing the gravity model network with rows optionally
     normalized to respect the maximum export fraction.
     """
-    # KM: Taking "max_frac" as a parameter.  The "row_normalizer" can be applied to any network, so let's just make it a separate helper function
+    # KM: Taking out "max_frac" as a parameter.  The "row_normalizer" can be applied to any network, so let's just make it a separate helper function
     # without tying it to the gravity model (or adding max_frac as a parameter to every network, where all it does is pass the final network through row_normalizer
     #  - if we want to make a migration model class instead of separate functions, we can revisit that)
     # Sanity checks
-    shared_sanity_checks(pops, distances, a=a, b=b, c=c, k=k)
+    _sanity_checks(pops, distances, a=a, b=b, c=c, k=k)
 
     distances1 = distances.copy()
     np.fill_diagonal(distances1, 1)  # Prevent division by zero in `distances ** (-1 * c)`
@@ -165,7 +119,7 @@ def competing_destinations(pops, distances, k, a, b, c, delta, **params):
     """
 
     # Sanity checks
-    shared_sanity_checks(pops, distances, a=a, k=k, b=b, c=c, delta=delta)
+    _sanity_checks(pops, distances, a=a, k=k, b=b, c=c, delta=delta)
 
     network = gravity(pops, distances, k=k, a=a, b=b, c=c, **params)
     # Construct the p_j^b / d_jk^c matrix, inside the sum
@@ -248,7 +202,7 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
     """
 
     # Sanity checks
-    shared_sanity_checks(pops, distances, a=a, b=b, k=k, include_home=include_home)
+    _sanity_checks(pops, distances, a=a, b=b, k=k, include_home=include_home)
 
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
@@ -294,7 +248,7 @@ def radiation(pops, distances, k, include_home, **params):
     """
 
     # Sanity checks
-    shared_sanity_checks(pops, distances, k=k, include_home=include_home)
+    _sanity_checks(pops, distances, k=k, include_home=include_home)
 
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
@@ -357,6 +311,52 @@ def distance(lat1, lon1, lat2, lon2):
 
 
 # Sanity checks
+
+
+def _sanity_checks(pops, distances, **params):
+    _is_instance(pops, np.ndarray, f"pops must be a NumPy array ({type(pops)=})")
+    _has_dimensions(pops, 1, f"pops must be a 1D array ({pops.shape=})")
+    _is_dtype(pops, np.number, f"pops must be a numeric array ({pops.dtype=})")
+    _has_values(pops >= 0, "pops must contain only non-negative values")
+
+    _is_instance(distances, np.ndarray, f"distances must be a NumPy array ({type(distances)=})")
+    _has_dimensions(distances, 2, f"distances must be a 2D array ({distances.shape=})")
+    _has_shape(
+        distances,
+        (pops.shape[0], pops.shape[0]),
+        f"distances must be a square matrix with length equal to the length of pops ({distances.shape=}, {pops.shape=})",
+    )
+    _is_dtype(distances, np.number, f"distances must be a numeric array ({distances.dtype=})")
+    _has_values(distances >= 0, "distances must contain only non-negative values")
+    _has_values(distances == distances.T, "distances must be a symmetric matrix")
+
+    if "a" in params:
+        a = params.get("a", None)
+        _is_instance(a, Number, f"a must be a numeric value ({type(a)=})")
+        _has_values(a >= 0, f"a must be a non-negative value ({a=})")
+
+    if "b" in params:
+        b = params.get("b", None)
+        _is_instance(b, Number, f"b must be a numeric value ({type(b)=})")
+        _has_values(b >= 0, f"b must be a non-negative value ({b=})")
+
+    if "c" in params:
+        c = params.get("c", None)
+        _is_instance(c, Number, f"c must be a numeric value ({type(c)=})")
+        _has_values(c >= 0, f"c must be a non-negative value ({c=})")
+
+    if "delta" in params:
+        delta = params.get("delta", None)
+        _is_instance(delta, Number, f"delta must be a numeric value ({type(delta)=})")
+
+    if "k" in params:
+        k = params.get("k", None)
+        _is_instance(k, Number, f"k must be a numeric value ({type(k)=})")
+        _has_values(k >= 0, f"k must be a non-negative value ({k=})")
+
+    if "include_home" in params:
+        include_home = params.get("include_home", None)
+        _is_instance(include_home, (int, bool), f"include_home must be boolean or integer type ({type(include_home)=})")
 
 
 def _is_instance(obj, types, message):
