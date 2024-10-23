@@ -67,8 +67,8 @@ void tx_inner_nodes(
                 susceptibility[selected_id] = 0;
                 selected_count++;
                 // Write the infected ID into the pre-allocated array
-                //printf( "Writing new infected id to index %d for node %d.\n", start_index + selected_count, node );
-                infected_ids[start_index + selected_count] = selected_id;
+                //printf( "Writing new infected id to index %d for node %d.\n", start_index + selected_count - 1, node );
+                infected_ids[start_index + selected_count - 1] = selected_id;
             }
         }
     }
