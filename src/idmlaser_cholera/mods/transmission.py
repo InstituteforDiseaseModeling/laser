@@ -180,37 +180,7 @@ def tx_inner_nodes(susceptibilities, nodeids, forces, etimers, count, exp_mean, 
 
     return
 
-@nb.njit(
-    (
-        nb.uint8[:], # susceptibilities, 
-        nb.uint16[:], # nodeids, 
-        nb.float32[:], # forces, 
-        nb.uint8[:], # etimers, 
-        nb.int64, # nb.uint32, # count, 
-        nb.float32, # exp_mean, 
-        nb.float32, # exp_std, 
-        nb.uint16[:], # expected_incidence, 
-    ),
-    parallel=True,
-    nogil=True,
-    cache=True,
-)
-def tx_inner(susceptibilities, nodeids, forces, etimers, count, exp_mean, exp_std, new_infections_by_node ):
-    for i in nb.prange(count):
-        susceptibility = susceptibilities[i]
-        if susceptibility > 0:
-            nodeid = nodeids[i]
-            if new_infections_by_node[nodeid] > 0:
-                #etimers[i] = 2 # didn't make anything faster
-                etimers[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(exp_mean, exp_std))))
-                susceptibilities[i] = 0.0  # set susceptibility to 0.0
-                # This is probably blocking; we need to send each node to its own process
-                new_infections_by_node[nodeid] -= 1
-
-    return # incidence
-
-
-def get_enviro_beta_from_psi( beta_env0, psi ):
+def _get_enviro_beta_from_psi( beta_env0, psi ):
     # See https://gilesjohnr.github.io/MOSAIC-docs/model-description.html#eq:system, 4.3.1
     # psi is a numpy array of current suitability values for all nodes
     # Calculate average suitability over time (for simplicity, use a rolling mean or a fixed window)
@@ -238,7 +208,7 @@ def get_enviro_beta_from_psi( beta_env0, psi ):
     parallel=True
     #, nogil=True, cache=True
 )
-def get_enviro_foi(
+def _get_enviro_foi(
     new_contagion,
     enviro_contagion, 
     WASH_fraction, 
@@ -372,7 +342,7 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
 
 def step(model, tick) -> None:
 
-    delta = 7
+    delta = 8
     nodes = model.nodes
     population = model.population
 
@@ -397,12 +367,21 @@ def step(model, tick) -> None:
     )
 
     contagion = nodes.cases[:, tick].astype(np.float32)    # we will accumulate current infections into this array
+    """
+    print( f"RAW {model.nodes.S[tick]=}" )
+    print( f"RAW {model.nodes.E[tick]=}" )
+    print( f"RAW {model.nodes.I[tick]=}" )
+    print( f"RAW {model.nodes.W[tick]=}" )
+    print( f"RAW {model.nodes.R[tick]=}" )
+    """
     contagion += model.nodes.I[tick]
+    #print( f"RAW {contagion=}" )
 
     network = nodes.network
     transfer = (contagion * network).round().astype(np.uint32)
     contagion += transfer.sum(axis=1)   # increment by incoming "migration"
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
+    contagion *= delta
     contagion *= delta
 
     global psi_means
@@ -415,21 +394,24 @@ def step(model, tick) -> None:
         beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
         #beta_effective = model.params.beta
 
+        #print( f"{contagion=}" )
         # Update forces based on contagion and beta_effective
         forces = nodes.forces
         np.multiply(contagion, beta_effective, out=forces)
+        #print( f"{forces=}" )
         np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
+        #print( f"normalized {forces=}" )
 
-    delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
+    decay_delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
 
     if True:
-        forces_environmental = get_enviro_foi(
+        forces_environmental = _get_enviro_foi(
             new_contagion=contagion,
             enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
             WASH_fraction=model.nodes.WASH_fraction,    # WASH fraction at each node
             psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
             psi_mean=psi_means,
-            enviro_base_decay_rate=delta, # model.params.enviro_base_decay_rate,  # Decay rate
+            enviro_base_decay_rate=decay_delta, # model.params.enviro_base_decay_rate,  # Decay rate
             zeta=model.params.zeta,             # Shedding multiplier
             beta_env=model.params.beta_env,     # Base environmental transmission rate
             kappa=model.params.kappa            # Environmental scaling factor
