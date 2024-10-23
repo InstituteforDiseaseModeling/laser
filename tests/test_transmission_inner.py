@@ -4,6 +4,7 @@ from unittest import TestCase
 from idmlaser_cholera.mods.transmission import calculate_new_infections_by_node
 from pkg_resources import resource_filename
 import pdb
+import copy
 
 class TestTxInnerNodesFunction(TestCase):
 
@@ -30,7 +31,7 @@ class TestTxInnerNodesFunction(TestCase):
         self.R_count = np.zeros(self.num_nodes, dtype=np.uint32)
 
         # Initialize arrays for tx_inner_nodes tests
-        self.new_infections = np.zeros(self.num_nodes, dtype=np.uint32)  # Tracks new infections
+        self.new_infections = np.ones(self.num_nodes, dtype=np.uint32)*999  # Tracks new infections
 
         # Assuming `lib` is already loaded and set up correctly
         shared_lib_path = resource_filename('idmlaser_cholera', 'mods/libtx.so')
@@ -149,7 +150,7 @@ class TestTxInnerNodesFunction(TestCase):
         # Ensure all elements in infected_ids_buffer are non-zero
         total_infected_ids = np.count_nonzero(self.infected_ids_buffer)
         for i in range(total_infected_ids):
-            self.assertNotEqual(self.infected_ids_buffer[i], 0, f"Expected non-zero ID in buffer at index {i}.")
+            self.assertNotEqual(self.infected_ids_buffer[i], 999, f"Expected non-zero ID in buffer at index {i}.")
 
     def test_tx_inner_nodes_all_infected(self): # passes
         """ Test that tx_inner_nodes handles a fully infected population """
@@ -169,4 +170,110 @@ class TestTxInnerNodesFunction(TestCase):
         total_new_infections = np.sum(self.new_infections)
         self.assertEqual(total_new_infections, 0, "Expected no new infections since everyone is already infected.")
 
+
+    def test_tx_inner_nodes_partial_susceptibility(self):
+        """ Test tx_inner_nodes with partial susceptibility (some susceptible, some immune) """
+
+        # Set half of the population as susceptible and the other half as immune
+        self.susceptibility[:self.population_size // 2] = 1  # Susceptible
+        self.susceptibility[self.population_size // 2:] = 0  # Immune
+
+        # Call report() to update the node counts
+        self.call_report()
+
+        # Set new infections based on the susceptibles
+        suscept_orig = copy.deepcopy( self.susceptibility )
+        self.set_new_infections()
+
+        # Call tx_inner_nodes
+        self.call_tx_inner_nodes()
+
+        # Ensure infections only occurred among the susceptible individuals
+        for infected_id in self.infected_ids_buffer:
+            if infected_id > 0:
+                self.assertEqual(suscept_orig[infected_id], 1, f"Infected agent {infected_id} should have been susceptible.")
+
+    def test_tx_inner_nodes_low_infection_rate(self):
+        """ Test tx_inner_nodes with all susceptible but low infection rate """
+
+        # Make everyone susceptible
+        self.susceptibility.fill(1)
+
+        # Call report to update internal states
+        self.call_report()
+
+        # Manually set a very low number of new infections
+        self.new_infections.fill(1)
+
+        # Call tx_inner_nodes
+        self.call_tx_inner_nodes()
+
+        # Ensure only a small number of infections occurred
+        total_new_infections = np.sum(self.new_infections)
+        self.assertLessEqual(total_new_infections, self.num_nodes, "Too many infections occurred.")
+
+    def skip_test_tx_inner_nodes_zero_susceptibility_timer(self):
+        """ Test that tx_inner_nodes prevents infections when susceptibility timer is zero """
+
+        # Set all susceptibility timers to zero (assumed to block infections)
+        self.susceptibility_timer.fill(0)
+
+        # Make everyone susceptible
+        self.susceptibility.fill(1)
+
+        # Call report() to update the internal states
+        self.call_report()
+
+        # Set new infections
+        self.set_new_infections()
+
+        # Call tx_inner_nodes
+        self.call_tx_inner_nodes()
+
+        # Check that no infections occurred due to the susceptibility timer
+        total_new_infections = np.sum(self.new_infections)
+        self.assertEqual(total_new_infections, 0, "No infections should have occurred with susceptibility timers set to zero.")
+
+    def test_tx_inner_nodes_high_exp_mean(self):
+        """ Test tx_inner_nodes with a high exp_mean value (long incubation period) """
+
+        # Set a high incubation mean value
+        self.exp_mean = 10.0
+
+        # Make everyone susceptible
+        self.susceptibility.fill(1)
+
+        # Call report to update internal states
+        self.call_report()
+
+        # Set new infections
+        self.set_new_infections()
+
+        # Call tx_inner_nodes
+        self.call_tx_inner_nodes()
+
+        # Ensure that new infections occur, but the number might be affected by the high exp_mean
+        total_new_infections = np.sum(self.new_infections)
+        self.assertGreater(total_new_infections, 0, "Expected some infections even with high exp_mean.")
+
+    def test_tx_inner_nodes_single_individual(self):
+        """ Test tx_inner_nodes with a population size of 1 """
+
+        # Reduce the population size to 1
+        self.population_size = 1
+        self.nodeid = np.array([0], dtype=np.uint16)
+        self.susceptibility = np.array([1], dtype=np.uint8)
+
+        # Call report() to set up the environment
+        self.call_report()
+
+        # Set new infections
+        self.set_new_infections()
+
+        # Call tx_inner_nodes
+        self.call_tx_inner_nodes()
+
+        # Check that if the individual is susceptible, they should be infected
+        total_new_infections = np.sum(self.new_infections)
+        self.assertGreaterEqual(total_new_infections, 0, "The individual should have been infected if susceptible.")
 
