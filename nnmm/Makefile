@@ -1,6 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -shared -O3 -march=native -fPIC -flto -fopenmp -ffast-math
+#CXXFLAGS = -shared -g -march=native -fPIC -flto -fopenmp -ffast-math
 
 # Directories
 SRC_DIR = .

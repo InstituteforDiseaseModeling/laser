@@ -26,10 +26,22 @@ def initialize_infections(count, infections, nodeid, itimer, inf_mean, inf_std):
 
     return
 
-def init( model ):
+def init( model, zero_nodes=None ):
+    #print( zero_nodes )
+    if zero_nodes is not None and len(zero_nodes)>0:
+        # Step 1: Initialize the output array as a copy of seed_values
+        output_array = np.zeros(len(model.nodes.initial_infections), dtype=np.uint32)
+
+        # Step 2: Use the eliminated_nodes array to mask the output
+        output_array[zero_nodes] = model.nodes.initial_infections[zero_nodes]
+        print( f"Re-seeding with this init_prev array: {output_array}" )
+    else:
+        import copy
+        output_array = copy.deepcopy( model.nodes.initial_infections )
+
     return initialize_infections(
             np.uint32(model.population.count),
-            model.nodes.initial_infections,
+            output_array, # model.nodes.initial_infections,
             model.population.nodeid,
             model.population.itimer,
             model.params.inf_mean,
