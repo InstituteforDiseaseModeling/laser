@@ -53,7 +53,7 @@ class TestKaplanMeierEstimator(unittest.TestCase):
                 category=RuntimeWarning,
             )
             test = kstest(f_of_x, self.cumulative_deaths)
-        assert test.pvalue > 0.05, f"Kolmogorov-Smirnov test failed {test=}"
+        assert test.pvalue > 0.80, f"Kolmogorov-Smirnov test failed {test.pvalue=}"
 
         return
 
@@ -84,32 +84,39 @@ class TestKaplanMeierEstimator(unittest.TestCase):
 
     def test_predict_age_at_death_kstest(self):
         # We could just do a uniform draw from 0-100 years, but that would be boring.
-        pyramid = load_pyramid_csv(Path(__file__).parent / "data" / "us-pyramid-2023.csv", quiet=True)
-        ad = AliasedDistribution(pyramid[:, 4])  # males and females
+        pyramid = load_pyramid_csv(Path(__file__).parent / "data" / "us-pyramid-2023.csv")
+        both = pyramid[:, 2] + pyramid[:, 3]  # males and females combined
+        ad = AliasedDistribution(both)
         ages_years = ad.sample(1_000_000)
         ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0], dtype=ages_years.dtype)
         estimator = KaplanMeierEstimator(self.cumulative_deaths)
-        predictions = estimator.predict_age_at_death(ages_days, 100)
-        predicted_years = np.floor_divide(predictions, 365, dtype=np.int32)  # convert age (days) at death to age (years) at death
-        assert predicted_years.max() <= 100, f"predicted years of death should be <= 100 ({predicted_years.max()=})"
-        # for each starting age, check against the (remaining) survival curve
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="ks_2samp: Exact calculation unsuccessful.*",
-                category=RuntimeWarning,
-            )
-            for age in range(ages_years.max() + 1):
-                individuals = np.nonzero(ages_years == age)[0]  # indices of individuals who are age `age`
-                counts = np.zeros(len(self.cumulative_deaths) - 1, dtype=np.int32)  # zeroed array
-                np.add.at(counts, predicted_years[individuals], 1)  # histogram of deaths at age i
-                f_of_x = np.insert(np.cumsum(counts), 0, 0)  # insert a 0 to match the estimator.cumulative deaths and simplify the math
-                f_of_x = f_of_x[age + 1 :] - f_of_x[age]  # remaining deaths at year >= age
-                g_of_x = self.cumulative_deaths[age + 1 :] - self.cumulative_deaths[age]  # survival curve for years >= age
-                factor = f_of_x[-1] / g_of_x[-1]  # comparison factor
-                g_of_x = (factor * g_of_x).astype(g_of_x.dtype)  # use same total number of deaths
-                test = kstest(f_of_x, g_of_x)
-                assert test.pvalue > 0.05, f"Kolmogorov-Smirnov test failed for {age=} ({test.pvalue=})"
+        failed = 0
+        for _ in range(4):
+            predictions = estimator.predict_age_at_death(ages_days, 100)
+            predicted_years = np.floor_divide(predictions, 365, dtype=np.int32)  # convert age (days) at death to age (years) at death
+            assert predicted_years.max() <= 100, f"predicted years of death should be <= 100 ({predicted_years.max()=})"
+            # for each starting age, check against the (remaining) survival curve
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="ks_2samp: Exact calculation unsuccessful.*",
+                    category=RuntimeWarning,
+                )
+                for age in range(ages_years.max() + 1):
+                    individuals = np.nonzero(ages_years == age)[0]  # indices of individuals who are age `age`
+                    counts = np.zeros(len(self.cumulative_deaths) - 1, dtype=np.int32)  # zeroed array
+                    np.add.at(counts, predicted_years[individuals], 1)  # histogram of deaths at age i
+                    f_of_x = np.insert(np.cumsum(counts), 0, 0)  # insert a 0 to match the estimator.cumulative deaths and simplify the math
+                    f_of_x = f_of_x[age + 1 :] - f_of_x[age]  # remaining deaths at year >= age
+                    g_of_x = self.cumulative_deaths[age + 1 :] - self.cumulative_deaths[age]  # survival curve for years >= age
+                    factor = f_of_x[-1] / g_of_x[-1]  # comparison factor
+                    g_of_x = (factor * g_of_x).astype(g_of_x.dtype)  # use same total number of deaths
+                    test = kstest(f_of_x, g_of_x)
+                    if test.pvalue < 0.80:
+                        print(f"{test.pvalue=}")
+                        failed += 1
+                    # assert test.pvalue >= 0.80, f"Kolmogorov-Smirnov test failed for {age=} ({test.pvalue=})"
+        assert failed < 4, f"All ({failed}) Kolmogorov-Smirnov tests failed."
 
         return
 
