@@ -1,5 +1,6 @@
 """A class for generating samples from a distribution using the Vose alias method."""
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -55,7 +56,13 @@ class AliasedDistribution:
         return self._total
 
     def sample(self, count=1) -> int:
-        """Generate samples from the distribution."""
+        """
+        Generate samples from the distribution.
+        Parameters:
+        count (int): The number of samples to generate. Default is 1.
+        Returns:
+        int or numpy.ndarray: A single integer if count is 1, otherwise an array of integers representing the generated samples.
+        """
 
         rng = prng()
 
@@ -73,25 +80,45 @@ class AliasedDistribution:
         return i
 
 
-def load_pyramid_csv(file: Path, quiet=False) -> np.ndarray:
-    """Load a CSV file with population pyramid data."""
+def load_pyramid_csv(file: Path, verbose=False) -> np.ndarray:
+    """
+    Load a CSV file with population pyramid data and return it as a NumPy array.
+    The CSV file is expected to have the following schema:
+    - The first line is a header: "Age,M,F"
+    - Subsequent lines contain age ranges and population counts for males and females:
+      "low-high,#males,#females"
+      ...
+      "max+,#males,#females"
+      Where low, high, males, females, and max are integer values >= 0.
+    The function processes the CSV file to create a NumPy array with the following columns:
+    - Start age of the range
+    - End age of the range
+    - Number of males
+    - Number of females
+    Parameters:
+    file (Path): The path to the CSV file.
+    verbose (bool): If True, prints the file reading status. Default is False.
+    Returns:
+    np.ndarray: A NumPy array with the processed population pyramid data.
+    """
 
-    if not quiet:
+    if verbose:
         print(f"Reading population pyramid data from '{file}' ...")
-    # Expected file schema:
-    # "Age,M,F"
-    # "low-high,#males,#females"
-    # ...
-    # "max+,#males,#females"
     with file.open("r") as f:
-        # Use strip to remove newline characters
-        lines = [line.strip() for line in f.readlines()]
+        lines = [line.strip() for line in f.readlines()]  # Use strip to remove newline characters
+
+    # Validate incoming text
+    if not lines[0] == "Age,M,F":
+        raise ValueError("Header line is not 'Age,M,F'.")
+    if not all(re.match(r"\d+-\d+,\d+,\d+", line) for line in lines[1:-1]):
+        raise ValueError("Data lines are not in the expected format 'low-high,males,females'.")
+    if not re.match(r"\d+\+,\d+,\d+", lines[-1]):
+        raise ValueError("Last data line is not in the expected format 'max+,males,females'.")
+
     text = lines[1:]  # Skip the first line
     text = [line.split(",") for line in text]  # Split each line by comma
-    # Split the first element by hyphen
-    text = [line[0].split("-") + line[1:] for line in text]
-    # Remove the plus sign from the last element
-    text[-1][0] = text[-1][0].replace("+", "")
+    text = [line[0].split("-") + line[1:] for line in text]  # Split the first element by hyphen
+    text[-1][0] = text[-1][0].replace("+", "")  # Remove the plus sign from the last element
     data = [list(map(int, line)) for line in text]  # Convert all elements to integers
     data[-1] = [
         data[-1][0],
@@ -99,9 +126,13 @@ def load_pyramid_csv(file: Path, quiet=False) -> np.ndarray:
         *data[-1][1:],
     ]  # Make the last element a single year bucket
 
-    datanp = np.zeros((len(data), 5), dtype=np.int32)
-    for i, line in enumerate(data):
-        datanp[i, :4] = line
-    datanp[:, 4] = datanp[:, 2] + datanp[:, 3]  # Total population (male + female)
+    datanp = np.array(data, dtype=np.int32)
+
+    # Validity checks
+    # Note, negative values will not pass the regex check above.
+    if not np.all(datanp[:-1, 0] < datanp[1:, 0]):
+        raise ValueError("Starting ages are not in ascending order.")
+    if not np.all(datanp[:-1, 1] < datanp[1:, 1]):
+        raise ValueError("Ending ages are not in ascending order.")
 
     return datanp
