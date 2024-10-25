@@ -2,54 +2,56 @@
 <img src="https://user-images.githubusercontent.com/10873335/283954768-97685a6d-7b86-4bba-a3e6-07ac22d5a2b3.png" alt="LASER logo" width="600px"/>
 </p>
 
+## Status
+
+[![documentation](https://readthedocs.org/projects/idmlaser/badge/?style=flat)](https://idmlaser.readthedocs.io/en/latest/)
+
+![tests](https://github.com/InstituteforDiseaseModeling/laser/actions/workflows/github-actions.yml/badge.svg)
+
+[![package](https://img.shields.io/pypi/v/idmlaser.svg)](https://test.pypi.org/project/laser-core/)
+![wheel](https://img.shields.io/pypi/wheel/idmlaser.svg)
+
+![commits since v0.0.1](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.0.1.svg)
+
+## Getting Started
+
+`laser-core` can be installed standalone with
+
+```bash
+python3 -m pip install laser-core
+```
+
+However, it may be more instructive to install one the disease packages built on `laser-core` to understand what `laser-core` provides and what is expected to be in a disease model. See [`laser-measles`](https://github.com/InstituteforDiseaseModeling/laser-measles).
+
+### Documentation
+
+Documentation can be found [here](https://idmlaser.readthedocs.io/en/latest/) at the moment.
+
 ## Schedule
 
 ### First 30 Days (EOY 2023)
 
-- firm up team/stakeholders/advisory committee
-- enumerate necessary features for reproducing/supporting previous and in-progress modeling efforts
-  - measles (kmccarthy)
-  - malaria (cbever/pselvaraj)
-  - end-game/end-stage polio (¿kfrey?)
-- enumerate necessary features for outstanding questions and issues
+- [x] firm up team/stakeholders/advisory committee: **kmmcarthy, krosenfeld, clorton, jbloedow**
+- [x] enumerate necessary features for reproducing/supporting previous and in-progress modeling efforts
+  - [Required Model Features](https://github.com/InstituteforDiseaseModeling/laser/wiki/Required-Model-Features)
+- <strike>enumerate necessary features for outstanding questions and issues</strike>
 
 ### First 60 Days (January 31, 2024)
 
-- "paper search" / investigate potential existing solutions
-- capture development requirements
-  - tools for preparing data (demographics, networks, etc.)
-  - file formats
-  - select initial features
-    - spatial connectivity
-      - individual agent migration (genetics - vector _and_ parasite)
-      - NxN matrix connectivity, contagion transport
-      - multi-level (meso-scale?) connectivity (communities of communities)
-    - community transmission dynamics
-      - agents
-      - cohorts
-      - \*Sim
-      - stochastic compartmental
-      - ODEs
-      - emulator
-    - demographics
-      - urban/rural
-      - class/caste
-    - multiple independent populations/community (people + mosquitoes, people + dogs, etc.)
-    - ¿co-transmission? TB _and_ HIV
-    - non-disease vital dynamics
-  - visualization choices
+- [x] "paper search" / investigate potential existing solutions
 
 ### First 120 Days (February 29, 2024)
 
 - technical considerations
-  - single laptop
-  - single laptop w/Nvidia GPU
-  - multicore
-    - single machine
-    - large machine (cloud)
-    - beyond?
-  - Numpy
-  - NumPy + Numba
+  - [x] single laptop
+  - [x] single laptop w/Nvidia GPU
+  - [x] multicore
+    - [x] single machine
+    - [x] large machine (cloud)
+    - ¿beyond?
+  - [x] Numpy
+  - [x] NumPy + Numba
+  - [x] NumPy + Numba + C/C++
   - NumPy + Numba + CUDA
 
 ## Problem Space
@@ -62,9 +64,9 @@ Community size in a spatial model is also a consideration - what is the configur
 
 We need configurable characteristics of the individual communities which can vary, along with their interconnectedness, to capture additional heterogeneity.
 
-What _is_ the modeling of the individual communities? "Light-Agent" seems to limit us to an ABM, but we should consider cohorts of epidemiologically similar populations (polio >5, HIV <15, TB latents, etc.) as well as stochastic compartmental models.
+What _is_ the modeling of the individual communities? "Light-Agent" seems to limit us to an ABM, but we should consider cohorts of epidemiologically similar populations (polio >5, HIV <15, TB latents, etc.) as well as stochastic compartmental models (XLA - eXtremely Light Agents).
 
-Are the individual communities well-mixed or should we also provide for explicit networks at the local level?
+- [ ] Are the individual communities well-mixed or should we also provide for explicit networks at the local level?
 
 ## Technology
 
