@@ -15,34 +15,30 @@ class TestKaplanMeierEstimator(unittest.TestCase):
     def setUpClass(cls):
         with (Path(__file__).parent / "data" / "us-life-tables-nvs-2003.csv").open("r") as file:
             cls.cumulative_deaths = np.insert(np.loadtxt(file, delimiter=",", usecols=1).astype(np.uint32), 0, 0)
+        cls.estimator = KaplanMeierEstimator(cls.cumulative_deaths)
 
         return
 
     def test_predict_year_of_death_limits_with_default(self):
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         ages_years = np.random.randint(100, size=1024, dtype=np.int32)
-
-        result = estimator.predict_year_of_death(ages_years)
+        result = self.estimator.predict_year_of_death(ages_years)
         assert all(result >= ages_years), f"pysod should be >= current age (in years) {result=}, {ages_years=}"
         assert all(result <= 100), f"pysod should be <= 100 ({result.max()=})"
 
         return
 
     def test_predict_year_of_death_limits_with_maximum(self):
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         max_year = 80
         ages_years = np.random.randint(max_year, size=1024, dtype=np.int32)
-
-        result = estimator.predict_year_of_death(ages_years, max_year)
+        result = self.estimator.predict_year_of_death(ages_years, max_year)
         assert all(result >= ages_years), f"pysod should be >= current age (in years) {result=}, {ages_years=}"
         assert all(result <= max_year), f"pysod should be <= max year ({max_year=}, {result.max()=})"
 
         return
 
     def test_predict_year_of_death_kstest(self):
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         ages_years = np.zeros(100_000, dtype=np.int32)
-        predictions = estimator.predict_year_of_death(ages_years, 100)
+        predictions = self.estimator.predict_year_of_death(ages_years, 100)
         counts = np.zeros(predictions.max() + 1, dtype=np.int32)
         np.add.at(counts, predictions, 1)
         f_of_x = np.insert(np.cumsum(counts), 0, 0)
@@ -58,23 +54,20 @@ class TestKaplanMeierEstimator(unittest.TestCase):
         return
 
     def test_predict_age_at_death_limits_default(self):
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         ages_years = np.random.randint(100, size=1024, dtype=np.int32)
         ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0], dtype=ages_years.dtype)
-
-        result = estimator.predict_age_at_death(ages_days)
+        result = self.estimator.predict_age_at_death(ages_days)
         assert all(result >= ages_days), f"predicted age at death should be >= current age (in days) {result=}, {ages_days=}"
         assert all(result < ((100 + 1) * 365)), f"predicted age at death should be < (100 + 1) (in days) ({result.max()=})"
 
         return
 
     def test_predict_age_at_death_limits_with_maximum(self):
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         max_year = 80
         ages_years = np.random.randint(max_year, size=1024, dtype=np.int32)
         ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0], dtype=ages_years.dtype)
 
-        result = estimator.predict_age_at_death(ages_days, max_year)
+        result = self.estimator.predict_age_at_death(ages_days, max_year)
         assert all(result >= ages_days), f"predicted age at death should be >= current age (in days) {result=}, {ages_days=}"
         assert all(
             result < ((max_year + 1) * 365)
@@ -89,10 +82,9 @@ class TestKaplanMeierEstimator(unittest.TestCase):
         ad = AliasedDistribution(both)
         ages_years = ad.sample(1_000_000)
         ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0], dtype=ages_years.dtype)
-        estimator = KaplanMeierEstimator(self.cumulative_deaths)
         failed = 0
         for _ in range(4):
-            predictions = estimator.predict_age_at_death(ages_days, 100)
+            predictions = self.estimator.predict_age_at_death(ages_days, 100)
             predicted_years = np.floor_divide(predictions, 365, dtype=np.int32)  # convert age (days) at death to age (years) at death
             assert predicted_years.max() <= 100, f"predicted years of death should be <= 100 ({predicted_years.max()=})"
             # for each starting age, check against the (remaining) survival curve
@@ -117,6 +109,26 @@ class TestKaplanMeierEstimator(unittest.TestCase):
                         failed += 1
                     # assert test.pvalue >= 0.80, f"Kolmogorov-Smirnov test failed for {age=} ({test.pvalue=})"
         assert failed < 4, f"All ({failed}) Kolmogorov-Smirnov tests failed."
+
+        return
+
+    def test_predict_year_of_death_with_types(self):
+        for type in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64, np.float32, np.float64]:
+            max_year = 100
+            ages_years = np.random.randint(max_year + 1, size=1024).astype(type)
+            result = self.estimator.predict_year_of_death(ages_years, max_year=max_year)
+            assert result.dtype == np.uint16, f"Expected {type=}, got {result.dtype=}"
+
+        return
+
+    def test_predict_age_at_death_with_types(self):
+        for type in [np.int16, np.int32, np.int64, np.uint16, np.uint32, np.uint64, np.float32, np.float64]:
+            # Use 88 as maximum age to avoid overflow with int16
+            max_year = 88 if type == np.int16 else 100
+            ages_years = np.random.randint(max_year + 1, size=1024).astype(type)
+            ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0]).astype(ages_years.dtype)
+            result = self.estimator.predict_age_at_death(ages_days, max_year=max_year)
+            assert result.dtype == type, f"Expected {type=}, got {result.dtype=}"
 
         return
 
