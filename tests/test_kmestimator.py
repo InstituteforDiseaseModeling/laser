@@ -1,8 +1,42 @@
+"""
+Unit tests for the KaplanMeierEstimator class from the laser_core.demographics module.
+
+This module contains a suite of unit tests to validate the functionality and robustness of the
+KaplanMeierEstimator class. The tests cover various initialization scenarios, prediction limits,
+and statistical validation using the Kolmogorov-Smirnov test.
+
+Classes:
+    TestKaplanMeierEstimator: A unittest.TestCase subclass containing all the test methods.
+
+Functions:
+    _compare_estimators(etest, eexpected, max_year=100): Compare two estimators using the Kolmogorov-Smirnov test.
+
+Test Methods in TestKaplanMeierEstimator:
+    setUpClass(cls): Set up the test class with necessary data and estimator instance.
+    test_init_with_numpy_array(self): Test initialization with a NumPy array.
+    test_init_with_python_list(self): Test initialization with a Python list.
+    test_init_with_string_filename(self): Test initialization with a string filename.
+    test_init_with_missing_file(self): Test initialization with a missing file.
+    test_init_with_invalid_source(self): Test initialization with an invalid source type.
+    test_predict_year_of_death_limits_with_default(self): Test prediction limits for year of death with default settings.
+    test_predict_year_of_death_limits_with_maximum(self): Test prediction limits for year of death with a specified maximum.
+    test_predict_year_of_death_kstest(self): Test prediction for year of death using the Kolmogorov-Smirnov test.
+    test_predict_age_at_death_limits_default(self): Test prediction limits for age at death with default settings.
+    test_predict_age_at_death_limits_with_maximum(self): Test prediction limits for age at death with a specified maximum.
+    test_predict_age_at_death_kstest(self): Test prediction for age at death using the Kolmogorov-Smirnov test.
+    test_predict_year_of_death_with_types(self): Test prediction for year of death with various data types.
+    test_predict_age_at_death_with_types(self): Test prediction for age at death with various data types.
+"""
+
+import re
 import unittest
 import warnings
 from pathlib import Path
 
 import numpy as np
+import pytest
+
+# from scipy.stats import KstestResult
 from scipy.stats import kstest
 
 from laser_core.demographics import AliasedDistribution
@@ -13,11 +47,58 @@ from laser_core.demographics import load_pyramid_csv
 class TestKaplanMeierEstimator(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with (Path(__file__).parent / "data" / "us-life-tables-nvs-2003.csv").open("r") as file:
-            cls.cumulative_deaths = np.insert(np.loadtxt(file, delimiter=",", usecols=1).astype(np.uint32), 0, 0)
-        cls.estimator = KaplanMeierEstimator(cls.cumulative_deaths)
+        cls.filepath = Path(__file__).parent / "data" / "us-life-tables-nvs-2003.csv"
+        cls.estimator = KaplanMeierEstimator(cls.filepath)
+        cls.cumulative_deaths = cls.estimator.cumulative_deaths  # Note: Does not include a leading 0.
 
         return
+
+    def test_init_with_numpy_array(self):
+        estimator = KaplanMeierEstimator(self.cumulative_deaths)  # Should _definitely_ match...
+
+        test = _compare_estimators(estimator, self.estimator)
+        assert test.pvalue > 0.99, f"Estimator from NumPy array failed KS test ({test.pvalue=})"
+
+        return
+
+    def test_init_with_python_list(self):
+        estimator = KaplanMeierEstimator(list(self.cumulative_deaths))  # Should _definitely_ match...
+
+        test = _compare_estimators(estimator, self.estimator)
+        assert test.pvalue > 0.99, f"Estimator from NumPy array failed KS test ({test.pvalue=})"
+
+        return
+
+    def test_init_with_string_filename(self):
+        estimator = KaplanMeierEstimator(str(self.filepath))
+
+        test = _compare_estimators(estimator, self.estimator)
+        assert test.pvalue > 0.99, f"Estimator from NumPy array failed KS test ({test.pvalue=})"
+
+        return
+
+    def test_init_with_missing_file(self):
+        missing = self.filepath.parent / "definitely_missing_file.csv"
+        # Windows path uses "\" which needs to be escaped.
+        with pytest.raises(FileNotFoundError, match=re.escape(f"File not found: {missing}")):
+            KaplanMeierEstimator(missing)
+
+        return
+
+    def test_init_with_invalid_source(self):
+        with pytest.raises(TypeError, match="Invalid source type: <class 'dict'>"):
+            KaplanMeierEstimator({"A": 1, "B": 2, "C": 3})
+
+        return
+
+    # Implicitly tested with all the other functions...
+    # def test_init_with_path(self):
+    #     estimator = KaplanMeierEstimator(self.filepath)
+
+    #     test = _compare_estimators(estimator, self.estimator)
+    #     assert test.pvalue > 0.99, f"Estimator from NumPy array failed KS test ({test.pvalue=})"
+
+    #     return
 
     def test_predict_year_of_death_limits_with_default(self):
         ages_years = np.random.randint(100, size=1024, dtype=np.int32)
@@ -38,10 +119,11 @@ class TestKaplanMeierEstimator(unittest.TestCase):
 
     def test_predict_year_of_death_kstest(self):
         ages_years = np.zeros(100_000, dtype=np.int32)
-        predictions = self.estimator.predict_year_of_death(ages_years, 100)
-        counts = np.zeros(predictions.max() + 1, dtype=np.int32)
+        max_year = 100
+        predictions = self.estimator.predict_year_of_death(ages_years, max_year)
+        counts = np.zeros(max_year + 1, dtype=np.int32)
         np.add.at(counts, predictions, 1)
-        f_of_x = np.insert(np.cumsum(counts), 0, 0)
+        f_of_x = counts.cumsum()
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
@@ -76,14 +158,17 @@ class TestKaplanMeierEstimator(unittest.TestCase):
         return
 
     def test_predict_age_at_death_kstest(self):
+        # pvalues = []    # debugging
         # We could just do a uniform draw from 0-100 years, but that would be boring.
         pyramid = load_pyramid_csv(Path(__file__).parent / "data" / "us-pyramid-2023.csv")
         both = pyramid[:, 2] + pyramid[:, 3]  # males and females combined
         ad = AliasedDistribution(both)
-        ages_years = ad.sample(1_000_000)
+        ages_years = ad.sample(10_000_000)
         ages_days = ages_years * 365 + np.random.randint(365, size=ages_years.shape[0], dtype=ages_years.dtype)
-        failed = 0
-        for _ in range(4):
+
+        cfailures = 0
+        ntrials = 4
+        for itrial in range(ntrials):
             predictions = self.estimator.predict_age_at_death(ages_days, 100)
             predicted_years = np.floor_divide(predictions, 365, dtype=np.int32)  # convert age (days) at death to age (years) at death
             assert predicted_years.max() <= 100, f"predicted years of death should be <= 100 ({predicted_years.max()=})"
@@ -94,21 +179,27 @@ class TestKaplanMeierEstimator(unittest.TestCase):
                     message="ks_2samp: Exact calculation unsuccessful.*",
                     category=RuntimeWarning,
                 )
+                expected_deaths = np.concatenate(([self.cumulative_deaths[0]], np.diff(self.cumulative_deaths)))
+                failed = False
                 for age in range(ages_years.max() + 1):
-                    individuals = np.nonzero(ages_years == age)[0]  # indices of individuals who are age `age`
-                    counts = np.zeros(len(self.cumulative_deaths) - 1, dtype=np.int32)  # zeroed array
+                    individuals = np.nonzero(ages_years == age)[0]  # indices of individuals who are age `age` or older
+                    counts = np.zeros(len(self.cumulative_deaths), dtype=np.int32)  # zeroed array
                     np.add.at(counts, predicted_years[individuals], 1)  # histogram of deaths at age i
-                    f_of_x = np.insert(np.cumsum(counts), 0, 0)  # insert a 0 to match the estimator.cumulative deaths and simplify the math
-                    f_of_x = f_of_x[age + 1 :] - f_of_x[age]  # remaining deaths at year >= age
-                    g_of_x = self.cumulative_deaths[age + 1 :] - self.cumulative_deaths[age]  # survival curve for years >= age
-                    factor = f_of_x[-1] / g_of_x[-1]  # comparison factor
+                    f_of_x = counts[age:]
+                    g_of_x = expected_deaths[age:]  # survival curve for years >= age
+                    factor = f_of_x.sum() / g_of_x.sum()  # comparison/normalization factor
                     g_of_x = (factor * g_of_x).astype(g_of_x.dtype)  # use same total number of deaths
                     test = kstest(f_of_x, g_of_x)
-                    if test.pvalue < 0.80:
-                        print(f"{test.pvalue=}")
-                        failed += 1
-                    # assert test.pvalue >= 0.80, f"Kolmogorov-Smirnov test failed for {age=} ({test.pvalue=})"
-        assert failed < 4, f"All ({failed}) Kolmogorov-Smirnov tests failed."
+                    # pvalues.append(test.pvalue) # debugging
+                    # assert test.pvalue >= 0.90, f"Kolmogorov-Smirnov test failed for {age=} ({test.pvalue=})"
+                    if test.pvalue < 0.90:
+                        failed = True
+                        print(f"Kolmogorov-Smirnov test failed for {age=}, {test.pvalue=} ({itrial=})")
+                if failed:
+                    cfailures += 1
+        assert cfailures < ntrials, f"Kolmogorov-Smirnov test failed too many times ({cfailures} out of {ntrials})."
+
+        # print(f"minimum p-value: {min(pvalues)}")   # debugging
 
         return
 
@@ -131,6 +222,41 @@ class TestKaplanMeierEstimator(unittest.TestCase):
             assert result.dtype == type, f"Expected {type=}, got {result.dtype=}"
 
         return
+
+
+def _compare_estimators(etest, eexpected, max_year=100):  # -> KstestResult:
+    """
+    Compare two estimators using the Kolmogorov-Smirnov test.
+    This function generates random ages, uses the provided estimators to predict
+    the year of death, and then compares the cumulative distribution functions
+    (CDFs) of the predictions using the Kolmogorov-Smirnov test.
+    Args:
+        etest: The estimator to be tested. Must have a method `predict_year_of_death`.
+        eexpected: The expected estimator to compare against. Must have a method `predict_year_of_death`.
+        max_year (int, optional): The maximum year to consider for predictions. Defaults to 100.
+    Returns:
+        KstestResult: The result of the Kolmogorov-Smirnov test comparing the two CDFs.
+    """
+
+    ages_years = np.random.randint(max_year + 1, size=10_000_000, dtype=np.int32)  # randint() = [0, max_year)
+    test = etest.predict_year_of_death(ages_years, max_year)
+    expected = eexpected.predict_year_of_death(ages_years, max_year)
+
+    ctest = np.zeros(max_year + 1, dtype=np.int32)
+    np.add.at(ctest, test, 1)  # get histogram
+    f_of_x = ctest.cumsum()
+    cexpected = np.zeros(max_year + 1, dtype=np.int32)
+    np.add.at(cexpected, expected, 1)  # get histogram
+    g_of_x = cexpected.cumsum()
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="ks_2samp: Exact calculation unsuccessful.*",
+            category=RuntimeWarning,
+        )
+        test = kstest(f_of_x, g_of_x)
+
+    return test
 
 
 if __name__ == "__main__":

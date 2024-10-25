@@ -14,17 +14,61 @@ Usage example:
     >>> age_at_death = estimator.predict_age_at_death(np.array([40*365, 50*365, 60*365]), max_year=80)
 """
 
+from pathlib import Path
 from typing import Any
+from typing import Union
 
 import numba as nb
 import numpy as np
 
 
 class KaplanMeierEstimator:
-    def __init__(self, cumulative_deaths: np.ndarray) -> None:
-        self.cumulative_deaths = cumulative_deaths.astype(np.uint32)
+    def __init__(self, source: Union[np.ndarray, list, Path, str]) -> None:
+        """
+        Initializes the KMEstimator with the given source data.
+        Parameters:
+        -----------
+        source : Union[np.ndarray, list, Path, str]
+            The source data for the KMEstimator. It can be:
+            - A numpy array of unsigned 32-bit integers.
+            - A list of integers.
+            - A Path object pointing to a file containing the data.
+            - A string representing the file path.
+        Raises:
+        -------
+        FileNotFoundError
+            If the provided file path does not exist or is not a file.
+        TypeError
+            If the source type is not one of the accepted types (np.ndarray, list, Path, str).
+        Notes:
+        ------
+        - If the source is a file path, the file should contain comma-separated values with the data in the second column.
+        - The source data is converted to a numpy array of unsigned 32-bit integers.
+        """
+
+        tsource = type(source)
+        if isinstance(source, str):
+            source = Path(source)
+        if isinstance(source, Path):
+            if not source.exists() or not source.is_file():
+                raise FileNotFoundError(f"File not found: {source}")
+            with source.open("r") as file:
+                source = np.loadtxt(file, delimiter=",", usecols=1).astype(np.uint32)
+        if isinstance(source, list):
+            source = np.array(source, dtype=np.uint32)
+        if not isinstance(source, np.ndarray):
+            raise TypeError(f"Invalid source type: {tsource}")
+
+        self._cumulative_deaths = np.insert(source.astype(np.uint32), 0, 0)
 
         return
+
+    @property
+    def cumulative_deaths(self) -> np.ndarray:
+        """
+        Returns the original source data.
+        """
+        return self._cumulative_deaths[1:]  # exclude the leading zero
 
     def predict_year_of_death(self, ages_years: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = 100) -> np.ndarray:
         """
@@ -43,7 +87,7 @@ class KaplanMeierEstimator:
         """
 
         assert np.all(ages_years <= max_year), f"{ages_years.max()=} is not less than {max_year=}"
-        year_of_death = _pyod(ages_years, self.cumulative_deaths, np.uint32(max_year))
+        year_of_death = _pyod(ages_years, self._cumulative_deaths, np.uint32(max_year))
         assert np.all(year_of_death <= max_year), f"{year_of_death.max()=} is not less than {max_year=}"
 
         return year_of_death
@@ -69,7 +113,7 @@ class KaplanMeierEstimator:
         age_at_death = np.empty(n, dtype=ages_days.dtype)
         ages_years = np.empty(ages_days.shape, dtype=np.uint8)
         np.floor_divide(ages_days, 365, out=ages_years, casting="unsafe")
-        year_of_death = _pyod(ages_years, self.cumulative_deaths, np.uint32(max_year))
+        year_of_death = _pyod(ages_years, self._cumulative_deaths, np.uint32(max_year))
         assert np.all(year_of_death <= max_year), f"{year_of_death.max()=} is not less than {max_year=}"
 
         _pdod(ages_days, year_of_death, age_at_death)
