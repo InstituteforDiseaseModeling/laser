@@ -6,9 +6,9 @@ object that will sample from the Kaplan-Meier distribution.
 
 A sample input array of cumulative deaths might look like this::
 
-    cd[0] = 687
-    cd[1] = 733
-    cd[2] = 767
+    cd[0] = 687 # 687 deaths in the first year (age 0)
+    cd[1] = 733 # +46 deaths in the second year (age 1)
+    cd[2] = 767 # +34 deaths in the third year (age 2)
     ...
     cd[100] = 100_000  # 100,000 deaths by end of year 100
 
@@ -22,10 +22,10 @@ the returned bin indices to actual years.
 A sample non-constant width age bin input array might look like this::
 
     cd[0] = 340 # 1/2 of first year deaths in the first 3 months
-    cd[1] = 170 # 1/4 of first year deaths in the next 3 months
-    cd[2] = 177 # 1/4 of first year deaths in the last 6 months
-    cd[3] = 733
-    cd[4] = 767
+    cd[1] = 510 # another 1/4 (+170) of first year deaths in the next 3 months
+    cd[2] = 687 # another 1/4 (+177) of first year deaths in the last 6 months
+    cd[3] = 733 # 46 deaths in the second year (age 1)
+    cd[4] = 767 # 34 deaths in the third year (age 2)
     ...
     cd[103] = 100_000  # 100,000 deaths by end of year 100
 
