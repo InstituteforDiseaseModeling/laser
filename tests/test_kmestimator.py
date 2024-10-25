@@ -35,8 +35,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
-# from scipy.stats import KstestResult
 from scipy.stats import kstest
 
 from laser_core.demographics import AliasedDistribution
@@ -224,7 +222,7 @@ class TestKaplanMeierEstimator(unittest.TestCase):
         return
 
 
-def _compare_estimators(etest, eexpected, max_year=100):  # -> KstestResult:
+def _compare_estimators(etest, eexpected, max_year=100):
     """
     Compare two estimators using the Kolmogorov-Smirnov test.
     This function generates random ages, uses the provided estimators to predict
@@ -238,7 +236,7 @@ def _compare_estimators(etest, eexpected, max_year=100):  # -> KstestResult:
         KstestResult: The result of the Kolmogorov-Smirnov test comparing the two CDFs.
     """
 
-    ages_years = np.random.randint(max_year + 1, size=10_000_000, dtype=np.int32)  # randint() = [0, max_year)
+    ages_years = np.random.randint(max_year + 1, size=10_000_000, dtype=np.int32)  # randint() = [0, max) so add 1
     test = etest.predict_year_of_death(ages_years, max_year)
     expected = eexpected.predict_year_of_death(ages_years, max_year)
 
