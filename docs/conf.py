@@ -14,8 +14,8 @@ extensions = [
 source_suffix = ".rst"
 master_doc = "index"
 project = "LASER"
-year = "2023"
-author = "Christopher Lorton"
+year = "2023-2024"
+author = "Institute for Disease Modeling"
 copyright = f"{year}, {author}"
 version = release = "0.0.1"
 
