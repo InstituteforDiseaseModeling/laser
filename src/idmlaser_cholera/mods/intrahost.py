@@ -5,7 +5,7 @@ from pkg_resources import resource_filename
 
 use_nb = True
 lib = None
-delta = 2
+#delta = 3
 
 def init( model ):
     global use_nb, lib
@@ -121,8 +121,7 @@ def _infection_update(count, itimer, sus_timer, susceptibility, tick):
     """
     for i in nb.prange(count):
         if itimer[i] > 0:
-            #itimer[i] -= 1
-            itimer[i] = max( itimer[i]-delta, 0 )
+            itimer[i] -= 1
             if itimer[i] <= 0:
                 susceptibility[i] = 0
                 sus_timer[i] = np.random.randint(2*365, 4*365) # waning
@@ -144,6 +143,5 @@ def step(model, tick):
     #do_exposure_update( model, tick )
     #do_infection_update( model, tick )
     _exposure_update(nb.uint32(model.population.count), model.population.etimer, model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility, model.params.inf_mean, model.params.inf_std, tick)
-    if tick % delta == 0:
-        _infection_update(nb.uint32(model.population.count), model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility, tick)
+    _infection_update(nb.uint32(model.population.count), model.population.itimer, model.population.susceptibility_timer, model.population.susceptibility, tick)
 
