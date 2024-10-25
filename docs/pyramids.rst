@@ -33,10 +33,9 @@ E.g.::
     100+,27665,76635
 
 
-`load_pyramid_csv()` returns a 5 column NumPy array with the following columns::
+`load_pyramid_csv()` returns a 4 column NumPy array with the following columns::
 
     0 - Lower bound of age bin, inclusive
     1 - Upper bound of age bin, inclusive
     2 - number of males in the age bin
     3 - number of females in the age bin
-    4 - total number of people in the age bin
