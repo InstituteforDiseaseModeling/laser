@@ -15,6 +15,7 @@ Contents
    changelog
    pyramids
    kmestimator
+   source/modules
 
 Indices and tables
 ==================
