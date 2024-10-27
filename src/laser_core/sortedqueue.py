@@ -9,9 +9,13 @@ import numpy as np
 class SortedQueue:
     """
     A sorted (priority) queue implemented using NumPy arrays and sped-up with Numba.
+
     Using the algorithm from the Python heapq module.
+
     __init__ with an existing array of sorting values
+
     __push__ with an index into sorting values
+
     __pop__ returns the index of the lowest sorting value and its value
     """
 
@@ -23,11 +27,14 @@ class SortedQueue:
         Initializes a new instance of the class with a specified capacity and reference to existing, sortable values.
 
         This implementation is specific to LASER and the expectation of tracking 10s or 100s of millions of agents.
+
         We expect the sortable (or priority) values to already be in a NumPy array, usually a property of a LaserFrame object.
+
         The `push()` and `pop()` will take _indices_ into this array and will sort on values[i].
         This avoids making copies of the sort values.
 
-        Args:
+        Parameters:
+
             capacity (int): The maximum number of elements the queue can hold.
             values (np.ndarray): A reference to an array of values to be accessed by the queue.
         """
@@ -41,12 +48,17 @@ class SortedQueue:
     def push(self, index) -> None:
         """
         Insert an element into the sorted queue.
+
         This method adds an element at the back of the sorted queue and then
         ensures the heap property is maintained by sifting the element forward
         to its correct position.
-        Args:
+
+        Parameters:
+
             index (int): The index of the element to be added to the sorted queue.
+
         Raises:
+
             IndexError: If the sorted queue is full.
         """
 
@@ -60,9 +72,13 @@ class SortedQueue:
     def peeki(self) -> np.uint32:
         """
         Returns the index of the smallest value element in the sorted queue without removing it.
+
         Raises:
+
             IndexError: If the sorted queue is empty.
+
         Returns:
+
             np.uint32: The index of the smallest value element.
         """
 
@@ -73,9 +89,13 @@ class SortedQueue:
     def peekv(self) -> Any:
         """
         Return the smallest value from the sorted queue without removing it.
+
         Raises:
+
             IndexError: If the sorted queue is empty.
+
         Returns:
+
             Any: The value with the smallest value in the sorted queue.
         """
 
@@ -86,9 +106,13 @@ class SortedQueue:
     def peekiv(self) -> tuple[np.uint32, Any]:
         """
         Returns the index and value of the smallest value element in the sorted queue without removing it.
+
         Returns:
+
             tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
+
         Raises:
+
             IndexError: If the sorted queue is empty.
         """
 
@@ -99,9 +123,12 @@ class SortedQueue:
     def popi(self) -> np.uint32:
         """
         Removes and returns the index of the smallest value element in the sorted queue.
+
         This method first retrieves the index of the smallest value element using `peeki()`,
         then removes the element from the queue using `pop()`, and finally returns the index.
+
         Returns:
+
             np.uint32: The index of the smallest value element in the sorted queue.
         """
 
@@ -113,10 +140,13 @@ class SortedQueue:
     def popv(self) -> Any:
         """
         Removes and returns the value at the front of the sorted queue.
+
         This method first retrieves the value at the front of the queue without
         removing it by calling `peekv()`, and then removes the front element
         from the queue by calling `pop()`. The retrieved value is then returned.
+
         Returns:
+
             Any: The value at the front of the sorted queue.
         """
 
@@ -128,9 +158,12 @@ class SortedQueue:
     def popiv(self) -> tuple[np.uint32, Any]:
         """
         Removes and returns the index and value of the smallest value element in the sorted queue.
+
         This method first retrieves the index and value of the smallest value element using `peekiv()`,
         then removes the element from the queue using `pop()`, and finally returns the index and value.
+
         Returns:
+
             tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
         """
         ivtuple = self.peekiv()
@@ -141,10 +174,15 @@ class SortedQueue:
     def __pop(self) -> None:
         """
         Removes the smallest value element from the sorted queue.
+
         Raises:
+
             IndexError: If the sorted queue is empty.
+
         Side Effects:
+
             Decreases the size of the sorted queue by one.
+
             Reorganizes the internal structure of the sorted queue to maintain the heap property.
         """
 
@@ -158,7 +196,9 @@ class SortedQueue:
     def __len__(self):
         """
         Return the number of elements in the sorted queue.
+
         Returns:
+
             int: The number of elements in the sorted queue.
         """
 

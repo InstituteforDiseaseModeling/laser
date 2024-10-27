@@ -8,6 +8,9 @@ Classes:
     LaserFrame: A class to manage dynamically allocated data for agents or nodes/patches.
 
 Usage Example:
+
+.. code-block:: python
+
     laser_frame = LaserFrame(capacity=100)
     laser_frame.add_scalar_property('age', dtype=np.int32, default=0)
     laser_frame.add_vector_property('position', length=3, dtype=np.float32, default=0.0)
@@ -33,11 +36,13 @@ class LaserFrame:
         """
         Initialize a LaserFrame object.
 
-        Args:
+        Parameters:
+
             capacity (int): The maximum capacity of the population (number of agents).
             **kwargs: Additional keyword arguments to set as attributes of the object.
 
         Returns:
+
             None
         """
         self._count = 0
@@ -53,14 +58,19 @@ class LaserFrame:
     def add_scalar_property(self, name: str, dtype=np.uint32, default=0) -> None:
         """
         Add a scalar property to the class.
+
         This method initializes a new scalar property for the class instance. The property is
         stored as a NumPy array with a specified data type and default value.
+
         Parameters:
-        name (str): The name of the scalar property to be added.
-        dtype (data-type, optional): The desired data type for the property. Default is np.uint32.
-        default (scalar, optional): The default value for the property. Default is 0.
+
+            name (str): The name of the scalar property to be added.
+            dtype (data-type, optional): The desired data type for the property. Default is np.uint32.
+            default (scalar, optional): The default value for the property. Default is 0.
+
         Returns:
-        None
+
+            None
         """
 
         # initialize the property to a NumPy array with of size self._capacity, dtype, and default value
@@ -70,17 +80,23 @@ class LaserFrame:
     def add_vector_property(self, name: str, length: int, dtype=np.uint32, default=0) -> None:
         """
         Adds a vector property to the object.
+
         This method initializes a new property with the given name as a NumPy array.
+
         The array will have a shape of (length, self._capacity) and will be filled
         with the specified default value. The data type of the array elements is
-        determined by the dtype parameter.
+        determined by the `dtype` parameter.
+
         Parameters:
-        name (str): The name of the property to be added.
-        length (int): The length of the vector.
-        dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
-        default (scalar, optional): The default value to fill the array with, default is 0.
+
+            name (str): The name of the property to be added.
+            length (int): The length of the vector.
+            dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
+            default (scalar, optional): The default value to fill the array with, default is 0.
+
         Returns:
-        None
+
+            None
         """
 
         # initialize the property to a NumPy array with of size (length, self._capacity), dtype, and default value
@@ -91,7 +107,9 @@ class LaserFrame:
     def count(self) -> int:
         """
         Returns the current count (equivalent to len()).
+
         Returns:
+
             int: The current count value.
         """
 
@@ -101,7 +119,9 @@ class LaserFrame:
     def capacity(self) -> int:
         """
         Returns the capacity of the laser frame (total possible entries for dynamic properties).
+
         Returns:
+
             int: The capacity of the laser frame.
         """
 
@@ -110,12 +130,19 @@ class LaserFrame:
     def add(self, count: int) -> tuple[int, int]:
         """
         Adds the specified count to the current count of the LaserFrame.
+
         This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised.
-        Args:
+
+        Parameters:
+
             count (int): The number to add to the current count.
+
         Returns:
+
             tuple[int, int]: A tuple containing the [start index, end index) after the addition.
+
         Raises:
+
             AssertionError: If the resulting count exceeds the frame's capacity.
         """
 
@@ -133,13 +160,16 @@ class LaserFrame:
     def sort(self, indices, verbose: bool = False) -> None:
         """
         Sorts the elements of the object's numpy arrays based on the provided indices.
+
         Parameters:
-        indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and
-                              have the same length as the population count (`self._count`).
-        verbose (bool, optional): If True, prints the sorting progress for each numpy array attribute.
-                                  Defaults to False.
+
+            indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the population count (`self._count`).
+
+            verbose (bool, optional): If True, prints the sorting progress for each numpy array attribute. Defaults to False.
+
         Raises:
-        AssertionError: If `indices` is not an integer array or if its length does not match the population count.
+
+            AssertionError: If `indices` is not an integer array or if its length does not match the population count.
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")
@@ -159,15 +189,19 @@ class LaserFrame:
     def squash(self, indices, verbose: bool = False) -> None:
         """
         Reduces the active count of the internal numpy arrays keeping only elements True in the provided boolean indices.
+
         Parameters:
-        indices (np.ndarray): A boolean array indicating which elements to keep.
-                      Must have the same length as the current population count.
-        verbose (bool, optional): If True, prints detailed information about the squashing process.
-                      Defaults to False.
+
+            indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current population count.
+            verbose (bool, optional): If True, prints detailed information about the squashing process. Defaults to False.
+
         Raises:
-        AssertionError: If `indices` is not a boolean array or if its length does not match the current population count.
+
+            AssertionError: If `indices` is not a boolean array or if its length does not match the current population count.
+
         Returns:
-        None
+
+            None
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")

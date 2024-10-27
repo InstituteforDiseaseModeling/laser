@@ -10,8 +10,9 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
+    "sphinx.ext.mathjax",
 ]
-source_suffix = ".rst"
+source_suffix = {".rst": "restructuredtext"}
 master_doc = "index"
 project = "LASER"
 year = "2023-2024"
@@ -39,6 +40,20 @@ html_sidebars = {
 }
 html_short_title = f"{project}-{version}"
 
-napoleon_use_ivar = True
-napoleon_use_rtype = False
-napoleon_use_param = False
+# Napoleon settings (Napolean converts Google-style docstrings to reStructuredText)
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = True  # from Cookiecutter template, False is the default
+napoleon_use_param = False  # from Cookiecutter template, True is the default
+napoleon_use_rtype = False  # from Cookiecutter template, True is the default
+napoleon_preprocess_types = False
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
+
+mathjax3_config = {"TeX": {"Macros": {"small": ["{\\scriptstyle #1}", 1]}}}
