@@ -1,5 +1,5 @@
-src
-===
+laser_core
+==========
 
 .. toctree::
    :maxdepth: 4

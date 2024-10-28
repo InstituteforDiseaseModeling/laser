@@ -9,7 +9,6 @@ Contents
    installation
    usage
    migration
-   reference/index
    contributing
    authors
    changelog
