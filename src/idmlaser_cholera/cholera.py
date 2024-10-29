@@ -136,9 +136,8 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
 # static inputs
 def init_psi_from_data( model ):
     suitability_filename = manifest.psi_data
-    import pandas as pd # ick
     try:
-        data = pd.read_csv(suitability_filename)
+        data = np.genfromtxt(suitability_filename,delimiter=',', skip_header=1, dtype=None, encoding=None)
     except Exception as ex:
         print( str( ex ) )
         # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
@@ -150,7 +149,7 @@ def init_psi_from_data( model ):
 
 
     # Convert the DataFrame into a NumPy array
-    suitability_data = data.values
+    suitability_data = data
 
     # Get the shape of psi in the model
     psi_shape = model.nodes.psi.shape
@@ -247,7 +246,7 @@ sia.init( model )
 model.nodes.add_vector_property("cbrs", model.nodes.count, dtype=np.float32)
 model.nodes.cbrs = np.array(list(cbrs.values()))
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
-transmission.init( model )
+transmission.init( model, manifest )
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 init_psi_from_data( model )
