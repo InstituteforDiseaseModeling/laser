@@ -3,7 +3,6 @@ import numpy as np
 from tqdm import tqdm
 import idmlaser_cholera.pyramid as pyramid
 import pdb
-from .. import manifest
 
 # ## Non-Disease Mortality 
 # ### Part I
@@ -13,12 +12,13 @@ from .. import manifest
 # The population pyramid is typically in 5 year age buckets. Once we draw for the age bucket, we draw uniformly for a date of birth within the range of the bucket.
 # 
 # **Note:** the values in `model.population.dob` are _positive_ at this point. Later we will negate them to convert them to dates of birth prior to now (t = 0).
-with manifest.age_data as pyramid_file:
-    print(f"Loading pyramid from '{pyramid_file}'...")
-    # Convert it to a string if needed
-    age_distribution = pyramid.load_pyramid_csv(pyramid_file)
+def init( model, manifest ):
 
-def init( model ):
+    with manifest.age_data as pyramid_file:
+        print(f"Loading pyramid from '{pyramid_file}'...")
+        # Convert it to a string if needed
+        age_distribution = pyramid.load_pyramid_csv(pyramid_file)
+
     initial_populations = model.nodes.population[:,0]
     capacity = model.population.capacity
 

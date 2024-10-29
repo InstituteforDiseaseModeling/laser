@@ -5,7 +5,6 @@ import numpy as np
 from datetime import datetime
 from tqdm import tqdm
 import pdb
-from . import manifest
 
 # Very simple!
 class Model:
@@ -16,28 +15,6 @@ model = Model()
 # Initialize model nodes and population sizes from data
 import importlib.util
 import os
-
-def load_location_data(data_path=None):
-    """Dynamically load location-specific data."""
-    if data_path is None:
-        raise ValueError("A data file path must be specified.")
-
-    # Check if the data file is a Python module
-    if os.path.isfile(data_path) and data_path.endswith('.py'):
-        spec = importlib.util.spec_from_file_location("location_data", data_path)
-        location_data = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(location_data)
-        return location_data
-    else:
-        raise ValueError("Invalid data file. It must be a Python file.")
-
-#nigeria_data = load_location_data("nigeria.py")
-#nn_nodes, initial_populations = nigeria_data.run()
-#cbrs = {i: 40 for i in range(len(nn_nodes))}
-
-#nigeria_data = load_location_data("nigeria_onenode.py")
-nigeria_data = load_location_data("synth_10.py")
-nn_nodes, initial_populations, cbrs = nigeria_data.run()
 
 # ## Parameters
 # 
@@ -85,6 +62,39 @@ network_params = PropertySet({
 model.params = PropertySet(meta_params, measles_params, network_params) # type: ignore
 model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
 
+import argparse
+
+# Set up argparse to parse the input directory
+parser = argparse.ArgumentParser(description="Specify the input directory.")
+parser.add_argument(
+    "input_dir",
+    nargs="?",
+    default=".",
+    help="Path to the input directory (default is current directory)"
+)
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Assign the input directory to model.params.input_dir
+model.params.input_dir = args.input_dir
+
+print(f"Input directory set to: {model.params.input_dir}")
+
+# Build the path to the manifest file
+manifest_path = os.path.join(model.params.input_dir, "manifest.py")
+
+# Check if manifest.py exists in the specified directory
+if os.path.isfile(manifest_path):
+    # Load the manifest module
+    spec = importlib.util.spec_from_file_location("manifest", manifest_path)
+    manifest = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(manifest)
+    print("Manifest module loaded successfully.")
+else:
+    print(f"Error: {manifest_path} does not exist.")
+
+nn_nodes, initial_populations, cbrs = manifest.load_population_data()
 
 from idmlaser_cholera.numpynumba import Population
 
@@ -124,16 +134,19 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
 
 # Some of these are inputs and some are outputs
 # static inputs
-def init_psi_from_data():
+def init_psi_from_data( model ):
     suitability_filename = manifest.psi_data
-    import pandas as pd 
+    import pandas as pd # ick
     try:
         data = pd.read_csv(suitability_filename)
     except Exception as ex:
         print( str( ex ) )
-        print( "Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
-        import idmlaser_cholera.tools.make_suitability_random_data
-        data = pd.read_csv(suitability_filename)
+        # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
+        # 
+        #print( "Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
+        #import idmlaser_cholera.tools.make_suitability_random_data
+        #data = pd.read_csv(suitability_filename)
+        raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
 
 
     # Convert the DataFrame into a NumPy array
@@ -176,7 +189,7 @@ def init_from_data():
     # ri coverages and init prev seem to be the same "kind of thing"?
     model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
 
-    age_init.init( model )
+    age_init.init( model, manifest )
     immunity.init(model)
     init_prev.init( model )
 
@@ -237,7 +250,7 @@ model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
 transmission.init( model )
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
-init_psi_from_data()
+init_psi_from_data( model )
 
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
