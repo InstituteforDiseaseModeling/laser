@@ -8,6 +8,7 @@ use_nb = True
 lib = None
 ll_lib = None
 psi_means = None
+seasonal_contact_data = None
 #infected_ids_type = ctypes.POINTER(ctypes.c_uint32)
 
 # Define the maximum number of infections you expect
@@ -19,6 +20,12 @@ infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
 # We need to calculate the distances between the centroids of the nodes in northern Nigeria
 
 RE = 6371.0  # Earth radius in km
+
+def get_additive_seasonality_effect( model, tick ):
+    # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
+    #return model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+    #global seasonal_contact_data 
+    return seasonal_contact_data[:,tick//7 % 52]
 
 def calc_distance(lat1, lon1, lat2, lon2):
     # convert to radians
@@ -34,7 +41,7 @@ def calc_distance(lat1, lon1, lat2, lon2):
     d = RE * c
     return d
 
-def init( model ):
+def init( model, manifest ):
     initial_populations = model.nodes.population[:,0]
     network = model.nodes.network
     locations = np.zeros((model.nodes.count, 2), dtype=np.float32)
@@ -125,6 +132,9 @@ def init( model ):
     except Exception as ex:
         print( f"Failed to load {shared_lib_path}. No backup." )
 
+    global seasonal_contact_data 
+    seasonal_contact_data = np.loadtxt( manifest.seasonal_dynamics, delimiter=',' )
+    
     return
 
 
@@ -302,7 +312,10 @@ def _get_enviro_foi(
 
         # Calculate the environmental transmission forces
         forces_environmental[node] = beta_env_effective * (enviro_contagion[node] / (kappa + enviro_contagion[node]))
-   
+  
+    # Might need to make sure this can never be negative?
+    #if np.any(forces_environmental<0):
+        #raise ValueError( f"{forces_environmental} has negative value." )
     return forces_environmental
 
 def calculate_new_infections_by_node(total_forces, susceptibles):
@@ -379,9 +392,10 @@ def step(model, tick) -> None:
 
     network = nodes.network
     transfer = (contagion * network).round().astype(np.uint32)
+    # The migration functions seem to be able to make the contagion negative in certain contexts
     contagion += transfer.sum(axis=1)   # increment by incoming "migration"
     contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
-    #contagion *= delta
+    #contagion *= delta # keeping delta at 1 for now, but this code should be correct
     #contagion *= delta
 
     global psi_means
@@ -391,7 +405,7 @@ def step(model, tick) -> None:
     # Code-based ways of toggling contact and enviro transmission routes on and off during perf investigations.
     if True: # contact tx
         # Compute the effective beta considering seasonality
-        beta_effective = model.params.beta + model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+        beta_effective = model.params.beta + get_additive_seasonality_effect( model, tick )
         #beta_effective = model.params.beta
 
         #print( f"{contagion=}" )
@@ -423,6 +437,8 @@ def step(model, tick) -> None:
     total_forces = (forces + forces_environmental).astype(np.float32)
     #total_forces = (forces_environmental).astype(np.float32) # enviro only
     #total_forces = forces
+    #if np.any(total_forces<0):
+        #raise ValueError( f"{total_forces} has negative value." )
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
     #print( f"{new_infections=}" )
