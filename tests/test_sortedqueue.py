@@ -171,6 +171,29 @@ class TestSortedQueue(unittest.TestCase):
         with pytest.raises(IndexError):
             _ = self.sq.peekv()
 
+    def test_push_pop_random_type(self):
+        """Test pushing and popping random values from the sorted queue."""
+        values = np.random.randint(-128, 128, 1024, dtype=np.int64)
+        for dtype in [np.int8, np.int16, np.int32, np.int64, np.float32, np.float64]:
+            self.sq = SortedQueue(len(values), values.astype(dtype))
+            for i in range(len(values)):
+                self.sq.push(i)
+            minimum = values.min()
+            while len(self.sq) > 0:
+                value = self.sq.popv()
+                assert value >= minimum
+                minimum = value
+        values += 128  # Shift values to positive range
+        for dtype in [np.uint8, np.uint16, np.uint32, np.uint64]:
+            self.sq = SortedQueue(len(values), values.astype(dtype))
+            for i in range(len(values)):
+                self.sq.push(i)
+            minimum = values.min()
+            while len(self.sq) > 0:
+                value = self.sq.popv()
+                assert value >= minimum
+                minimum = value
+
 
 if __name__ == "__main__":
     unittest.main(exit=False)

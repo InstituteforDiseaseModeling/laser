@@ -41,7 +41,7 @@ class SortedQueue:
 
         self.indices = np.zeros(capacity, dtype=np.uint32)
         self.values = values
-        self.size = 0
+        self.size = np.uint32(0)
 
         return
 
@@ -65,8 +65,8 @@ class SortedQueue:
         if self.size >= len(self.indices):
             raise IndexError("Sorted queue is full")
         self.indices[self.size] = index
-        _siftforward(self.indices, self.values, 0, self.size)
-        self.size += 1
+        _siftforward(self.indices, self.values, np.uint32(0), self.size)
+        self.size += np.uint32(1)
         return
 
     def peeki(self) -> np.uint32:
@@ -188,12 +188,12 @@ class SortedQueue:
 
         if self.size == 0:
             raise IndexError("Priority queue is empty")
-        self.size -= 1
+        self.size -= np.uint32(1)
         self.indices[0] = self.indices[self.size]
-        _siftbackward(self.indices, self.values, 0, self.size)
+        _siftbackward(self.indices, self.values, np.uint32(0), self.size)
         return
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Return the number of elements in the sorted queue.
 
@@ -202,10 +202,24 @@ class SortedQueue:
             int: The number of elements in the sorted queue.
         """
 
-        return self.size
+        return int(self.size)
 
 
-@nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
+@nb.njit(
+    [
+        (nb.uint32[:], nb.int8[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int16[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int64[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint8[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint16[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint64[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.float32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.float64[:], nb.uint32, nb.uint32),
+    ],
+    nogil=True,
+)
 def _siftforward(indices, values, startpos, pos):  # pragma: no cover
     inewitem = indices[pos]
     vnewitem = values[inewitem]
@@ -224,7 +238,21 @@ def _siftforward(indices, values, startpos, pos):  # pragma: no cover
     return
 
 
-@nb.njit((nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32), nogil=True)
+@nb.njit(
+    [
+        (nb.uint32[:], nb.int8[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int16[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.int64[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint8[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint16[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.uint64[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.float32[:], nb.uint32, nb.uint32),
+        (nb.uint32[:], nb.float64[:], nb.uint32, nb.uint32),
+    ],
+    nogil=True,
+)
 def _siftbackward(indices, values, pos, size):  # pragma: no cover
     endpos = size
     startpos = pos
