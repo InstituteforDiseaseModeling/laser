@@ -4,6 +4,8 @@ version = "0.0.1"
 authors = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
   { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },
+  { name="Katherine Rosenfeld", email="katherine.rosenfeld@gatesfoundation.org"},
+  { name="Kevin McCarthy", email="kevin.mccarthy@gatesfoundation.org" },
 ]
 maintainers = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
@@ -24,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    # "Programming Language :: Python :: 3.13",   # Not until Numba supports it
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
@@ -34,7 +37,7 @@ dependencies = [
     "tqdm",  # ==4.66.1",
     "matplotlib",
     "pandas",
-    "taichi",
+    # "taichi",
     "pytest",
 ]
 
