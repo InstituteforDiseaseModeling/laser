@@ -46,6 +46,9 @@ class PropertySet:
     def __getitem__(self, key):
         return getattr(self, key)
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
     def __add__(self, other):
         """
         Add another PropertySet to this PropertySet.

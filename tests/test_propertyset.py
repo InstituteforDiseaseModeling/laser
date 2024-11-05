@@ -175,6 +175,21 @@ class TestPropertySet(unittest.TestCase):
         assert gb["ps"] == PropertySet({"e": 2.7182818285})
         assert gb.ps["e"] == 2.7182818285
 
+    def test_item_set(self):
+        """Test item set in the PropertySet class."""
+        gb = PropertySet()
+        gb["a"] = 1
+        gb["b"] = 2.7182818285
+        gb["c"] = "three"
+        gb["d"] = np.uint32(42)
+        assert gb.a == 1
+        assert gb.b == 2.7182818285
+        assert gb.c == "three"
+        assert gb.d == np.uint32(42)
+        gb["ps"] = PropertySet({"e": 2.7182818285})
+        assert gb.ps == PropertySet({"e": 2.7182818285})
+        assert gb.ps["e"] == 2.7182818285
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
