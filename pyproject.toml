@@ -1,6 +1,6 @@
 [project]
 name = "laser-core"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
   { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },

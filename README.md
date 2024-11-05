@@ -11,7 +11,7 @@
 [![package](https://img.shields.io/pypi/v/idmlaser.svg)](https://test.pypi.org/project/laser-core/)
 ![wheel](https://img.shields.io/pypi/wheel/idmlaser.svg)
 
-![commits since v0.0.1](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.0.1.svg)
+![commits since v0.0.3](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.0.3.svg)
 
 ## Getting Started
 
