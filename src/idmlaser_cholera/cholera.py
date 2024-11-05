@@ -253,14 +253,44 @@ model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 init_psi_from_data( model )
 
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
-model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
+model.nodes.add_vector_property("WASH_fraction", model.params.ticks, dtype=np.float32) # leave at 0 for now, not used yet
+
+# some other ways of intializing that were useful
 #model.nodes.WASH_fraction = np.ones(model.nodes.count, dtype=np.float32) * 0.0
 #model.nodes.WASH_fraction = np.linspace(0.9, 1.0, model.nodes.count, dtype=np.float32)
 #wash_theta = np.loadtxt( manifest.wash_theta, delimiter="," )
 # mosaic, sorted by pop
-model.nodes.WASH_fraction = np.array([0.760084782053426, 0.63228528227706, 0.62881883749221, 0.913309900436136, 0.662459438552131, 0.584967034702784, 0.626706892794503, 0.636079830581899, 0.669666481983608, 0.64894201077891, 0.696995593022847, 0.702195043279203, 0.560481455873029, 0.803807835653375, 0.601725306457658, 0.672665705198764, 0.802617145990318, 0.709158179331758, 0.627881103961712, 0.662058780328589, 0.670273659221199, 0.573613963043334, 0.779348244741159, 0.625693855744188, 0.725439309848231, 0.657335789147831, 0.812776283418475, 0.554660601903563, 0.534945174425158, 0.762547227258778, 0.472575435225232, 0.615583176673807, 0.745641645018617, 0.790012651929884, 0.687360184773828, 0.778921138655779, 0.631520091542042, 0.715102219034724, 0.691454014537071], dtype=np.float32)
+def finalize_WASH( input_WASH_setting ):
+    # Assume `model.nodes.count` and `model.nodes.ticks` are available
+    node_count = model.nodes.count
+    ticks = model.params.ticks
 
+    # Handle scalar input: Expand to a full 2D array
+    if np.isscalar(input_WASH_setting):
+        return np.full((node_count, ticks), input_WASH_setting, dtype=np.float32)
 
+    # Handle 1D array: Expand along the time (second) dimension
+    elif input_WASH_setting.ndim == 1:
+        if len(input_WASH_setting) != node_count:
+            raise ValueError(f"Length of 1D array {len(input_WASH_setting)} must match the number of nodes {node_count}.")
+        return np.tile(input_WASH_setting[:, np.newaxis], (1, ticks))
+
+    # Handle 2D array: Verify dimensions and use as-is
+    elif input_WASH_setting.ndim == 2:
+        if input_WASH_setting.shape != (node_count, ticks):
+            raise ValueError("2D array dimensions must match (node_count, ticks).")
+        return input_WASH_setting
+
+    else:
+        raise ValueError("Input must be a scalar, 1D array, or 2D array.")
+
+tmp_WASH_setting = np.array([0.760084782053426, 0.63228528227706, 0.62881883749221, 0.913309900436136, 0.662459438552131, 0.584967034702784, 0.626706892794503, 0.636079830581899, 0.669666481983608, 0.64894201077891, 0.696995593022847, 0.702195043279203, 0.560481455873029, 0.803807835653375, 0.601725306457658, 0.672665705198764, 0.802617145990318, 0.709158179331758, 0.627881103961712, 0.662058780328589, 0.670273659221199, 0.573613963043334, 0.779348244741159, 0.625693855744188, 0.725439309848231, 0.657335789147831, 0.812776283418475, 0.554660601903563, 0.534945174425158, 0.762547227258778, 0.472575435225232, 0.615583176673807, 0.745641645018617, 0.790012651929884, 0.687360184773828, 0.778921138655779, 0.631520091542042, 0.715102219034724, 0.691454014537071, 0.691454014537071, 0.691454014537071], dtype=np.float32)
+model.nodes.WASH_fraction = finalize_WASH( tmp_WASH_setting )
+
+# example how one might do a WASH intervention
+# Set the second "half" of the time domain to 1.0 for every other node
+#half_tick = model.params.ticks // 2
+#model.nodes.WASH_fraction[::2, half_tick:] = 1.0  # Every other row, starting from index 0
 
 # report outputs
 model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
