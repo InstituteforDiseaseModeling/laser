@@ -6,6 +6,8 @@ from pkg_resources import resource_filename
 use_nb = True
 lib = None
 #delta = 3
+mean_duration_days = 7 * 365  # 7 years in days
+decay_rate = 1 / mean_duration_days
 
 def init( model ):
     global use_nb, lib
@@ -45,7 +47,6 @@ def init( model ):
         use_nb = False
     except Exception as ex:
         print( "Couldn't load exposure_update.so. Using numba." )
-
 
 # ## Incubation and Infection
 # 
@@ -124,7 +125,12 @@ def _infection_update(count, itimer, sus_timer, susceptibility, tick):
             itimer[i] -= 1
             if itimer[i] <= 0:
                 susceptibility[i] = 0
-                sus_timer[i] = np.random.randint(2*365, 4*365) # waning
+                #sus_timer[i] = np.random.randint(2*365, 4*365) # waning
+                uniform_random_value = np.random.uniform(0, 1)
+                # Calculate durations using inverse CDF
+                immune_duration = -np.log(1 - uniform_random_value) / decay_rate
+                sus_timer[i] = min(1+immune_duration, 3650)
+                #print( f"acquired init sus_timer = {sus_timer[i]}" )
 
     return
 

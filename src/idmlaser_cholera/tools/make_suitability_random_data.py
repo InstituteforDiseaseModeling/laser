@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
-from .. import manifest
+import importlib.util
+
+spec = importlib.util.spec_from_file_location("manifest", "manifest.py")
+manifest = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(manifest)
 
 # Define the dimensions of the CSV
 rows = 419  # Number of nodes

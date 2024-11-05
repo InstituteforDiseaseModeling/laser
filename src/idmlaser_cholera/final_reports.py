@@ -9,7 +9,8 @@ def save_seird( model ):
         'E': model.nodes.E,
         'I': model.nodes.I,
         'W': model.nodes.W,
-        'R': model.nodes.R
+        'R': model.nodes.R,
+        'NI': model.nodes.NI
     }
 
     # Save the arrays to an HDF5 file

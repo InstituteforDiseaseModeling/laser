@@ -35,6 +35,7 @@ def init( model ):
     model.nodes.add_report_property("I", model.params.ticks, dtype=np.uint32)
     model.nodes.add_report_property("W", model.params.ticks, dtype=np.uint32) 
     model.nodes.add_report_property("R", model.params.ticks, dtype=np.uint32) 
+    model.nodes.add_report_property("NI", model.params.ticks, dtype=np.uint32) 
 
 delta = 8
 def step( model, tick ):

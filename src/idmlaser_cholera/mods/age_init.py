@@ -14,10 +14,10 @@ import pdb
 # **Note:** the values in `model.population.dob` are _positive_ at this point. Later we will negate them to convert them to dates of birth prior to now (t = 0).
 def init( model, manifest ):
 
-    with manifest.age_data as pyramid_file:
-        print(f"Loading pyramid from '{pyramid_file}'...")
-        # Convert it to a string if needed
-        age_distribution = pyramid.load_pyramid_csv(pyramid_file)
+    print(f"Loading pyramid from '{manifest.age_data}'...")
+    #with open( manifest.age_data, 'r' ) as pyramid_file:
+    # Convert it to a string if needed
+    age_distribution = pyramid.load_pyramid_csv(Path(manifest.age_data))
 
     initial_populations = model.nodes.population[:,0]
     capacity = model.population.capacity

@@ -16,11 +16,11 @@ import numba as nb
 
 # initial_infections = np.random.randint(0, 11, model.nodes.count, dtype=np.uint32)
 
-@nb.njit((nb.uint32, nb.uint32[:], nb.uint16[:], nb.uint8[:], nb.float32, nb.float32), parallel=True)
-def initialize_infections(count, infections, nodeid, itimer, inf_mean, inf_std):
+@nb.njit((nb.uint32, nb.uint32[:], nb.uint16[:], nb.uint8[:], nb.uint8[:], nb.float32, nb.float32), parallel=True)
+def initialize_infections(count, infections, nodeid, itimer, sus, inf_mean, inf_std):
 
     for i in nb.prange(count):
-        if infections[nodeid[i]] > 0:
+        if infections[nodeid[i]] > 0 and sus[i] == 1:
             infections[nodeid[i]] -= 1
             itimer[i] = np.maximum(np.uint8(1), np.uint8(np.round(np.random.normal(inf_mean, inf_std)))) # must be at least 1 day
 
@@ -44,6 +44,7 @@ def init( model, zero_nodes=None ):
             output_array, # model.nodes.initial_infections,
             model.population.nodeid,
             model.population.itimer,
+            model.population.susceptibility,
             model.params.inf_mean,
             model.params.inf_std
         )

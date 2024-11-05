@@ -23,9 +23,11 @@ RE = 6371.0  # Earth radius in km
 
 def get_additive_seasonality_effect( model, tick ):
     # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
-    #return model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
-    #global seasonal_contact_data 
-    return seasonal_contact_data[:,tick//7 % 52]
+    if seasonal_contact_data is not None:
+        return seasonal_contact_data[:,tick//7 % 52]
+    else:
+        return model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
+
 
 def calc_distance(lat1, lon1, lat2, lon2):
     # convert to radians
@@ -132,8 +134,15 @@ def init( model, manifest ):
     except Exception as ex:
         print( f"Failed to load {shared_lib_path}. No backup." )
 
-    global seasonal_contact_data 
-    seasonal_contact_data = np.loadtxt( manifest.seasonal_dynamics, delimiter=',' )
+    try:
+        global seasonal_contact_data 
+        seasonal_contact_data = np.loadtxt( manifest.seasonal_dynamics, delimiter=',' )
+
+        # auto limit to number of nodes (I go back on forth on whether this is a good idea)
+        seasonal_contact_data = seasonal_contact_data[:len(model.nodes), :]
+    except Exception as ex:
+        print( str( ex ) )
+        print( f"WARNING: ***{manifest.seasonal_dynamics} either not found or not parsed correctly. Proceeding with synthetic sinusoidal seasonality***." )
     
     return
 
@@ -306,6 +315,7 @@ def _get_enviro_foi(
 
         # Apply WASH fraction to reduce environmental contagion
         enviro_contagion[node] *= (1 - WASH_fraction[node])
+        #print( f"enviro_contagion[{node}] = {repr(enviro_contagion[node])}, WASH_fraction[{node}] = {repr(WASH_fraction[node])}" )
 
         # Calculate beta_env_effective using psi
         beta_env_effective = beta_env * (1 + (psi[node] - psi_mean[node]) / psi_mean[node])
@@ -393,8 +403,8 @@ def step(model, tick) -> None:
     network = nodes.network
     transfer = (contagion * network).round().astype(np.uint32)
     # The migration functions seem to be able to make the contagion negative in certain contexts
-    contagion += transfer.sum(axis=1)   # increment by incoming "migration"
-    contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
+    #contagion += transfer.sum(axis=1)   # increment by incoming "migration"
+    #contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
     #contagion *= delta # keeping delta at 1 for now, but this code should be correct
     #contagion *= delta
 
@@ -406,6 +416,8 @@ def step(model, tick) -> None:
     if True: # contact tx
         # Compute the effective beta considering seasonality
         beta_effective = model.params.beta + get_additive_seasonality_effect( model, tick )
+        #if np.any( beta_effective < 0 ):
+            #raise ValueError( "beta went negative after subtracting seasonality." )
         #beta_effective = model.params.beta
 
         #print( f"{contagion=}" )
@@ -441,6 +453,7 @@ def step(model, tick) -> None:
         #raise ValueError( f"{total_forces} has negative value." )
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
+    model.nodes.NI[tick] = new_infections 
     #print( f"{new_infections=}" )
     
 

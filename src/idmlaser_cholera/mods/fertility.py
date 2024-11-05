@@ -71,6 +71,6 @@ def step(model, tick):
 
     ag.set_accessibility(model, istart, iend )
     ri.add_with_ips( model, count_births, istart, iend )
-    mi.init( model, istart, iend )
+
     return
 
