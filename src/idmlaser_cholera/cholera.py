@@ -142,10 +142,11 @@ def init_psi_from_data( model ):
         print( str( ex ) )
         # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
         # 
-        #print( "Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
-        #import idmlaser_cholera.tools.make_suitability_random_data
-        #data = pd.read_csv(suitability_filename)
-        raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
+        print( "WARNING: Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
+        import idmlaser_cholera.tools.make_suitability_random_data
+        import pandas as pd
+        data = pd.read_csv(suitability_filename)
+        #raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
 
 
     # Convert the DataFrame into a NumPy array
@@ -190,7 +191,7 @@ def init_from_data():
 
     age_init.init( model, manifest )
     immunity.init(model)
-    init_prev.init( model )
+    #init_prev.init( model )
 
     return capacity
 
@@ -241,7 +242,7 @@ else:
 
 ages.init( model )
 mortality.init( model )
-sia.init( model )
+sia.init( model, manifest )
 
 model.nodes.add_vector_property("cbrs", model.nodes.count, dtype=np.float32)
 model.nodes.cbrs = np.array(list(cbrs.values()))
@@ -253,6 +254,13 @@ init_psi_from_data( model )
 
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_scalar_property("WASH_fraction", dtype=np.float32) # leave at 0 for now, not used yet
+#model.nodes.WASH_fraction = np.ones(model.nodes.count, dtype=np.float32) * 0.0
+#model.nodes.WASH_fraction = np.linspace(0.9, 1.0, model.nodes.count, dtype=np.float32)
+#wash_theta = np.loadtxt( manifest.wash_theta, delimiter="," )
+# mosaic, sorted by pop
+model.nodes.WASH_fraction = np.array([0.760084782053426, 0.63228528227706, 0.62881883749221, 0.913309900436136, 0.662459438552131, 0.584967034702784, 0.626706892794503, 0.636079830581899, 0.669666481983608, 0.64894201077891, 0.696995593022847, 0.702195043279203, 0.560481455873029, 0.803807835653375, 0.601725306457658, 0.672665705198764, 0.802617145990318, 0.709158179331758, 0.627881103961712, 0.662058780328589, 0.670273659221199, 0.573613963043334, 0.779348244741159, 0.625693855744188, 0.725439309848231, 0.657335789147831, 0.812776283418475, 0.554660601903563, 0.534945174425158, 0.762547227258778, 0.472575435225232, 0.615583176673807, 0.745641645018617, 0.790012651929884, 0.687360184773828, 0.778921138655779, 0.631520091542042, 0.715102219034724, 0.691454014537071], dtype=np.float32)
+
+
 
 # report outputs
 model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
@@ -288,7 +296,7 @@ model.phases = [
     transmission.step, # type: ignore
     #ri.step, # type: ignore
     mi.step, # type: ignore
-    sia.step, # type: ignore 
+    #sia.step, # type: ignore 
 ]
 
 
@@ -298,11 +306,14 @@ model.phases = [
 
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
-    #"""
+    """
     if tick == 365:
         model.population.save( filename="laser_cache/burnin_cholera.h5", initial_populations=initial_populations, age_distribution=age_init.age_distribution, cumulative_deaths=cumulative_deaths)
-        import sys
-        sys.exit()
+
+    """
+    #"""
+    if tick == 40:
+        init_prev.init( model )
     #"""
     metrics = [tick]
      
