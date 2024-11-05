@@ -348,7 +348,7 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
 
     # Cap the total forces at 1.0 using np.minimum
     capped_forces = np.minimum(total_forces, 1.0)
-
+    capped_forces = np.maximum(capped_forces, 0.0)
     capped_forces = np.array(capped_forces, dtype=np.float64)
     susceptibles = np.array(susceptibles, dtype=np.uint32)
 
@@ -359,7 +359,6 @@ def calculate_new_infections_by_node(total_forces, susceptibles):
         print( str( ex ) )
         pdb.set_trace()
     #print( f"new_infections = {new_infections}" )
-
 
     return new_infections
 
@@ -434,7 +433,7 @@ def step(model, tick) -> None:
         forces_environmental = _get_enviro_foi(
             new_contagion=contagion,
             enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
-            WASH_fraction=model.nodes.WASH_fraction,    # WASH fraction at each node
+            WASH_fraction=model.nodes.WASH_fraction[:,tick],    # WASH fraction at each node
             psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
             psi_mean=psi_means,
             enviro_base_decay_rate=decay_delta, # model.params.enviro_base_decay_rate,  # Decay rate
