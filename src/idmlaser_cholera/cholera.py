@@ -214,7 +214,7 @@ from idmlaser_cholera.numpynumba.population import check_hdf5_attributes
 from idmlaser_cholera.kmcurve import cumulative_deaths
 
 def check_for_cached():
-    hdf5_directory = "laser_cache"
+    hdf5_directory = manifest.laser_cache
     import os
     if not os.path.exists(hdf5_directory):
         os.makedirs(hdf5_directory)
@@ -298,10 +298,12 @@ model.phases = [
 
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
-    """
-    if tick == 50:
+    #"""
+    if tick == 365:
         model.population.save( filename="laser_cache/burnin_cholera.h5", initial_populations=initial_populations, age_distribution=age_init.age_distribution, cumulative_deaths=cumulative_deaths)
-    """
+        import sys
+        sys.exit()
+    #"""
     metrics = [tick]
      
     for phase in model.phases:
