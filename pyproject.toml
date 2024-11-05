@@ -115,3 +115,9 @@ force-single-line = true
 [tool.black]
 line-length = 140
 target-version = ["py39"]
+
+# sample here: https://coverage.readthedocs.io/en/latest/excluding.html
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    ]

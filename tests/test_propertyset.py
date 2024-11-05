@@ -1,8 +1,11 @@
 """Tests for the PropertySet class."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
+
+import numpy as np
 
 from laser_core.propertyset import PropertySet
 
@@ -111,7 +114,7 @@ class TestPropertySet(unittest.TestCase):
         """Test the __str__ method of the PropertySet class."""
         # assert that the __str__ method returns the expected string
         gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
-        assert str(gb) == str({"a": 1, "b": 2, "c": 3, "d": 4})
+        assert str(gb) == json.dumps({"a": 1, "b": 2, "c": 3, "d": 4}, indent=4)
 
     def test_repr(self):
         """Test the __repr__ method of the PropertySet class."""
@@ -151,6 +154,27 @@ class TestPropertySet(unittest.TestCase):
             gb.save(filename)
             assert filename.read_text() == str(gb)
 
+    # Test load() method on temporary file
+    def test_load(self):
+        """Test the load method of the PropertySet class."""
+        # assert that the load method reads the expected string from the file
+        gb = PropertySet({"a": 1, "b": 2}, {"c": 3, "d": 4})
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as file:
+            filename = Path(file.name)
+            gb.save(filename)
+            assert PropertySet.load(filename) == gb
 
-if __name__ == "__main__":
+    def test_item_access(self):
+        """Test item access in the PropertySet class."""
+        gb = PropertySet({"a": 1, "b": 2.7182818285}, {"c": "three", "d": np.uint32(42)})
+        assert gb["a"] == 1
+        assert gb["b"] == 2.7182818285
+        assert gb["c"] == "three"
+        assert gb["d"] == np.uint32(42)
+        gb.ps = PropertySet({"e": 2.7182818285})
+        assert gb["ps"] == PropertySet({"e": 2.7182818285})
+        assert gb.ps["e"] == 2.7182818285
+
+
+if __name__ == "__main__":  # pragma: no cover
     unittest.main()
