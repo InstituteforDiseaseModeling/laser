@@ -29,5 +29,5 @@ def load_population_data():
 
         return location_data.run()
     else:
-        raise ValueError("Invalid data file. It must be a Python file.")
+        raise ValueError(f"Invalid data file '{population_file}'. It must be a Python file.")
 
