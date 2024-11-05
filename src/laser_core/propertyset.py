@@ -1,5 +1,6 @@
 """Implements a PropertySet class that can be used to store properties in a dictionary-like object."""
 
+import json
 from pathlib import Path
 
 
@@ -41,6 +42,9 @@ class PropertySet:
             file.write(str(self))
 
         return
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
     def __add__(self, other):
         """
@@ -114,7 +118,7 @@ class PropertySet:
             str: A string representation of the object's dictionary.
         """
 
-        return str(self.__dict__)
+        return json.dumps(self.to_dict(), indent=4)
 
     def __repr__(self) -> str:
         """
@@ -128,7 +132,7 @@ class PropertySet:
             str: A string representation of the PropertySet instance.
         """
 
-        return f"PropertySet({self.__dict__!s})"
+        return f"PropertySet({self.to_dict()!s})"
 
     def __contains__(self, key):
         """
@@ -144,3 +148,36 @@ class PropertySet:
         """
 
         return key in self.__dict__
+
+    def __eq__(self, other):
+        """
+        Check if two PropertySet instances are equal.
+
+        Parameters:
+
+            other (PropertySet): The other PropertySet instance to compare.
+
+        Returns:
+
+            bool: True if the two instances are equal, False otherwise.
+        """
+
+        return self.to_dict() == other.to_dict()
+
+    @staticmethod
+    def load(filename):
+        """
+        Load a PropertySet from a specified file.
+
+        Parameters:
+
+            filename (str): The path to the file where the PropertySet is saved.
+
+        Returns:
+
+            PropertySet: The PropertySet instance loaded from the file.
+        """
+        with Path(filename).open("r") as file:
+            data = json.load(file)
+
+        return PropertySet(data)
