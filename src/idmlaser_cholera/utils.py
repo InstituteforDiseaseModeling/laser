@@ -386,6 +386,24 @@ def _siftup(indices, values, pos, size):
     _siftdown(indices, values, startpos, pos)
     return
 
+def viz_2D( data, label, x_label, y_label ):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    # Set up the figure with a specific aspect ratio
+    fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Create the heatmap with 1 pixel per value
+    cax = ax.imshow(data, cmap='viridis', interpolation='none', vmin=0, vmax=1, aspect='auto', origin='lower')
+    
+    # Adjust color bar size and label
+    cbar = fig.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label('Value')
+    
+    plt.title(label)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.show()
 
 # """
 # push/pop elements/sec for various priority queue implementations

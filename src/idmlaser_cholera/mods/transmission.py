@@ -3,6 +3,7 @@ import numba as nb
 import ctypes
 import pdb
 from pkg_resources import resource_filename
+from idmlaser_cholera.utils import viz_2D
 
 use_nb = True
 lib = None
@@ -143,6 +144,7 @@ def init( model, manifest ):
     except Exception as ex:
         print( str( ex ) )
         print( f"WARNING: ***{manifest.seasonal_dynamics} either not found or not parsed correctly. Proceeding with synthetic sinusoidal seasonality***." )
+    viz_2D( seasonal_contact_data, "Seasonal Contact Factor", "timestep", "node" )
     
     return
 
