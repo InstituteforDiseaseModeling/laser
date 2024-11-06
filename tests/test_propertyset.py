@@ -165,7 +165,7 @@ class TestPropertySet(unittest.TestCase):
             assert PropertySet.load(filename) == gb
 
     def test_item_access(self):
-        """Test item access in the PropertySet class."""
+        """Test item access, e.g., ``ps[key]``, in the PropertySet class."""
         gb = PropertySet({"a": 1, "b": 2.7182818285}, {"c": "three", "d": np.uint32(42)})
         assert gb["a"] == 1
         assert gb["b"] == 2.7182818285
@@ -176,7 +176,7 @@ class TestPropertySet(unittest.TestCase):
         assert gb.ps["e"] == 2.7182818285
 
     def test_item_set(self):
-        """Test item set in the PropertySet class."""
+        """Test item set, e.g., ``ps[key] = value``, in the PropertySet class."""
         gb = PropertySet()
         gb["a"] = 1
         gb["b"] = 2.7182818285

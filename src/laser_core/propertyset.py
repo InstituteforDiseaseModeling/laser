@@ -44,9 +44,38 @@ class PropertySet:
         return
 
     def __getitem__(self, key):
+        """
+        Retrieve the attribute of the object with the given key (e.g., ``ps[key]``).
+
+        Parameters:
+
+            key (str): The name of the attribute to retrieve.
+
+        Returns:
+
+            Any: The value of the attribute with the specified key.
+
+        Raises:
+
+            AttributeError: If the attribute with the specified key does not exist.
+        """
+
         return getattr(self, key)
 
     def __setitem__(self, key, value):
+        """
+        Set the value of an attribute.
+        This method allows setting an attribute of the instance using the
+        dictionary-like syntax (e.g., ``ps[key] = value``).
+
+        Parameters:
+            key (str): The name of the attribute to set.
+            value (any): The value to set for the attribute.
+
+        Returns:
+            None
+        """
+
         setattr(self, key, value)
 
     def __add__(self, other):
