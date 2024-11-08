@@ -141,7 +141,8 @@ def init( model, manifest ):
     except Exception as ex:
         print( str( ex ) )
         print( f"WARNING: ***{manifest.seasonal_dynamics} either not found or not parsed correctly. Proceeding with synthetic sinusoidal seasonality***." )
-    viz_2D( seasonal_contact_data, "Seasonal Contact Factor", "timestep", "node" )
+    if model.params.viz:
+        viz_2D( seasonal_contact_data, "Seasonal Contact Factor", "timestep", "node" )
     
     return
 
