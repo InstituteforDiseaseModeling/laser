@@ -3,7 +3,7 @@ import numba as nb
 import ctypes
 import pdb
 from pkg_resources import resource_filename
-from idmlaser_cholera.utils import viz_2D
+from idmlaser_cholera.utils import viz_2D, load_csv_maybe_header
 
 use_nb = True
 lib = None
@@ -25,7 +25,7 @@ RE = 6371.0  # Earth radius in km
 def get_additive_seasonality_effect( model, tick ):
     # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
     if seasonal_contact_data is not None:
-        return seasonal_contact_data[:,tick//7 % 52]
+        return 0.2*seasonal_contact_data[:,tick//7 % 52]
     else:
         return model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
 
@@ -137,10 +137,7 @@ def init( model, manifest ):
 
     try:
         global seasonal_contact_data 
-        seasonal_contact_data = np.loadtxt( manifest.seasonal_dynamics, delimiter=',' )
-
-        # auto limit to number of nodes (I go back on forth on whether this is a good idea)
-        seasonal_contact_data = seasonal_contact_data[:len(model.nodes), :]
+        seasonal_contact_data = load_csv_maybe_header( manifest.seasonal_dynamics )
     except Exception as ex:
         print( str( ex ) )
         print( f"WARNING: ***{manifest.seasonal_dynamics} either not found or not parsed correctly. Proceeding with synthetic sinusoidal seasonality***." )
