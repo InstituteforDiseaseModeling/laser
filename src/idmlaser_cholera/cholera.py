@@ -24,7 +24,7 @@ import os
 
 
 from idmlaser_cholera.utils import PropertySet
-from idmlaser_cholera.utils import viz_2D
+from idmlaser_cholera.utils import viz_2D, viz_pop
 
 meta_params = PropertySet({
     "ticks": int(365*5),
@@ -295,6 +295,7 @@ tmp_WASH_setting = np.array([0.760084782053426, 0.63228528227706, 0.628818837492
 model.nodes.WASH_fraction = finalize_WASH( tmp_WASH_setting )
 
 if model.params.viz:
+    viz_pop()
     viz_2D( model.nodes.WASH_fraction, label="WASH param", x_label="timestep", y_label="node" )
     viz_2D( model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
 

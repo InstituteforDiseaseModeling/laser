@@ -7,9 +7,14 @@ from typing import Any
 from typing import Tuple
 from typing import Union
 
+import geopandas as gpd
+import requests
+import zipfile
+
 import numba as nb
 import numpy as np
 import matplotlib.pyplot as plt # for viz function
+from matplotlib.colors import LogNorm
 
 
 def pop_from_cbr_and_mortality(
@@ -497,6 +502,68 @@ def load_csv_maybe_header(file_path):
     # Load data with np.loadtxt, skip header if detected
     data = np.loadtxt(file_path, delimiter=',', skiprows=1 if has_header else 0)
     return data
+
+def viz_pop(url="https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_shapes.zip", extract_to_dir="ssa_shapes"):
+    """
+    Download, unzip, and plot population data on a map of Sub-Saharan Africa.
+
+    Parameters:
+        url (str): URL to download the zip file from.
+        extract_to_dir (str or Path): Directory name where the zip file will be extracted.
+    """
+    # Download the file
+    zip_path = Path(f"{extract_to_dir}.zip")
+    if not zip_path.exists():
+        print("Downloading zip file...")
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(zip_path, "wb") as file:
+            file.write(response.content)
+        print("Download complete.")
+
+    # Unzip the file
+    extract_to_dir = Path(extract_to_dir)
+    if not extract_to_dir.exists():
+        print("Unzipping file...")
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(extract_to_dir)
+        print("Unzipping complete.")
+
+    # Load data from synth_small_ssa module
+    import synth_small_ssa as ssa
+    nn_nodes, initial_populations, cbrs = ssa.run()
+
+    # Extract longitude, latitude, and population data
+    nn_longitudes = [node[1][1] for node in nn_nodes.values()]
+    nn_latitudes = [node[1][0] for node in nn_nodes.values()]
+    nn_populations = [node[0][0] for node in nn_nodes.values()]
+    nn_sizes = 0.05 * np.sqrt(nn_populations)  # Marker sizes scaled by population
+
+    # Load and plot shapefile
+    shapefile_path = extract_to_dir / "ssa_shapes.shp"
+    shapefile = gpd.read_file(shapefile_path)
+
+    # Set up the plot
+    fig, ax = plt.subplots(figsize=(12, 9), dpi=200)
+
+    # Plot shapefile data
+    shapefile.plot(ax=ax)
+
+    # Plot the population data with logarithmic color scaling
+    scatter = ax.scatter(
+        nn_longitudes, nn_latitudes, 
+        s=nn_sizes, 
+        c=nn_populations, 
+        norm=LogNorm(), 
+        cmap="inferno"
+    )
+
+    # Add a color bar and labels
+    plt.colorbar(scatter, label="Population")
+    plt.show()
+
+# Usage
+#download_unzip_plot("https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_shapes.zip")
 
 # """
 # push/pop elements/sec for various priority queue implementations
