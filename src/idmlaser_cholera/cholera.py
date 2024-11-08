@@ -61,7 +61,7 @@ network_params = PropertySet({
 })
 
 model.params = PropertySet(meta_params, measles_params, network_params) # type: ignore
-model.params.beta = model.params.r_naught / model.params.inf_mean # type: ignore
+model.params.beta = 0.4 # model.params.r_naught / model.params.inf_mean # type: ignore
 
 import argparse
 
