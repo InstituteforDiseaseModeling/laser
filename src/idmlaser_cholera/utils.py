@@ -9,6 +9,7 @@ from typing import Union
 
 import numba as nb
 import numpy as np
+import matplotlib.pyplot as plt # for viz function
 
 
 def pop_from_cbr_and_mortality(
@@ -387,14 +388,44 @@ def _siftup(indices, values, pos, size):
     return
 
 def viz_2D( data, label, x_label, y_label ):
-    import numpy as np
-    import matplotlib.pyplot as plt
+    """
+    Visualize a 2D array as a heatmap using a specified color map, with options for custom labels and an automatically scaled color bar.
+
+    Parameters
+    ----------
+    data : 2D array-like
+        The data array to visualize. Each element in the array is represented as a pixel, with color indicating value.
+        Values are displayed in their raw range without normalization, allowing for both positive and negative values.
+
+    label : str
+        Title for the heatmap, displayed above the plot.
+
+    x_label : str
+        Label for the x-axis, typically describing the column dimension or variable associated with the horizontal axis.
+
+    y_label : str
+        Label for the y-axis, typically describing the row dimension or variable associated with the vertical axis.
+
+    Notes
+    -----
+    - The colormap used is 'viridis' by default, providing a perceptually uniform color gradient suitable for a wide range of data values.
+    - The color bar is dynamically scaled to the actual range of `data`, so values are represented accurately, including any negatives.
+    - The aspect ratio is set to 'auto' to ensure each data element appears as a distinct pixel in the visualization.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> data = np.random.rand(10, 10) * 2 - 1  # Generate a 10x10 array with values between -1 and 1
+    >>> viz_2D(data, label="Random Data Heatmap", x_label="X Axis", y_label="Y Axis")
+
+    This function is ideal for visualizing small-to-medium-sized 2D datasets where each value should be represented individually.
+    """
 
     # Set up the figure with a specific aspect ratio
     fig, ax = plt.subplots(figsize=(8, 6))
     
     # Create the heatmap with 1 pixel per value
-    cax = ax.imshow(data, cmap='viridis', interpolation='none', vmin=0, vmax=1, aspect='auto', origin='lower')
+    cax = ax.imshow(data, cmap='viridis', interpolation='none', aspect='auto', origin='lower')
     
     # Adjust color bar size and label
     cbar = fig.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
@@ -404,6 +435,68 @@ def viz_2D( data, label, x_label, y_label ):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.show()
+
+def load_csv_maybe_header(file_path):
+    """
+    Load a CSV file as a NumPy array, automatically detecting and skipping a header row if present.
+
+    Parameters
+    ----------
+    file_path : str or Path-like
+        Path to the CSV file to be loaded.
+
+    Returns
+    -------
+    data : ndarray
+        A NumPy array containing the data from the CSV file. If a header row is detected, it is skipped,
+        and only the numerical data is returned.
+
+    Notes
+    -----
+    This function performs a quick heuristic check on the first line of the file to determine if it is a header row.
+    A row is identified as a header if any of the following conditions are met for any item in the first row:
+    - Contains alphabetic characters.
+    - Contains a hyphen or minus sign (indicating text or non-numeric values).
+    - Has a numeric value outside the range [0, 1] (assuming all valid data falls within this range).
+
+    If the function detects a header, it skips the first line when loading the data with `np.loadtxt`. Otherwise, 
+    it reads from the start of the file.
+
+    Examples
+    --------
+    >>> # Suppose 'data.csv' has a header row
+    >>> load_csv_maybe_header('data.csv')
+    array([[0.1, 0.2, 0.3],
+           [0.4, 0.5, 0.6]])
+
+    >>> # Suppose 'data_no_header.csv' has no header row
+    >>> load_csv_maybe_header('data_no_header.csv')
+    array([[0.1, 0.2, 0.3],
+           [0.4, 0.5, 0.6]])
+
+    This function is particularly useful for cases where CSV files may inconsistently include a header row.
+
+    Raises
+    ------
+    ValueError
+        If any item in the first line cannot be converted to a float when performing header detection checks.
+
+    """
+    # Open file to check the first line
+    with open(file_path, 'r') as f:
+        first_line = f.readline().strip().split(',')
+        
+        # Check if first line contains a header based on conditions
+        has_header = any(
+            item.isalpha() or  # Check if item contains letters
+            '-' in item or     # Check if item has minus/hyphen
+            float(item) < 0 or float(item) > 1
+            for item in first_line
+        )
+    
+    # Load data with np.loadtxt, skip header if detected
+    data = np.loadtxt(file_path, delimiter=',', skiprows=1 if has_header else 0)
+    return data
 
 # """
 # push/pop elements/sec for various priority queue implementations
