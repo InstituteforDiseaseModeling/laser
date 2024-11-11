@@ -24,7 +24,7 @@ import os
 
 
 from idmlaser_cholera.utils import PropertySet
-from idmlaser_cholera.utils import viz_2D, viz_pop
+from idmlaser_cholera.utils import viz_2D, viz_pop, combine_pdfs
 
 meta_params = PropertySet({
     "ticks": int(365*5),
@@ -78,6 +78,11 @@ parser.add_argument(
     action="store_true",
     help="Enable visualization (default is OFF)"
 )
+parser.add_argument(
+    "--to_pdf",
+    action="store_true",
+    help="Works with --viz. Write to pdf instead of displaying to screen."
+)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -85,6 +90,7 @@ args = parser.parse_args()
 # Assign the input directory to model.params.input_dir
 model.params.input_dir = args.input_dir
 model.params.viz = args.viz  # This will be True if --viz is specified, False otherwise
+model.params.to_pdf = args.to_pdf  # This will be True if --viz is specified, False otherwise
 
 print(f"Input directory set to: {model.params.input_dir}")
 
@@ -254,7 +260,6 @@ sia.init( model, manifest )
 model.nodes.add_vector_property("cbrs", model.nodes.count, dtype=np.float32)
 model.nodes.cbrs = np.array(list(cbrs.values()))
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
-transmission.init( model, manifest )
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 init_psi_from_data( model )
@@ -295,14 +300,19 @@ tmp_WASH_setting = np.array([0.760084782053426, 0.63228528227706, 0.628818837492
 model.nodes.WASH_fraction = finalize_WASH( tmp_WASH_setting )
 
 if model.params.viz:
-    viz_pop()
-    viz_2D( model.nodes.WASH_fraction, label="WASH param", x_label="timestep", y_label="node" )
-    viz_2D( model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
+    viz_pop( model )
+    viz_2D( model, model.nodes.WASH_fraction, label="WASH param", x_label="timestep", y_label="node" )
+    viz_2D( model, model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
 
 # example how one might do a WASH intervention
 # Set the second "half" of the time domain to 1.0 for every other node
 #half_tick = model.params.ticks // 2
-#model.nodes.WASH_fraction[::2, half_tick:] = 1.0  # Every other row, starting from index 0
+#model.nodes.WASH_fraction[:, half_tick:] = 1.0  # Every other row, starting from index 0
+#model.nodes.WASH_fraction[:, :half_tick] = 0.0  # Every other row, starting from index 0
+
+
+# moved this after initial viz coz it has viz of its own. Not sure of a smarter way to do that
+transmission.init( model, manifest )
 
 # report outputs
 model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
@@ -319,12 +329,9 @@ model.nodes.add_scalar_property("enviro_contagion", dtype=np.float32)
 model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
 model.nodes.ri_coverages = np.random.rand(len(nn_nodes))
 
-
-# ## Tick/Step Processing Phases
-# 
-# The phases (sub-steps) of the processing on each tick go here as they are implemented.
-
-# In[24]:
+# combine pdfs into single
+if model.params.to_pdf:
+    combine_pdfs()
 
 
 # consider `step_functions` rather than `phases` for the following

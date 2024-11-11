@@ -10,12 +10,16 @@ from typing import Union
 import geopandas as gpd
 import requests
 import zipfile
+from PyPDF2 import PdfMerger
+import glob
 
 import numba as nb
 import numpy as np
 import matplotlib.pyplot as plt # for viz function
 from matplotlib.colors import LogNorm
+from matplotlib.backends.backend_pdf import PdfPages
 
+pdf_filename = 'combined_plots.pdf' # should probably be in manifest?
 
 def pop_from_cbr_and_mortality(
     initial: Union[int, np.integer],
@@ -392,7 +396,7 @@ def _siftup(indices, values, pos, size):
     _siftdown(indices, values, startpos, pos)
     return
 
-def viz_2D( data, label, x_label, y_label ):
+def viz_2D( model, data, label, x_label, y_label ):
     """
     Visualize a 2D array as a heatmap using a specified color map, with options for custom labels and an automatically scaled color bar.
 
@@ -439,7 +443,12 @@ def viz_2D( data, label, x_label, y_label ):
     plt.title(label)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.show()
+    if model.params.to_pdf:
+        with PdfPages(label.replace( " ", "_" )+".pdf") as pdf:
+            pdf.savefig()
+            plt.close()
+    else:
+        plt.show()
 
 def load_csv_maybe_header(file_path):
     """
@@ -503,7 +512,7 @@ def load_csv_maybe_header(file_path):
     data = np.loadtxt(file_path, delimiter=',', skiprows=1 if has_header else 0)
     return data
 
-def viz_pop(url="https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_shapes.zip", extract_to_dir="ssa_shapes"):
+def viz_pop(model, url="https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_shapes.zip", extract_to_dir="ssa_shapes"):
     """
     Download, unzip, and plot population data on a map of Sub-Saharan Africa.
 
@@ -560,7 +569,26 @@ def viz_pop(url="https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_s
 
     # Add a color bar and labels
     plt.colorbar(scatter, label="Population")
-    plt.show()
+    if model.params.to_pdf:
+        with PdfPages(pdf_filename) as pdf:
+            pdf.savefig()
+            plt.close()
+    else:
+        plt.show()
+
+def combine_pdfs(output_filename=pdf_filename):
+    merger = PdfMerger()
+
+    pdf_files = glob.glob("*.pdf")
+    # Append each individual PDF file to the merger
+    for pdf in pdf_files:
+        merger.append(pdf)
+
+    # Write out the combined PDF
+    with open(output_filename, "wb") as fout:
+        merger.write(fout)
+
+    print(f"Combined PDF saved to {output_filename}.")
 
 # Usage
 #download_unzip_plot("https://packages.idmod.org:443/artifactory/idm-data/LASER/ssa_shapes.zip")
