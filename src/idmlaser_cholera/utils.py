@@ -577,11 +577,15 @@ def viz_pop(model, url="https://packages.idmod.org:443/artifactory/idm-data/LASE
         plt.show()
 
 def combine_pdfs(output_filename=pdf_filename):
+    print( "DEBUG: combine_pdfs" )
     merger = PdfMerger()
 
     pdf_files = glob.glob("*.pdf")
     # Append each individual PDF file to the merger
     for pdf in pdf_files:
+        if pdf == output_filename:
+            continue
+        print( f"Found and appending {pdf}." )
         merger.append(pdf)
 
     # Write out the combined PDF
