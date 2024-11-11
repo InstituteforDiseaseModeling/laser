@@ -1,7 +1,10 @@
 from pathlib import Path
 import numpy as np
+import pandas as pd
 
 from iso_codes_mosaic import sorted_by_pop as sbp
+
+# Load the CSV file into a DataFrame
 
 # Define number of synthetic nodes and ranges for population and birth rate
 num_nodes = 41
