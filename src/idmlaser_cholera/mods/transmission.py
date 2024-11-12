@@ -22,6 +22,35 @@ infected_ids_buffer = (ctypes.c_uint32 * (MAX_INFECTIONS))()
 
 RE = 6371.0  # Earth radius in km
 
+# Some of these are inputs and some are outputs
+# static inputs
+def init_psi_from_data( model, manifest ):
+    suitability_filename = manifest.psi_data
+    try:
+        data = np.genfromtxt(suitability_filename,delimiter=',', skip_header=1, dtype=None, encoding=None)
+    except Exception as ex:
+        print( str( ex ) )
+        # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
+        # 
+        print( "WARNING: Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
+        import idmlaser_cholera.tools.make_suitability_random_data
+        import pandas as pd
+        data = pd.read_csv(suitability_filename)
+        #raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
+
+
+    # Convert the DataFrame into a NumPy array
+    suitability_data = data
+
+    # Get the shape of psi in the model
+    psi_shape = model.nodes.psi.shape
+
+    # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
+    suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
+
+    # Assign the subset of the data to the "psi" vector in the model
+    model.nodes.psi[:] = suitability_subset
+
 def get_additive_seasonality_effect( model, tick ):
     # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
     if seasonal_contact_data is not None:
@@ -135,6 +164,9 @@ def init( model, manifest ):
     except Exception as ex:
         print( f"Failed to load {shared_lib_path}. No backup." )
 
+    init_psi_from_data( model, manifest )
+    if model.params.viz:
+        viz_2D( model, model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
     try:
         global seasonal_contact_data 
         seasonal_contact_data = load_csv_maybe_header( manifest.seasonal_dynamics )

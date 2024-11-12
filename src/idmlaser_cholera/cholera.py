@@ -145,35 +145,6 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
     model.nodes.nn_nodes = nn_nodes
 
 
-# Some of these are inputs and some are outputs
-# static inputs
-def init_psi_from_data( model ):
-    suitability_filename = manifest.psi_data
-    try:
-        data = np.genfromtxt(suitability_filename,delimiter=',', skip_header=1, dtype=None, encoding=None)
-    except Exception as ex:
-        print( str( ex ) )
-        # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
-        # 
-        print( "WARNING: Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
-        import idmlaser_cholera.tools.make_suitability_random_data
-        import pandas as pd
-        data = pd.read_csv(suitability_filename)
-        #raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
-
-
-    # Convert the DataFrame into a NumPy array
-    suitability_data = data
-
-    # Get the shape of psi in the model
-    psi_shape = model.nodes.psi.shape
-
-    # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
-    suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
-
-    # Assign the subset of the data to the "psi" vector in the model
-    model.nodes.psi[:] = suitability_subset
-
 
 # ## Population per Tick
 # 
@@ -262,7 +233,6 @@ model.nodes.cbrs = np.array(list(cbrs.values()))
 model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
 # The climatically driven environmental suitability of V. cholerae by node and time
 model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
-init_psi_from_data( model )
 
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_vector_property("WASH_fraction", model.params.ticks, dtype=np.float32) # leave at 0 for now, not used yet
@@ -302,7 +272,6 @@ model.nodes.WASH_fraction = finalize_WASH( tmp_WASH_setting )
 if model.params.viz:
     viz_pop( model )
     viz_2D( model, model.nodes.WASH_fraction, label="WASH param", x_label="timestep", y_label="node" )
-    viz_2D( model, model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
 
 # example how one might do a WASH intervention
 # Set the second "half" of the time domain to 1.0 for every other node
