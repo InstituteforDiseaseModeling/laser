@@ -72,7 +72,8 @@ setup(
         "taichi",
         "pytest",
         "h5py",
-        "scipy"
+        "scipy",
+        "PyPDF2"
     ],
     extras_require={
         # eg:
