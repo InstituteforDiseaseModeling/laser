@@ -12,6 +12,8 @@ import requests
 import zipfile
 from PyPDF2 import PdfMerger
 import glob
+import os
+import pdb
 
 import numba as nb
 import numpy as np
@@ -582,15 +584,17 @@ def combine_pdfs(output_filename=pdf_filename):
 
     pdf_files = glob.glob("*.pdf")
     # Append each individual PDF file to the merger
+    pdf_files.remove( output_filename )
     for pdf in pdf_files:
-        if pdf == output_filename:
-            continue
         print( f"Found and appending {pdf}." )
         merger.append(pdf)
 
     # Write out the combined PDF
     with open(output_filename, "wb") as fout:
         merger.write(fout)
+
+    for pdf in pdf_files:
+        os.remove( pdf )
 
     print(f"Combined PDF saved to {output_filename}.")
 
