@@ -119,7 +119,7 @@ from idmlaser_cholera.mods import immunity
 from idmlaser_cholera.mods import init_prev
 from idmlaser_cholera.mods import transmission
 from idmlaser_cholera.mods import intrahost
-from idmlaser_cholera.mods import maternal_immunity as mi
+#from idmlaser_cholera.mods import maternal_immunity as mi
 from idmlaser_cholera.mods import ri
 from idmlaser_cholera.mods import sia
 from idmlaser_cholera.mods import fertility
@@ -237,18 +237,9 @@ model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
 # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
 model.nodes.add_vector_property("WASH_fraction", model.params.ticks, dtype=np.float32) # leave at 0 for now, not used yet
 
-
 if model.params.viz:
     viz_pop( model )
 
-# example how one might do a WASH intervention
-# Set the second "half" of the time domain to 1.0 for every other node
-#half_tick = model.params.ticks // 2
-#model.nodes.WASH_fraction[:, half_tick:] = 1.0  # Every other row, starting from index 0
-#model.nodes.WASH_fraction[:, :half_tick] = 0.0  # Every other row, starting from index 0
-
-
-# moved this after initial viz coz it has viz of its own. Not sure of a smarter way to do that
 transmission.init( model, manifest )
 
 # report outputs
@@ -281,8 +272,8 @@ model.phases = [
     #intrahost.step2, # type: ignore
     transmission.step, # type: ignore
     #ri.step, # type: ignore
-    mi.step, # type: ignore
-    #sia.step, # type: ignore 
+    #mi.step, # type: ignore
+    sia.step, # type: ignore 
 ]
 
 

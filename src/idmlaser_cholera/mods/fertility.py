@@ -2,7 +2,7 @@ import numpy as np
 import pdb
 from . import access_groups as ag
 from . import ri
-from . import maternal_immunity as mi
+#from . import maternal_immunity as mi
 
 from idmlaser_cholera.kmcurve import pdsod
 
