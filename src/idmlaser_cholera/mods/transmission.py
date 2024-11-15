@@ -46,7 +46,8 @@ def init_psi_from_data( model, manifest ):
     psi_shape = model.nodes.psi.shape
 
     # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
-    suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
+    #suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
+    suitability_subset = suitability_data.T[:model.nodes.psi.shape[0], :model.nodes.psi.shape[1]]
 
     # Assign the subset of the data to the "psi" vector in the model
     model.nodes.psi[:] = suitability_subset
@@ -63,19 +64,19 @@ def finalize_WASH( model, input_WASH_setting ):
 
     # Handle scalar input: Expand to a full 2D array
     if np.isscalar(input_WASH_setting):
-        return np.full((node_count, ticks), input_WASH_setting, dtype=np.float32)
+        return np.full((node_count, ticks), input_WASH_setting, dtype=np.float32).T
 
     # Handle 1D array: Expand along the time (second) dimension
     elif input_WASH_setting.ndim == 1:
         if len(input_WASH_setting) != node_count:
             raise ValueError(f"Length of 1D array {len(input_WASH_setting)} must match the number of nodes {node_count}.")
-        return np.tile(input_WASH_setting[:, np.newaxis], (1, ticks))
+        return np.tile(input_WASH_setting[:, np.newaxis], (1, ticks)).T
 
     # Handle 2D array: Verify dimensions and use as-is
     elif input_WASH_setting.ndim == 2:
         if input_WASH_setting.shape != (node_count, ticks):
             raise ValueError("2D array dimensions must match (node_count, ticks).")
-        return input_WASH_setting
+        return input_WASH_setting.T
 
     else:
         raise ValueError("Input must be a scalar, 1D array, or 2D array.")
@@ -103,7 +104,9 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return d
 
 def init( model, manifest ):
-    initial_populations = model.nodes.population[:,0]
+    initial_populations = model.nodes.population[0]
+    if initial_populations.sum() == 0:
+        raise ValueError( f"Initial Population empty in transmission init." )
     network = model.nodes.network
     locations = np.zeros((model.nodes.count, 2), dtype=np.float32)
 
@@ -195,7 +198,7 @@ def init( model, manifest ):
 
     init_psi_from_data( model, manifest )
     if model.params.viz:
-        viz_2D( model, model.nodes.psi, label="PSI param", x_label="timestep", y_label="node" )
+        viz_2D( model, model.nodes.psi.T, label="PSI param", x_label="timestep", y_label="node" )
 
     tmp_WASH_setting = np.array([0.760084782053426, 0.63228528227706, 0.62881883749221, 0.913309900436136, 0.662459438552131, 0.584967034702784, 0.626706892794503, 0.636079830581899, 0.669666481983608, 0.64894201077891, 0.696995593022847, 0.702195043279203, 0.560481455873029, 0.803807835653375, 0.601725306457658, 0.672665705198764, 0.802617145990318, 0.709158179331758, 0.627881103961712, 0.662058780328589, 0.670273659221199, 0.573613963043334, 0.779348244741159, 0.625693855744188, 0.725439309848231, 0.657335789147831, 0.812776283418475, 0.554660601903563, 0.534945174425158, 0.762547227258778, 0.472575435225232, 0.615583176673807, 0.745641645018617, 0.790012651929884, 0.687360184773828, 0.778921138655779, 0.631520091542042, 0.715102219034724, 0.691454014537071, 0.691454014537071, 0.691454014537071], dtype=np.float32)
     model.nodes.WASH_fraction = finalize_WASH( model, tmp_WASH_setting )
@@ -205,7 +208,7 @@ def init( model, manifest ):
     #model.nodes.WASH_fraction[:, half_tick:] = 1.0  # Every other row, starting from index 0
     #model.nodes.WASH_fraction[:, :half_tick] = 0.0  # Every other row, starting from index 0
     if model.params.viz:
-        viz_2D( model, model.nodes.WASH_fraction, label="WASH param", x_label="timestep", y_label="node" )
+        viz_2D( model, model.nodes.WASH_fraction.T, label="WASH param", x_label="timestep", y_label="node" )
 
     try:
         global seasonal_contact_data 
@@ -460,7 +463,7 @@ def step(model, tick) -> None:
         tick
     )
 
-    contagion = nodes.cases[:, tick].astype(np.float32)    # we will accumulate current infections into this array
+    contagion = nodes.cases[tick].astype(np.float32)    # we will accumulate current infections into this array
     """
     print( f"RAW {model.nodes.S[tick]=}" )
     print( f"RAW {model.nodes.E[tick]=}" )
@@ -496,17 +499,18 @@ def step(model, tick) -> None:
         forces = nodes.forces
         np.multiply(contagion, beta_effective, out=forces)
         #print( f"{forces=}" )
-        np.divide(forces, model.nodes.population[:, tick], out=forces)  # per agent force of infection as a probability
+        np.divide(forces, model.nodes.population[tick], out=forces)  # per agent force of infection as a probability
         #print( f"normalized {forces=}" )
 
-    decay_delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
+    #decay_delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
+    decay_delta = model.params.delta_min + model.nodes.psi[tick] * (model.params.delta_max - model.params.delta_min)
 
     if True:
         forces_environmental = _get_enviro_foi(
             new_contagion=contagion,
             enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
-            WASH_fraction=model.nodes.WASH_fraction[:,tick],    # WASH fraction at each node
-            psi=model.nodes.psi[:, tick],                # Psi data for each node and timestep
+            WASH_fraction=model.nodes.WASH_fraction[tick],    # WASH fraction at each node
+            psi=model.nodes.psi[tick],                # Psi data for each node and timestep
             psi_mean=psi_means,
             enviro_base_decay_rate=decay_delta, # model.params.enviro_base_decay_rate,  # Decay rate
             zeta=model.params.zeta,             # Shedding multiplier

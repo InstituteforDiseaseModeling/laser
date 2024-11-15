@@ -4,7 +4,8 @@ from . import access_groups as ag
 from . import ri
 #from . import maternal_immunity as mi
 
-from idmlaser_cholera.kmcurve import pdsod
+#from idmlaser_cholera.kmcurve import pdsod
+from idmlaser_cholera.demographics import ExtendedKaplanMeierEstimator as KME
 
 # ## Vital Dynamics: Births
 # 
@@ -23,18 +24,21 @@ def step(model, tick):
     if doy == 1:
         if hasattr( model.nodes, "cbrs" ) and model.nodes.cbrs is not None:
             # cbr by node
-            model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.nodes.cbrs / 1000)
+            model.nodes.births[year] = np.random.poisson(model.nodes.population[tick] * model.nodes.cbrs / 1000)
         else:
-            model.nodes.births[:, year] = np.random.poisson(model.nodes.population[:, tick] * model.params.cbr / 1000)
+            model.nodes.births[year] = np.random.poisson(model.nodes.population[tick] * model.params.cbr / 1000)
         #print( f"Births for year {year} = {model.nodes.births[:, year]}" )
 
-    annual_births = model.nodes.births[:, year]
+    annual_births = model.nodes.births[year]
     todays_births = (annual_births * doy // 365) - (annual_births * (doy - 1) // 365)
     count_births = todays_births.sum()
     istart, iend = model.population.add(count_births)   # add count_births agents to the population, get the indices of the new agents
 
     # enable this after loading the aliased distribution and dod and dob properties (see cells below)
-    model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
+    estimator = KME()
+    predicted_age_at_death = estimator.predict_age_at_death(model.population.dob[istart:iend], max_year=100)
+    model.population.dod[istart:iend] = predicted_age_at_death 
+    #model.population.dod[istart:iend] = pdsod(model.population.dob[istart:iend], max_year=100)   # make use of the fact that dob[istart:iend] is currently 0
     model.population.dob[istart:iend] = tick    # now update dob to reflect being born today
 
     # enable this after adding susceptibility property to the population (see cells below)
@@ -67,7 +71,7 @@ def step(model, tick):
             if dods[agent] < max_tick:
                 model.nddq.push(agent)
         index += births
-    model.nodes.population[:,tick+1] += todays_births
+    model.nodes.population[tick+1] += todays_births
 
     ag.set_accessibility(model, istart, iend )
     ri.add_with_ips( model, count_births, istart, iend )

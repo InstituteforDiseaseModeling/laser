@@ -23,7 +23,7 @@ import os
 # Also, we will set the parameters separately as `meta_params` and `measles_params` but combine them into one parameter set for future use. We _could_ create `model.params = PropertySet({"meta":meta_params, "measles":measles_params})` and then reference them "by path" in the subsequent code, e.g., `params.meta.ticks` and `params.measles.inf_mean`.
 
 
-from idmlaser_cholera.utils import PropertySet
+from laser_core.propertyset import PropertySet
 from idmlaser_cholera.utils import viz_2D, viz_pop, combine_pdfs
 
 meta_params = PropertySet({
@@ -109,7 +109,8 @@ else:
 
 nn_nodes, initial_populations, cbrs = manifest.load_population_data()
 
-from idmlaser_cholera.numpynumba import Population
+#from laser_core.laserframe import LaserFrame as Population
+from idmlaser_cholera.numpynumba.population import ExtendedLF as Population
 
 # We're going to create the human/agent population from the capacity (expansion slots based on births)
 # It will be in model.population
@@ -141,9 +142,9 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
     ifirst, ilast = nodes.add(node_count)
     print(f"{ifirst=:,}, {ilast=:,}")
     model.nodes.add_vector_property("population", model.params.ticks + 1) # type: ignore
-    nodes.population[:,0] = initial_populations
+    #nodes.population[:,0] = initial_populations
+    nodes.population[0] = initial_populations
     model.nodes.nn_nodes = nn_nodes
-
 
 
 # ## Population per Tick
@@ -151,7 +152,7 @@ def save_pops_in_nodes( model, nn_nodes, initial_populations):
 # We will propagate the current populations forward on each tick. Vital dynamics of births and non-disease deaths will update the current values. The argument signature for per tick step phases is (`model`, `tick`). This lets functions access model specific properties and use the current tick, if necessary, e.g. record information or decide to act.
 
 def propagate_population(model, tick):
-    model.nodes.population[:,tick+1] = model.nodes.population[:,tick]
+    model.nodes.population[tick+1] = model.nodes.population[tick]
 
     return
 
@@ -159,6 +160,7 @@ def init_from_data():
     Population.create_from_capacity(model,initial_populations,cbrs)
     capacity = model.population.capacity
     from .schema import schema
+
     model.population.add_properties_from_schema( schema )
 
     def assign_node_ids(model,initial_populations):
@@ -173,6 +175,7 @@ def init_from_data():
     # ri coverages and init prev seem to be the same "kind of thing"?
     model.nodes.initial_infections = np.uint32(np.round(np.random.poisson(prevalence*initial_populations)))
 
+    # this is erroring because population size isn't right
     age_init.init( model, manifest )
     immunity.init(model)
     #init_prev.init( model )
@@ -196,7 +199,7 @@ def init_from_file( filename ):
     save_pops_in_nodes( model, nn_nodes, initial_populations )
 
 from idmlaser_cholera.numpynumba.population import check_hdf5_attributes
-from idmlaser_cholera.kmcurve import cumulative_deaths
+from idmlaser_cholera.demographics import cumulative_deaths
 
 def check_for_cached():
     hdf5_directory = manifest.laser_cache

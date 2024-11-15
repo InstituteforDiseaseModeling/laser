@@ -3,8 +3,10 @@ import numba as nb
 from datetime import datetime
 from tqdm import tqdm
 
-from idmlaser_cholera.kmcurve import pdsod
+from idmlaser_cholera.demographics import ExtendedKaplanMeierEstimator as KME
 
+from pathlib import Path
+import numpy as np
 
 # ## Non-Disease Mortality 
 # ### Part II
@@ -19,7 +21,11 @@ def init( model ):
     dobs = population.dob
     dods = population.dod
     tstart = datetime.now(tz=None)  # noqa: DTZ005
-    dods[0:population.count] = pdsod(dobs[0:population.count], max_year=100)
+
+    estimator = KME()
+    #dods[0:population.count] = pdsod(dobs[0:population.count], max_year=100)
+    predicted_age_at_death = estimator.predict_age_at_death(dobs[:population.count], max_year=100)
+    dods[:population.count] = predicted_age_at_death
     tfinish = datetime.now(tz=None)  # noqa: DTZ005
     print(f"Elapsed time for drawing dates of death: {tfinish - tstart}")
 
@@ -101,8 +107,8 @@ def step(model, tick):
         i = pq.popi()
         model.population.susceptibility[i] = 0
         nodeid = model.population.nodeid[i]
-        model.nodes.population[nodeid,tick+1] -= 1
-        model.nodes.deaths[nodeid,year] += 1
+        model.nodes.population[tick+1,nodeid] -= 1
+        model.nodes.deaths[year,nodeid] += 1
 
     return
 

@@ -1,7 +1,8 @@
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-import idmlaser_cholera.pyramid as pyramid
+#import idmlaser_cholera.pyramid as pyramid
+import laser_core.demographics.pyramid as pyramid
 import pdb
 
 # ## Non-Disease Mortality 
@@ -19,11 +20,13 @@ def init( model, manifest ):
     # Convert it to a string if needed
     age_distribution = pyramid.load_pyramid_csv(Path(manifest.age_data))
 
-    initial_populations = model.nodes.population[:,0]
+    #initial_populations = model.nodes.population[:,0]
+    initial_populations = model.nodes.population[0]
     capacity = model.population.capacity
 
     print("Creating aliased distribution...")
-    aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,4])
+    #aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,4])
+    aliased_distribution = pyramid.AliasedDistribution(age_distribution[4])
     count_active = initial_populations.sum()
 
     print(f"Sampling {count_active:,} ages... {model.population.count=:,}")
@@ -36,7 +39,12 @@ def init( model, manifest ):
     for i in tqdm(range(len(age_distribution))):
         mask[:count_active] = (buckets == i)    # indices of agents in this age group bucket
         # draw uniformly between the start and end of the age group bucket
-        model.population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
+        try:
+            model.population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
+        except Exception as ex:
+            print( str( ex ) )
+            print( f" at i={i}." )
+            pdb.set_trace()
         # Not negative actually
         model.population.age[mask] = model.population.dob[mask]
 

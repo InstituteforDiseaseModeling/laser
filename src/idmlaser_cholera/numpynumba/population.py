@@ -47,115 +47,61 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
             print(f"Attribute not found in file {hdf5_filename}\nError: {e}")
             return False
 
-class Population:
-    """Array-based Agent Based Population Class"""
 
-    def __init__(self, capacity: int, **kwargs):
-        """
-        Initialize a Population object.
+from laser_core.laserframe import LaserFrame
 
-        Args:
-            capacity (int): The maximum capacity of the population (number of agents).
-            **kwargs: Additional keyword arguments to set as attributes of the object.
-
-        Returns:
-            None
-        """
-        self._count = 0
-        self._capacity = capacity
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        self.add_property = self.add_scalar_property  # alias
-        self.node_count = -1
+class ExtendedLF(LaserFrame):
+    def __init__(self, capacity, **kwargs):
+        # Initialize the parent class
         self.expected_new_deaths_per_year = None
-
-        return
-
-    # dynamically add a property to the class
-    def add_scalar_property(self, name: str, dtype=np.uint32, default=0) -> None:
-        """Add a scalar property to the class"""
-        # initialize the property to a NumPy array with of size self._count, dtype, and default value
-        setattr(self, name, np.full(self._capacity, default, dtype=dtype))
-        return
-
-    def add_vector_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
-        """Add a vector property to the class"""
-        # initialize the property to a NumPy array with of size self._count, dtype, and default value
-        setattr(self, name, np.full((self._capacity, length), default, dtype=dtype))
-        return
-
-    def add_report_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
-        """Add a vector property to the class"""
-        # initialize the property to a NumPy array with of size self._count, dtype, and default value
-        setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
-        return
+        super().__init__(capacity, **kwargs)
 
     # Add scalar properties to model.population
     def add_properties_from_schema( self, schema ):
         for name, dtype in schema.items():
             self.add_scalar_property(name, dtype)
 
-    @property
-    def count(self) -> int:
-        return self._count
-
-    @property
-    def capacity(self) -> int:
-        return self._capacity
-
-    def add(self, count: int) -> Tuple[int, int]:
-        """Add agents to the population"""
-        assert self._count + count <= self._capacity, f"New population ({self._count + count}) exceeds capacity ({self._capacity=})"
-        i = self._count
-        self._count += int(count)
-        j = self._count
-        #print( f"Adding {count} agents bringing us to {self._count}." )
-        return i, j
-
-    def __len__(self) -> int:
-        return self._count
-
-    def sort_by_property(self, property_name: str):
-        if property_name not in self.__dict__:
-            raise ValueError(f"Property '{property_name}' does not exist in the population.")
-
-        # Should we include expanstion slots in sort? Simpler, but slower, if 0's sorts properly.
-        # Otherwise we should sort the regular section only and tack on the end
-        # Get the values of the property to sort by
-        sort_values = self.__dict__[property_name][:self._count]
-
-        # Calculate sorted indices based on the specified property
-        sorted_indices = np.argsort(sort_values)
-
-        # Sort all properties based on the sorted indices
-        for key, value in self.__dict__.items():
-            if isinstance(value, np.ndarray) and value.size == self._capacity:
-                self.__dict__[key][:self._count] = value[:self._count][sorted_indices]
-
-        return sorted_indices
-
     @staticmethod
-    def create_from_capacity(model,initial_populations,cbrs=None):
+    def create_from_capacity(model, initial_populations, cbrs=None):
+        # Calculate initial capacity based on sum of initial populations
         capacity = initial_populations.sum()
         print(f"initial {capacity=:,}")
+        
+        # Calculate growth based on cbrs or model parameters
         if cbrs:
             print(f"{cbrs=}, {model.params.ticks=}")    # type: ignore
-            growth = ((1.0 + np.mean(np.array(list(cbrs.values()))/1000))**(model.params.ticks // 365))
+            growth = ((1.0 + np.mean(np.array(list(cbrs.values())) / 1000)) 
+                      ** (model.params.ticks // 365))
         else:
             print(f"{model.params.cbr=}, {model.params.ticks=}")    # type: ignore
-            growth = ((1.0 + model.params.cbr/1000)**(model.params.ticks // 365))   # type: ignore
+            growth = ((1.0 + model.params.cbr / 1000) 
+                      ** (model.params.ticks // 365))   # type: ignore
+        
         print(f"{growth=}")
+        
+        # Adjust capacity by growth and add a 1% buffer
         capacity *= growth
         capacity *= 1.01  # 1% buffer
         capacity = np.uint32(np.round(capacity))
+        
         print(f"required {capacity=:,}")
         print(f"Allocating capacity for {capacity:,} individuals")
-        population = Population(capacity)
+        
+        # Initialize the Population object with calculated capacity
+        population = ExtendedLF(capacity)
         model.population = population   # type: ignore
+        
+        # Add initial population to the model's population and return capacity
         ifirst, ilast = population.add(initial_populations.sum())
         print(f"{ifirst=:,}, {ilast=:,}")
+        
         return capacity
+
+    def add_report_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
+        """Add a vector property to the class"""
+        # initialize the property to a NumPy array with of size self._count, dtype, and default value
+        setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        return
 
     def save_pd(self, filename: str, tail_number=0 ) -> None:
         """Save the population properties to a CSV file"""

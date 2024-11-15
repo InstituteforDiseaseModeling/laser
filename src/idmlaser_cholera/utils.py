@@ -572,7 +572,7 @@ def viz_pop(model, url="https://packages.idmod.org:443/artifactory/idm-data/LASE
     # Add a color bar and labels
     plt.colorbar(scatter, label="Population")
     if model.params.to_pdf:
-        with PdfPages(pdf_filename) as pdf:
+        with PdfPages("pop_plot.pdf") as pdf:
             pdf.savefig()
             plt.close()
     else:
