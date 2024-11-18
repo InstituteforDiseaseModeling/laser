@@ -131,7 +131,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(self.pops)):
                         if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
                             mysum = mysum + self.pops[m]
@@ -147,7 +147,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(self.pops)):
                         if self.distances[i][m] <= self.distances[i][j]:
                             mysum = mysum + self.pops[m]
@@ -168,7 +168,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(pops)):
                         if distances[i][m] <= distances[i][j]:
                             mysum = mysum + pops[m]
@@ -184,7 +184,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(self.pops)):
                         if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
                             mysum = mysum + self.pops[m]
@@ -200,7 +200,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(self.pops)):
                         if self.distances[i][m] <= self.distances[i][j]:
                             mysum = mysum + self.pops[m]
@@ -221,7 +221,7 @@ class TestMigrationFunctions(unittest.TestCase):
         for i in range(network.shape[0]):
             for j in range(network.shape[1]):
                 if i != j:
-                    mysum = 0
+                    mysum = np.int64(0)
                     for m in range(len(pops)):
                         if (m != i) and (distances[i][m] <= distances[i][j]):
                             mysum = mysum + pops[m]
