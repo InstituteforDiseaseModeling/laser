@@ -4,7 +4,7 @@
 
 ## Status
 
-[![documentation](https://readthedocs.org/projects/idmlaser/badge/?style=flat)](https://idmlaser.readthedocs.io/en/latest/)
+[![documentation](https://readthedocs.org/projects/idmlaser/badge/?style=flat)](https://docs.idmod.org/projects/laser/en/latest/)
 
 ![tests](https://github.com/InstituteforDiseaseModeling/laser/actions/workflows/github-actions.yml/badge.svg)
 
@@ -25,7 +25,7 @@ However, it may be more instructive to install one the disease packages built on
 
 ### Documentation
 
-Documentation can be found [here](https://idmlaser.readthedocs.io/en/latest/) at the moment.
+Documentation can be found [here](https://docs.idmod.org/projects/laser/en/latest/) at the moment.
 
 ### Development
 

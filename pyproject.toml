@@ -61,8 +61,8 @@ test = [
 [project.urls]
 Homepage = "https://github.com/InstituteforDiseaseModeling/laser"
 Issues = "https://github.com/InstituteforDiseaseModeling/laser/issues"
-Documentation = "https://idmlaser.readthedocs.io/en/latest/"
-Changelog = "https://idmlaser.readthedocs.io/en/latest/changelog.html"
+Documentation = "https://docs.idmod.org/projects/laser/en/latest/"
+Changelog = "https://docs.idmod.org/projects/laser/en/latest/changelog.html"
 
 [build-system]
 requires = ["setuptools>=61.0"]

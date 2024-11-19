@@ -16,7 +16,7 @@ Overview
       - | |version| |wheel| |supported-versions| |supported-implementations|
         | |commits-since|
 .. |docs| image:: https://readthedocs.org/projects/idmlaser/badge/?style=flat
-    :target: https://idmlaser.readthedocs.io/en/latest/
+    :target: https://docs.idmod.org/projects/laser/en/latest/
     :alt: Documentation Status
 
 .. |github-actions| image:: https://github.com/InstituteforDiseaseModeling/laser/actions/workflows/github-actions.yml/badge.svg
@@ -71,7 +71,7 @@ Documentation
 =============
 
 
-https://idmlaser.readthedocs.io/en/latest/
+https://docs.idmod.org/projects/laser/en/latest/
 
 
 Development
