@@ -120,7 +120,7 @@ from idmlaser_cholera.mods import immunity
 from idmlaser_cholera.mods import init_prev
 from idmlaser_cholera.mods import transmission
 from idmlaser_cholera.mods import intrahost
-#from idmlaser_cholera.mods import maternal_immunity as mi
+from idmlaser_cholera.mods import maternal_immunity as mi
 from idmlaser_cholera.mods import ri
 from idmlaser_cholera.mods import sia
 from idmlaser_cholera.mods import fertility
@@ -275,8 +275,8 @@ model.phases = [
     #intrahost.step2, # type: ignore
     transmission.step, # type: ignore
     #ri.step, # type: ignore
-    #mi.step, # type: ignore
-    sia.step, # type: ignore 
+    mi.step, # type: ignore
+    #sia.step, # type: ignore 
 ]
 
 
