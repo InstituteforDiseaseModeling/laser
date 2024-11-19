@@ -1,7 +1,6 @@
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-#import idmlaser_cholera.pyramid as pyramid
 import laser_core.demographics.pyramid as pyramid
 import pdb
 

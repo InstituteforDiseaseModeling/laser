@@ -1,4 +1,6 @@
 from laser_core.demographics.kmestimator import KaplanMeierEstimator as KME
+from pathlib import Path
+import numpy as np
 
 # Derived from table 1 of "National Vital Statistics Reports Volume 54, Number 14 United States Life Tables, 2003" (see README.md)
 cumulative_deaths = [
@@ -107,16 +109,18 @@ cumulative_deaths = [
 ]
 
 class ExtendedKaplanMeierEstimator(KME):
-    DEFAULT_FILE = "USA-pyramid-2023.csv"  # Replace with actual path
+    DEFAULT_FILE = "us-life-tables-nvs-2003.csv"  # Replace with actual path
 
-    def __init__(self, source=cumulative_deaths):
+    def __init__(self, source=None):
         """
         Initializes the ExtendedKaplanMeierEstimator.
         If no source is provided, the default dataset is loaded.
         """
         if source is None:
-            # If no source is provided, load the default file
-            source = Path(self.DEFAULT_FILE)
+            source = cumulative_deaths
+        elif isinstance(source, (str, Path)):
+            # If a path is provided, load data from the CSV file
+            source_path = Path(source)
             if not source.exists() or not source.is_file():
                 raise FileNotFoundError(f"Default file not found: {self.DEFAULT_FILE}")
             with source.open("r") as file:
