@@ -46,7 +46,6 @@ def init_psi_from_data( model, manifest ):
     psi_shape = model.nodes.psi.shape
 
     # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
-    #suitability_subset = suitability_data[:psi_shape[0], :psi_shape[1]]
     suitability_subset = suitability_data.T[:model.nodes.psi.shape[0], :model.nodes.psi.shape[1]]
 
     # Assign the subset of the data to the "psi" vector in the model
@@ -69,7 +68,11 @@ def finalize_WASH( model, input_WASH_setting ):
     # Handle 1D array: Expand along the time (second) dimension
     elif input_WASH_setting.ndim == 1:
         if len(input_WASH_setting) != node_count:
-            raise ValueError(f"Length of 1D array {len(input_WASH_setting)} must match the number of nodes {node_count}.")
+            if len(input_WASH_setting) > node_count:
+                # Truncate to match node_count
+                input_WASH_setting = input_WASH_setting[:node_count]
+            else:
+                raise ValueError(f"Length of 1D array {len(input_WASH_setting)} must match the number of nodes {node_count}.")
         return np.tile(input_WASH_setting[:, np.newaxis], (1, ticks)).T
 
     # Handle 2D array: Verify dimensions and use as-is
@@ -84,7 +87,7 @@ def finalize_WASH( model, input_WASH_setting ):
 def get_additive_seasonality_effect( model, tick ):
     # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
     if seasonal_contact_data is not None:
-        return 0.2*seasonal_contact_data[:,tick//7 % 52]
+        return 0.2*seasonal_contact_data[tick//7 % 52]
     else:
         return model.params.seasonality_factor * np.sin(2 * np.pi * (tick - model.params.seasonality_phase) / 365)
 
@@ -213,11 +216,14 @@ def init( model, manifest ):
     try:
         global seasonal_contact_data 
         seasonal_contact_data = load_csv_maybe_header( manifest.seasonal_dynamics )
+        if seasonal_contact_data.shape[0] > model.nodes.count:
+            seasonal_contact_data = seasonal_contact_data[:model.nodes.count]
     except Exception as ex:
         print( str( ex ) )
         print( f"WARNING: ***{manifest.seasonal_dynamics} either not found or not parsed correctly. Proceeding with synthetic sinusoidal seasonality***." )
     if model.params.viz:
         viz_2D( model, seasonal_contact_data, "Seasonal Contact Factor", "timestep", "node" )
+    seasonal_contact_data = seasonal_contact_data.T
     
     return
 
@@ -484,7 +490,7 @@ def step(model, tick) -> None:
 
     global psi_means
     if psi_means is None:
-        psi_means = np.mean(model.nodes.psi, axis=1)
+        psi_means = np.mean(model.nodes.psi, axis=0)
 
     # Code-based ways of toggling contact and enviro transmission routes on and off during perf investigations.
     if True: # contact tx
