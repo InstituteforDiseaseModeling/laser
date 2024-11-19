@@ -23,7 +23,6 @@ def init( model ):
     tstart = datetime.now(tz=None)  # noqa: DTZ005
 
     estimator = KME()
-    #dods[0:population.count] = pdsod(dobs[0:population.count], max_year=100)
     predicted_age_at_death = estimator.predict_age_at_death(dobs[:population.count], max_year=100)
     dods[:population.count] = predicted_age_at_death
     tfinish = datetime.now(tz=None)  # noqa: DTZ005

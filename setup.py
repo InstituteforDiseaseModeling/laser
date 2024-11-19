@@ -10,6 +10,10 @@ def read(*names, **kwargs):
     with Path(__file__).parent.joinpath(*names).open(encoding=kwargs.get("encoding", "utf8")) as fh:
         return fh.read()
 
+def parse_requirements(filename):
+    """Load requirements from a pip requirements file."""
+    with open(filename, "r") as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
     name="idmlaser_cholera",
@@ -61,19 +65,7 @@ setup(
         # eg: "keyword1", "keyword2", "keyword3",
     ],
     python_requires=">=3.8",
-    install_requires=[
-        "laser-core",
-        "numba",  # ==0.58.1",
-        "polars",  # ==0.19.19",
-        "tqdm",  # ==4.66.1",
-        "matplotlib",
-        "pandas",
-        "taichi",
-        "pytest",
-        "h5py",
-        "scipy",
-        "PyPDF2"
-    ],
+    install_requires=parse_requirements("requirements.txt"),
     extras_require={
         # eg:
         #   "rst": ["docutils>=0.11"],

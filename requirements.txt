@@ -1,0 +1,15 @@
+laser-core~=0.0
+click
+h5py # caching
+pandas # sigh
+numba
+numpy
+pkg_resources
+requests
+taichi
+tqdm
+
+# for viz
+geopandas
+matplotlib
+PyPDF2
