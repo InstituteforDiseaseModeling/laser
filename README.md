@@ -8,8 +8,11 @@
 
 ![tests](https://github.com/InstituteforDiseaseModeling/laser/actions/workflows/github-actions.yml/badge.svg)
 
-[![package](https://img.shields.io/pypi/v/idmlaser.svg)](https://pypi.org/project/laser-core/)
-![wheel](https://img.shields.io/pypi/wheel/idmlaser.svg)
+[![package](https://img.shields.io/pypi/v/laser-core.svg)](https://pypi.org/project/laser-core/)
+![wheel](https://img.shields.io/pypi/wheel/laser-core.svg)
+![python versions](https://img.shields.io/pypi/pyversions/laser-core)
+![implementation](https://img.shields.io/pypi/implementation/laser-core.svg)
+![license](https://img.shields.io/pypi/l/laser-core.svg)
 
 ![commits since v0.1.1](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.1.1.svg)
 
