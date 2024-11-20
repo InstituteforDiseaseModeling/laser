@@ -63,8 +63,9 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "click",  # ==8.1.7",
-        "numpy",  # ==1.26.2",
-        "numba",  # ==0.58.1",
+        "numpy~=1.26.4",
+        "llvimlite>=0.43.0",
+        "numba~=0.59.1",
         "polars",  # ==0.19.19",
         "tqdm",  # ==4.66.1",
         "matplotlib",
