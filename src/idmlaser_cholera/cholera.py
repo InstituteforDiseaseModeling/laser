@@ -87,13 +87,7 @@ params.to_pdf = args.to_pdf  # This will be True if --viz is specified, False ot
 
 # Encapsulate this in a 'factory' method in Model
 from idmlaser_cholera.mymodel import Model
-model = Model(params)
-
-if model.check_for_cached():
-    print("*\nFound cached file. Using it.\n*")
-    # TBD
-else:
-    model.init_from_data()
+model = Model.get(params)
 
 # params/config done, model created from pop data, now do components
 #=========================================================================
