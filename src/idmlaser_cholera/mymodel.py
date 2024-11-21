@@ -48,6 +48,39 @@ class Model:
             raise FileNotFoundError(f"{self.manifest_path} does not exist.")
 
         self.nn_nodes, self.initial_populations, self.cbrs = self.manifest.load_population_data()
+        def convert_to_laserframe():
+            # Let's convert the input data into a laserframe
+            # with init_pop, cbr, lat, long, and id for each node
+            # The laserframe doesn't get used yet
+            self.input_pop = Population(capacity=len(self.nn_nodes))
+            self.input_pop.add_scalar_property(name="populations")
+            self.input_pop.add_scalar_property(name="cbrs")
+            self.input_pop.add_scalar_property(name="ids")
+            # Define new scalar properties for 'name', 'lat', and 'long'
+            #self.input_pop.add_scalar_property(name='name', dtype=np.object)  # Store names as objects (strings)
+            self.input_pop.add_scalar_property(name='lat', dtype=np.float32)  # Latitude as float
+            self.input_pop.add_scalar_property(name='long', dtype=np.float32) # Longitude as float
+
+            # print( f"{self.nn_nodes=}" )
+            self.input_pop.ids[:] = np.arange(len(self.nn_nodes))
+            self.input_pop.populations[:] = self.initial_populations
+            self.input_pop.cbrs[:] = np.array(list(self.cbrs.values()), dtype=np.float32)
+
+            # Populate the scalar properties from `self.nn_nodes`
+            names = []
+            lats = []
+            longs = []
+
+            for node, data in self.nn_nodes.items():
+                names.append(node)                      # Extract the node name
+                lats.append(data[1][0])                 # Extract latitude from the second tuple
+                longs.append(data[1][1])                # Extract longitude from the second tuple
+
+            # Assign the extracted data to the scalar properties
+            #self.input_pop.name[:] = np.array(names, dtype=np.object)
+            self.input_pop.lat[:] = np.array(lats, dtype=np.float32)
+            self.input_pop.long[:] = np.array(longs, dtype=np.float32)
+        convert_to_laserframe()
 
     def _save_pops_in_nodes(self):
         """Initialize the node populations."""
@@ -79,6 +112,7 @@ class Model:
             np.round(np.random.poisson(self.params.prevalence * self.initial_populations))
         )
 
+        # It would be cleaner if these didn't need to be here
         age_init.init(self, self.manifest)
         immunity.init(self)
 
