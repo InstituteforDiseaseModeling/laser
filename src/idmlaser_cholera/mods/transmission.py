@@ -107,6 +107,21 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return d
 
 def init( model, manifest ):
+    model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
+    # The climatically driven environmental suitability of V. cholerae by node and time
+    model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
+
+    # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
+    model.nodes.add_vector_property("WASH_fraction", model.params.ticks, dtype=np.float32) # leave at 0 for now, not used yet
+
+    # report outputs
+    model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
+    model.nodes.add_vector_property("incidence", model.params.ticks, dtype=np.uint32)
+
+    # transient for calculations
+    model.nodes.add_scalar_property("forces", dtype=np.float32)
+    model.nodes.add_scalar_property("enviro_contagion", dtype=np.float32)
+
     initial_populations = model.nodes.population[0]
     if initial_populations.sum() == 0:
         raise ValueError( f"Initial Population empty in transmission init." )

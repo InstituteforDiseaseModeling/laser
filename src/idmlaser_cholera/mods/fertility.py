@@ -7,6 +7,11 @@ from . import ri
 #from idmlaser_cholera.kmcurve import pdsod
 from idmlaser_cholera.demographics import ExtendedKaplanMeierEstimator as KME
 
+def init( model ):
+    model.nodes.add_vector_property("births", (model.params.ticks + 364) // 365)    # births per year
+    model.nodes.add_vector_property("cbrs", model.nodes.count, dtype=np.float32)
+    model.nodes.cbrs = np.array(list(model.cbrs.values()))
+
 # ## Vital Dynamics: Births
 # 
 # Let's implement births over time. We will use the CBR in `model.params` and draw for the number of births this year based on the most recent population. Then, we will distribute those births as evenly as possible for integral values over the days of the year.

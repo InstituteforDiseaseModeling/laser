@@ -22,30 +22,34 @@ import ctypes
 # ## RI 
 # ### Add based on accessibility group for newborns
 
-# In[17]:
-
-
-# ## RI
-# ### "Step-Function"
 # Timers get counted down each timestep and when they reach 0, susceptibility is set to 0.
 
 use_nb = True
-# TBD: Put in init function!
-try:
-    lib = ctypes.CDLL('./libri.so')
+lib = None
 
-# Define the argument types for the C function
-    lib.update_susceptibility_based_on_ri_timer.argtypes = [
-        ctypes.c_uint32,                  # count
-        np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
-        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
-        #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
-        #np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
-        #ctypes.c_int64                    # tick
-    ]
-    use_nb = False
-except Exception as ex:
-    print( "Failed to load libri.so. Will use numba." )
+def init( model ):
+    # Add new property "ri_coverages", just randomly for demonstration purposes
+    # Replace with values from data
+    model.nodes.add_scalar_property("ri_coverages", dtype=np.float32)
+    model.nodes.ri_coverages = np.random.rand(len(model.nn_nodes))
+
+    try:
+        global lib
+        lib = ctypes.CDLL('./libri.so')
+
+        # Define the argument types for the C function
+        lib.update_susceptibility_based_on_ri_timer.argtypes = [
+            ctypes.c_uint32,                  # count
+            np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # ri_timer
+            np.ctypeslib.ndpointer(dtype=np.uint8, ndim=1, flags='C_CONTIGUOUS'),   # susceptibility
+            #np.ctypeslib.ndpointer(dtype=np.uint16, ndim=1, flags='C_CONTIGUOUS'),  # age_at_vax
+            #np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags='C_CONTIGUOUS'),   # dob
+            #ctypes.c_int64                    # tick
+        ]
+        global use_nb
+        use_nb = False
+    except Exception as ex:
+        print( "Failed to load libri.so. Will use numba." )
 
 
 def add(model, count_births, istart, iend):

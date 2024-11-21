@@ -21,7 +21,7 @@ def save_seird( model ):
     print("Arrays saved successfully.")
 
 
-def report( model, initial_populations ):
+def report( model ):
     metrics = pd.DataFrame(model.metrics, columns=["tick"] + [phase.__name__ for phase in model.phases])
     metrics.head()
 

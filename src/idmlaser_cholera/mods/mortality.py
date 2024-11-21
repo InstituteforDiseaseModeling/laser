@@ -33,6 +33,8 @@ def init( model ):
     print(f"First 32 DoBs (should all be negative - these agents were born before today):\n{dobs[:32]}")
     print(f"First 32 DoDs (should all be positive - these agents will all pass in the future):\n{dods[:32]}")
 
+    model.nodes.add_vector_property("deaths", (model.params.ticks + 364) // 365)    # deaths per year
+
     if "eula_age" in model.params.__dict__:
         #pdb.set_trace()
         # Sort by age
