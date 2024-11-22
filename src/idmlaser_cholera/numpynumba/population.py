@@ -200,6 +200,7 @@ class ExtendedLF(LaserFrame):
         
         return capacity
 
+    # Added as special case of add_vector_property but probably not needed
     def add_report_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
         """Add a vector property to the class"""
         # initialize the property to a NumPy array with of size self._count, dtype, and default value
@@ -207,7 +208,11 @@ class ExtendedLF(LaserFrame):
         return
 
     def save_pd(self, filename: str, tail_number=0 ) -> None:
-        """Save the population properties to a CSV file"""
+        """
+        Save the population properties to a CSV file. Much slower than save which uses HDF5. Only use
+        if you really don't want to convert your HDF5 to CSV afterwards and are willing to accept slowness.
+        If you're running with smaller populations this might be fine.
+        """
         data = {}
         for key, value in self.__dict__.items():
             if isinstance(value, np.ndarray):
@@ -221,6 +226,23 @@ class ExtendedLF(LaserFrame):
         df = pd.DataFrame(data)
         df.to_csv(filename, index=False)
         print(f"Population data saved to {filename}")
+
+    def save_npz(self, filename: str, tail_number=0) -> None:
+        """
+        Save the population properties to a .npz file. Slower than save which uses HDF5.
+        """
+        data_to_save = {}
+
+        for key, value in self.__dict__.items():
+            if isinstance(value, np.ndarray):
+                if tail_number > 0:
+                    print(f"Saving population of just {tail_number} agents born during sim.")
+                    data_to_save[key] = value[self._count - tail_number:self._count]  # Save only the last tail_number elements
+                else:
+                    data_to_save[key] = value[:self._count]  # Only save up to the current count
+
+        # Save to a .npz file
+        np.savez_compressed(filename, **data_to_save)
 
     def save(self, filename: str, tail_number=0, initial_populations=None, age_distribution=None, cumulative_deaths=None, eula_age=None ) -> None:
         """Save the population properties to an HDF5 file"""
@@ -249,23 +271,46 @@ class ExtendedLF(LaserFrame):
                     # Create a dataset in the HDF5 file
                     hdf.create_dataset(key, data=data)
 
-    def save_npz(self, filename: str, tail_number=0) -> None:
-        """Save the population properties to a .npz file"""
-        data_to_save = {}
-
-        for key, value in self.__dict__.items():
-            if isinstance(value, np.ndarray):
-                if tail_number > 0:
-                    print(f"Saving population of just {tail_number} agents born during sim.")
-                    data_to_save[key] = value[self._count - tail_number:self._count]  # Save only the last tail_number elements
-                else:
-                    data_to_save[key] = value[:self._count]  # Only save up to the current count
-
-        # Save to a .npz file
-        np.savez_compressed(filename, **data_to_save)
-
     @staticmethod
     def load(filename: str) -> None:
+        """
+        Load a serialized population from a file and reconstruct its properties.
+
+        This method reads population data from a specified file and recreates an
+        `ExtendedLF` object. The data is expected to be stored in an HDF5 format,
+        containing population properties and metadata.
+
+        Parameters:
+        filename (str): The path to the file containing the serialized population data.
+                        The file must have an ".h5" extension.
+
+        Returns:
+        ExtendedLF: An instance of `ExtendedLF` initialized with the loaded data.
+
+        Raises:
+        KeyError: If the file is missing the required `nodeid` attribute.
+        ValueError: If the file format is unsupported.
+
+        Notes:
+        - The file must contain at least the following attributes: `count`, `capacity`,
+          `node_count`, and a dataset named `nodeid`.
+        - Additional datasets within the HDF5 file are dynamically assigned to the
+          `ExtendedLF` object as attributes.
+        - This method automatically calculates `node_count` based on the maximum
+          value in the `nodeid` array.
+
+        Example:
+        >>> population = ExtendedLF.load("population_data.h5")
+        >>> print(population._count)
+        10000
+
+        Implementation Details:
+        - The method uses a helper function `load_hdf5` to handle file-specific
+          operations.
+        - The `population.node_count` is incremented by 1 to represent the total
+          number of unique nodes (assumes 0-based indexing).
+
+        """
         def load_hdf5( filename ):
             population = ExtendedLF(0) # We'll do capacity automatically
             """Load the population properties from an HDF5 file"""
@@ -296,12 +341,45 @@ class ExtendedLF(LaserFrame):
         else:
             raise KeyError("The 'nodeid' property is missing from the HDF5 file.")
 
-        #population._count=len(population.nodeid)
         print( f"Loaded file with population {population._count}." )
 
         return population
 
     def set_capacity( self, new_capacity ):
+        """
+        Adjusts the capacity of the population by resizing all the attributes (NumPy arrays).
+
+        This method updates the population's capacity by checking all of its attributes stored in `__dict__`.
+        If an attribute is a 1D NumPy array and its length is smaller than the new capacity, the array is
+        resized to the new capacity with zeros filling the extra space. The old data is retained, and the
+        resized array replaces the original one in the object.
+
+        Attributes with 2D arrays are ignored, and a message is printed for each ignored attribute. These are
+        assumed to not be population properties.
+
+        Parameters:
+        ----------
+        new_capacity : int
+            The new capacity to be set for the population's 1D array attributes. All 1D arrays will be resized
+            to this capacity, and their contents will be preserved up to the size of the original array.
+
+        Returns:
+        -------
+        None
+            This method modifies the population in place, resizing arrays where necessary, and does not return anything.
+
+        Notes:
+        -----
+        - Any exceptions encountered during the resizing process (e.g., copying data into the new array) will
+          be caught and printed for debugging purposes, with an optional breakpoint (`pdb.set_trace()`) for
+          interactive debugging.
+        - 2D arrays are not resized and will be ignored during the process.
+
+        Example:
+        --------
+        population.set_capacity(1000)  # Resizes all 1D arrays in the object to a length of 1000.
+        """
+
         self._capacity = new_capacity
         for key, value in self.__dict__.items():
             if isinstance(value, np.ndarray):
@@ -325,6 +403,8 @@ class ExtendedLF(LaserFrame):
                         pdb.set_trace()
 
         return
+
+    # potentially obsolete functions below here.
 
     def current( self ):
         # return tuple of first and last index of current cohort of interest
