@@ -22,6 +22,7 @@ class Model:
         self.manifest_path = os.path.join(self.params.input_dir, "manifest.py")
         self.manifest = None
         self._load_manifest()
+        age_init.age_data_manager.set_path( self.manifest.age_data )
 
     @classmethod
     def get(cls, params):
@@ -32,11 +33,18 @@ class Model:
         model = cls(params)  # Create a Model instance
         if model._check_for_cached():
             print("*\nFound cached file. Using it.\n*")
-            # Logic for using cached data can be placed here
         else:
             model._init_from_data()  # Initialize from data if no cache found
         return model
 
+    def save( self, filename ):
+        if age_init.age_data_manager.get_data() is None:
+            raise ValueError( f"age_distribution uninitialized while saving" )
+        self.population.save( filename=filename,
+            initial_populations=self.initial_populations,
+            age_distribution=age_init.age_data_manager.get_data(),
+            cumulative_deaths=cumulative_deaths
+        )
     def _load_manifest(self):
         """Load the manifest module if it exists."""
         if os.path.isfile(self.manifest_path):
@@ -133,6 +141,10 @@ class Model:
         self.population = Population.load(filename)
         self._extend_capacity_after_loading()
         self._save_pops_in_nodes()
+        # We aren't yet storing the initial infections in the cached file so recreating on reload
+        self.nodes.initial_infections = np.uint32(
+            np.round(np.random.poisson(self.params.prevalence * self.initial_populations))
+        )
 
     def _extend_capacity_after_loading(self):
         """Extend the population capacity after loading."""
@@ -148,10 +160,12 @@ class Model:
         for filename in os.listdir(hdf5_directory):
             if filename.endswith(".h5"):
                 hdf5_filepath = os.path.join(hdf5_directory, filename)
+                if age_init.age_data_manager.get_data() is None:
+                    raise RuntimeError( "age_init.age_distribution seems to None while caching" )
                 cached = check_hdf5_attributes(
                     hdf5_filename=hdf5_filepath,
                     initial_populations=self.initial_populations,
-                    age_distribution=age_init.age_distribution,
+                    age_distribution=age_init.age_data_manager.get_data(),
                     cumulative_deaths=cumulative_deaths,
                 )
                 if cached:

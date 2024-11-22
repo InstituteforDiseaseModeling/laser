@@ -124,7 +124,8 @@ class ExtendedLF(LaserFrame):
         with h5py.File(filename, 'w') as hdf:
             hdf.attrs['count'] = self._count
             hdf.attrs['capacity'] = self._capacity
-            hdf.attrs['node_count'] = self.node_count
+            hdf.attrs['node_count'] = len(initial_populations)
+            print( "TBD: Need to derive node count since we don't have it here." )
             if initial_populations is not None:
                 hdf.attrs['init_pops'] = initial_populations
             if age_distribution is not None:
@@ -163,7 +164,7 @@ class ExtendedLF(LaserFrame):
     @staticmethod
     def load(filename: str) -> None:
         def load_hdf5( filename ):
-            population = Population(0) # We'll do capacity automatically
+            population = ExtendedLF(0) # We'll do capacity automatically
             """Load the population properties from an HDF5 file"""
             with h5py.File(filename, 'r') as hdf:
                 population._count = hdf.attrs['count']

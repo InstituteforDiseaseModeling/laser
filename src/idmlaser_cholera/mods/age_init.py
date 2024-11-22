@@ -4,6 +4,36 @@ from tqdm import tqdm
 import laser_core.demographics.pyramid as pyramid
 import pdb
 
+# age_init.py
+import json  # Assuming the age data is stored in a JSON file; adjust as necessary.
+
+# This get way more involved than I wanted when I needed to load the age_distribution from the user-specifiec path early enough to check whether the 
+# cached models match the distribution before creating a new model.
+
+class AgeDataManager:
+    def __init__(self):
+        self._path = None
+        self._data = None
+
+    def get_data(self):
+        """Load and return the age data."""
+        if self._data is None:
+            if self._path is None:
+                raise ValueError("Path not set. Please use set_path to specify a file path.")
+            self._data = pyramid.load_pyramid_csv(Path(self._path))
+        return self._data
+
+    def set_path(self, path):
+        """Set the file path for the age data."""
+        if not isinstance(path, str):
+            raise TypeError("Path must be a string.")
+        self._path = path
+        self._data = None  # Clear any previously loaded data
+
+# Singleton instance for module-level access
+age_data_manager = AgeDataManager()
+
+
 # ## Non-Disease Mortality 
 # ### Part I
 # 
@@ -15,11 +45,14 @@ import pdb
 def init( model, manifest ):
 
     print(f"Loading pyramid from '{manifest.age_data}'...")
-    #with open( manifest.age_data, 'r' ) as pyramid_file:
     # Convert it to a string if needed
-    age_distribution = pyramid.load_pyramid_csv(Path(manifest.age_data))
+    age_distribution = age_data_manager.get_data()
 
     #initial_populations = model.nodes.population[:,0]
+    if model.nodes is None:
+        raise RuntimeError( "nodes does not seem to be initialized in model object." )
+    if model.nodes.population is None:
+        raise RuntimeError( "nodes.population does not seem to be initialized in model object." )
     initial_populations = model.nodes.population[0]
     capacity = model.population.capacity
 

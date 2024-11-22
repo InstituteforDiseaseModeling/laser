@@ -138,8 +138,8 @@ model.phases = [
 model.metrics = []
 for tick in tqdm(range(model.params.ticks)):
     """
-    if tick == 365:
-        model.population.save( filename="laser_cache/burnin_cholera.h5", initial_populations=initial_populations, age_distribution=age_init.age_distribution, cumulative_deaths=cumulative_deaths)
+    if tick == 1:
+        model.save( filename="laser_cache/burnin_cholera.h5" )
 
     """
     #"""
