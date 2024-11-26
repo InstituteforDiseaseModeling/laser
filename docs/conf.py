@@ -77,3 +77,8 @@ exclude_patterns = [
     'reference/idmlaser_cholera.tools.make_suitability_random_data.rst',  # Exclude this specific .rst file
     'idmlaser_cholera/__main__.py',
 ]
+autodoc_default_options = {
+    'undoc-members': True,  # Include undocumented members (set to False to ignore private members)
+    'exclude-members': '_*',  # Exclude private members starting with an underscore
+}
+

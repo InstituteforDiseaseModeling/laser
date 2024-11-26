@@ -1,4 +1,4 @@
-"""Single array-based population class for agent-based models"""
+"""Single array-based population class for agent-based models."""
 
 from typing import Tuple
 
@@ -10,7 +10,6 @@ import os
 import pdb
 
 @nb.njit(parallel=True)
-#def accumulate_deaths_parallel(nodeid_filtered, death_year, nodeid_indices_array, total_population_per_year):
 def accumulate_deaths_parallel(nodeid_filtered, death_year, deaths_per_year):
     for i in nb.prange(len(death_year)):
         #node_index = nodeid_indices_array[nodeid_filtered[i]]
@@ -18,8 +17,7 @@ def accumulate_deaths_parallel(nodeid_filtered, death_year, deaths_per_year):
         deaths_per_year[node_index, death_year[i]] += 1
 
 def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, cumulative_deaths, eula_age=None):
-    """
-    Verify that attributes stored in an HDF5 file match the provided data.
+    """Verify that attributes stored in an HDF5 file match the provided data.
 
     This function checks whether the specified attributes in an HDF5 file correspond
     to the given input arrays. If the file or attributes are missing, or if any of
@@ -55,7 +53,6 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
     ...     print("Attributes match.")
     ... else:
     ...     print("Attributes do not match.")
-
     """
     if not os.path.exists( hdf5_filename ):
         print( "WARNING: Couldn't find requested file: {hdf5_filename}" )
@@ -97,8 +94,8 @@ class ExtendedLF(LaserFrame):
 
     # Add scalar properties to model.population
     def add_properties_from_schema( self, schema ):
-        """
-        Initialize scalar properties for agents in the population based on a provided schema.
+        """Initialize scalar properties for agents in the population based on a
+        provided schema.
 
         This method iterates through each property defined in the schema and calls
         `add_scalar_property` to add the property to the model's population. The schema is
@@ -129,6 +126,7 @@ class ExtendedLF(LaserFrame):
             self.add_scalar_property(name, dtype)
 
     @staticmethod
+
     def create_from_capacity(model, initial_populations, cbrs=None):
         """
         Allocate and initialize a population model based on an initial population
@@ -140,32 +138,39 @@ class ExtendedLF(LaserFrame):
         derived from the model's parameters. A buffer is added to the calculated
         capacity to ensure sufficient allocation.
 
-        Parameters:
-        model (object): The model to which the population will be assigned.
-                        Must contain a `params` attribute with `cbr` (crude birth rate)
-                        and `ticks` (simulation duration in days).
-        initial_populations (numpy.ndarray): Array of initial population counts.
-        cbrs (dict, optional): A dictionary mapping regions or groups to crude
-                               birth rates (per 1000 individuals). If provided,
-                               these values are used for growth calculations.
+        Parameters
+        ----------
+        model : object
+            The model to which the population will be assigned. Must contain a
+            `params` attribute with `cbr` (crude birth rate) and `ticks` (simulation
+            duration in days).
+        initial_populations : numpy.ndarray
+            Array of initial population counts.
+        cbrs : dict, optional
+            A dictionary mapping regions or groups to crude birth rates (per 1000
+            individuals). If provided, these values are used for growth calculations.
 
-        Returns:
-        int: The calculated population capacity after accounting for growth
-             and a 1% buffer.
+        Returns
+        -------
+        int
+            The calculated population capacity after accounting for growth and a
+            1% buffer.
 
-        Notes:
+        Notes
+        -----
         - Growth is compounded annually based on crude birth rates.
         - If `cbrs` is not provided, the model's global `cbr` value is used.
         - The capacity is converted to a 32-bit unsigned integer to optimize memory usage.
 
-        Example:
+        Examples
+        --------
         >>> model.params.cbr = 25  # crude birth rate (per 1000 individuals)
         >>> model.params.ticks = 730  # 2 years in simulation days
         >>> initial_populations = np.array([1000, 2000, 1500])
         >>> capacity = create_from_capacity(model, initial_populations)
         >>> print(f"Allocated capacity: {capacity}")
-
         """
+    
         # Calculate initial capacity based on sum of initial populations
         capacity = initial_populations.sum()
         print(f"initial {capacity=:,}")
@@ -202,16 +207,18 @@ class ExtendedLF(LaserFrame):
 
     # Added as special case of add_vector_property but probably not needed
     def add_report_property(self, name, length: int, dtype=np.uint32, default=0) -> None:
-        """Add a vector property to the class"""
+        """Add a vector property to the class."""
         # initialize the property to a NumPy array with of size self._count, dtype, and default value
         setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
         return
 
     def save_pd(self, filename: str, tail_number=0 ) -> None:
-        """
-        Save the population properties to a CSV file. Much slower than save which uses HDF5. Only use
-        if you really don't want to convert your HDF5 to CSV afterwards and are willing to accept slowness.
-        If you're running with smaller populations this might be fine.
+        """Save the population properties to a CSV file.
+
+        Much slower than save which uses HDF5. Only use if you really
+        don't want to convert your HDF5 to CSV afterwards and are
+        willing to accept slowness. If you're running with smaller
+        populations this might be fine.
         """
         data = {}
         for key, value in self.__dict__.items():
@@ -228,8 +235,9 @@ class ExtendedLF(LaserFrame):
         print(f"Population data saved to {filename}")
 
     def save_npz(self, filename: str, tail_number=0) -> None:
-        """
-        Save the population properties to a .npz file. Slower than save which uses HDF5.
+        """Save the population properties to a .npz file.
+
+        Slower than save which uses HDF5.
         """
         data_to_save = {}
 
@@ -245,7 +253,7 @@ class ExtendedLF(LaserFrame):
         np.savez_compressed(filename, **data_to_save)
 
     def save(self, filename: str, tail_number=0, initial_populations=None, age_distribution=None, cumulative_deaths=None, eula_age=None ) -> None:
-        """Save the population properties to an HDF5 file"""
+        """Save the population properties to an HDF5 file."""
         with h5py.File(filename, 'w') as hdf:
             hdf.attrs['count'] = self._count
             hdf.attrs['capacity'] = self._capacity
@@ -273,8 +281,8 @@ class ExtendedLF(LaserFrame):
 
     @staticmethod
     def load(filename: str) -> None:
-        """
-        Load a serialized population from a file and reconstruct its properties.
+        """Load a serialized population from a file and reconstruct its
+        properties.
 
         This method reads population data from a specified file and recreates an
         `ExtendedLF` object. The data is expected to be stored in an HDF5 format,
@@ -309,11 +317,10 @@ class ExtendedLF(LaserFrame):
           operations.
         - The `population.node_count` is incremented by 1 to represent the total
           number of unique nodes (assumes 0-based indexing).
-
         """
         def load_hdf5( filename ):
             population = ExtendedLF(0) # We'll do capacity automatically
-            """Load the population properties from an HDF5 file"""
+            """Load the population properties from an HDF5 file."""
             with h5py.File(filename, 'r') as hdf:
                 population._count = hdf.attrs['count']
                 population._capacity = hdf.attrs['capacity']
@@ -346,8 +353,8 @@ class ExtendedLF(LaserFrame):
         return population
 
     def set_capacity( self, new_capacity ):
-        """
-        Adjusts the capacity of the population by resizing all the attributes (NumPy arrays).
+        """Adjusts the capacity of the population by resizing all the
+        attributes (NumPy arrays).
 
         This method updates the population's capacity by checking all of its attributes stored in `__dict__`.
         If an attribute is a 1D NumPy array and its length is smaller than the new capacity, the array is
@@ -452,13 +459,13 @@ class ExtendedLF(LaserFrame):
 
 
     def expected_deaths_over_sim(self, death_years, split_index, sim_years=10):
-        """
-        Estimate the population sizes by node for each year from 1 to years, considering a 
-        specific age threshold (eula_age_in_years). Start by filtering out individuals 
-        younger than the given age at the start of the simulation. Then, calculate the 
-        number of deaths for each node per year using the pre-existing data-of-death
-        and use this information to compute the expected population size at each node 
-        for each of the years.
+        """Estimate the population sizes by node for each year from 1 to years,
+        considering a specific age threshold (eula_age_in_years). Start by
+        filtering out individuals younger than the given age at the start of
+        the simulation. Then, calculate the number of deaths for each node per
+        year using the pre-existing data-of-death and use this information to
+        compute the expected population size at each node for each of the
+        years.
 
         Assume nodeid but nothing else.
         """

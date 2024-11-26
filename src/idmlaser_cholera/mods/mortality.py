@@ -64,11 +64,11 @@ def init( model ):
 
 
     def queue_deaths():
-        from idmlaser_cholera.utils import PriorityQueuePy
+        from laser_core.sortedqueue import SortedQueue
 
         tstart = datetime.now(tz=None)  # noqa: DTZ005
         dods = population.dod
-        mortality = PriorityQueuePy(capacity, dods)
+        mortality = SortedQueue(capacity, dods)
         for i in tqdm(indices := np.nonzero(dods[0:population.count] < model.params.ticks)[0]):
             mortality.push(i)
         tfinish = datetime.now(tz=None)  # noqa: DTZ005
