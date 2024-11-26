@@ -4,7 +4,6 @@ h5py # caching
 pandas # sigh
 numba
 numpy
-pkg_resources
 requests
 taichi
 tqdm

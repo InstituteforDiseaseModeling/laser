@@ -26,8 +26,8 @@ class Model:
 
     @classmethod
     def get(cls, params):
-        """
-        Factory method to create and initialize a Model instance.
+        """Factory method to create and initialize a Model instance.
+
         Handles cached data or initializes from data as needed.
         """
         model = cls(params)  # Create a Model instance
@@ -38,6 +38,37 @@ class Model:
         return model
 
     def save( self, filename ):
+        """
+        Save the full agent population state to disk in HDF5 format.
+
+        This method stores the agent population, including the initial population
+        distribution across patches, age structure, and natural mortality profile,
+        in a specified HDF5 file. The data stored includes:
+
+        - `initial_populations`: The initial population count for each patch in the model.
+        - `age_distribution`: The distribution of agents across age groups at the time of saving.
+        - `cumulative_deaths`: The cumulative number of deaths recorded in the simulation up to this point.
+
+        Before saving, the method checks that the `age_distribution` data has been initialized.
+        If the `age_distribution` is not properly set, a `ValueError` is raised.
+
+        Args:
+            filename (str): The path to the HDF5 file where the population data should be saved.
+
+        Raises:
+            ValueError: If the `age_distribution` is not initialized before attempting to save.
+
+        Notes:
+            - The method utilizes an external `age_data_manager` to retrieve the current age distribution.
+            - The `population.save` function is responsible for handling the actual file-saving process,
+              including packaging the data into an HDF5 file format.
+            - This method assumes that the agent population and the other components (age distribution,
+              mortality data) are properly initialized before being saved.
+
+        Example:
+            # Save the population data to 'population_data.h5'
+            model.save('population_data.h5')
+        """
         if age_init.age_data_manager.get_data() is None:
             raise ValueError( f"age_distribution uninitialized while saving" )
         self.population.save( filename=filename,
