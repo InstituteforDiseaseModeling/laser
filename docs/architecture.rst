@@ -149,13 +149,13 @@ Output Files
 Demographics
 ============
 
+- **Age Structure**  
+  If you want to work with age structure for a short simulation which doesn't need births you can just give everyone an age (based on distribution) and increment it each timestep. The laser_core.demographics.pyramid module is provided to support the initialization of agents with plausible initial ages.
+
 - **Births**  
-  TBD
+  If you want to model fertility, we recommend giving everyone, at least during initialization, a date of birth, such that people currently alive get an implied age-at-startup and people not yet born get their expected birthday. In LASER we strive to keep arrays contiguous and fixed size, so we want to create these preborns at the beginning in age order and then 'activate' them as the simulation time reaches their expected birthday. If you're comfortable working with negative birthdays and don't need to calculate current ages a lot, you can use real valued integer dates-of-birth. If you are using fertility but not age structure, the only function of date of birth is literally to find the day to birth them.
 
 - **Deaths**  
-  TBD
-
-- **Aging**  
   TBD
 
 User Customizability
