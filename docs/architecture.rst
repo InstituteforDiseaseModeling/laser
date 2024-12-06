@@ -134,17 +134,11 @@ By defining components in this modular fashion, the LASER framework supports reu
 
 Input Files
 ===========
-To run this geospatial cholera model, you need to provide input files for:
-
-- The manifest
-- Immunity
-- Age distribution
-- Population demographics
-
-These files can be specified in the model's ``params`` variable. Additionally, parameters such as ``r_naught`` and ``beta`` should also be provided in ``params``.
+There is no requirement for any particular input files for laser-core. You're free to provide, load and parse input data in preferred formats for values such as input populations, age structure, fertility, mortality, and migration rates.
 
 Output Files
 ============
+`laser-core` does not output data to disk. It's up to you to collect and write csv or other data files as needed.
 
 Demographics
 ============
@@ -156,7 +150,7 @@ Demographics
   If you want to model fertility, we recommend giving everyone, at least during initialization, a date of birth, such that people currently alive get an implied age-at-startup and people not yet born get their expected birthday. In LASER we strive to keep arrays contiguous and fixed size, so we want to create these preborns at the beginning in age order and then 'activate' them as the simulation time reaches their expected birthday. If you're comfortable working with negative birthdays and don't need to calculate current ages a lot, you can use real valued integer dates-of-birth. If you are using fertility but not age structure, the only function of date of birth is literally to find the day to birth them.
 
 - **Deaths**  
-  TBD
+  The recommended way of doing mortality in LASER is by precalculating a lifespan for each agent, rather than probabilistically kill agents as the simulation runs. This can take different forms: If you prefer to track agent age, you can also have an agent lifespan. Alternatively, if you are just using `date_of_birth` you can have a `date_of_death`, where theses 'dates' are really simulation times ('sim day of birth' and 'sim day of death'). Also, in LASER we strive to leave the contiguous arrays of agent data in place, without adding or deleting elements (allocating or freeing). This means that to model mortality, we prefer to 'kill' agents by doing either 1) check that their age is greater than their lifespan (or that the current timestep is greater than their 'sim day of death') in each component that cares, or 2) Set an active flag to false or a dead flag to true. The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, laser_core.demographics.kmestimator is provided to support these calculations.
 
 User Customizability
 ====================
