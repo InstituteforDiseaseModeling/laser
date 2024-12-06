@@ -321,7 +321,7 @@ def radiation(pops, distances, k, include_home, **params):
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
     network = np.zeros_like(distances)
-    sort_indices = np.argsort(distances, axis=1, stable=True)
+    sort_indices = np.argsort(distances, axis=1, kind="stable")
     unsort_indices = np.argsort(sort_indices, axis=1)
 
     for i in range(len(pops)):

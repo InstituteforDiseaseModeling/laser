@@ -4,14 +4,17 @@
 
 ## Status
 
-[![documentation](https://readthedocs.org/projects/idmlaser/badge/?style=flat)](https://idmlaser.readthedocs.io/en/latest/)
+[![documentation](https://readthedocs.org/projects/idmlaser/badge/?style=flat)](https://docs.idmod.org/projects/laser/en/latest/)
 
 ![tests](https://github.com/InstituteforDiseaseModeling/laser/actions/workflows/github-actions.yml/badge.svg)
 
-[![package](https://img.shields.io/pypi/v/idmlaser.svg)](https://test.pypi.org/project/laser-core/)
-![wheel](https://img.shields.io/pypi/wheel/idmlaser.svg)
+[![package](https://img.shields.io/pypi/v/laser-core.svg)](https://pypi.org/project/laser-core/)
+![wheel](https://img.shields.io/pypi/wheel/laser-core.svg)
+![python versions](https://img.shields.io/pypi/pyversions/laser-core)
+![implementation](https://img.shields.io/pypi/implementation/laser-core.svg)
+![license](https://img.shields.io/pypi/l/laser-core.svg)
 
-![commits since v0.0.3](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.0.3.svg)
+![commits since v0.1.1](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.1.1.svg)
 
 ## Getting Started
 
@@ -25,7 +28,7 @@ However, it may be more instructive to install one the disease packages built on
 
 ### Documentation
 
-Documentation can be found [here](https://idmlaser.readthedocs.io/en/latest/) at the moment.
+Documentation can be found [here](https://docs.idmod.org/projects/laser/en/latest/) at the moment.
 
 ### Development
 

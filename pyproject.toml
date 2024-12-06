@@ -1,6 +1,6 @@
 [project]
 name = "laser-core"
-version = "0.0.3"
+version = "0.1.1"
 authors = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
   { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },
@@ -31,8 +31,8 @@ classifiers = [
 ]
 dependencies = [
     "click",  # ==8.1.7",
-    "numpy",  # ==1.26.2",
-    "numba",  # ==0.58.1",
+    "numpy>=1.26.4,<2.0.0",
+    "numba~=0.59.1",
     "polars",  # ==0.19.19",
     "tqdm",  # ==4.66.1",
     "matplotlib",
@@ -61,8 +61,8 @@ test = [
 [project.urls]
 Homepage = "https://github.com/InstituteforDiseaseModeling/laser"
 Issues = "https://github.com/InstituteforDiseaseModeling/laser/issues"
-Documentation = "https://idmlaser.readthedocs.io/en/latest/"
-Changelog = "https://idmlaser.readthedocs.io/en/latest/changelog.html"
+Documentation = "https://docs.idmod.org/projects/laser/en/latest/"
+Changelog = "https://docs.idmod.org/projects/laser/en/latest/changelog.html"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -121,3 +121,60 @@ target-version = ["py39"]
 exclude_also = [
     "if __name__ == .__main__.:",
     ]
+
+[tool.bumpversion]
+current_version = "0.1.1"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+tag = true
+sign_tags = false
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+allow_dirty = false
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+commit_args = ""
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "/v{current_version}.svg"
+replace = "/v{new_version}.svg"
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "since v{current_version}"
+replace = "since v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "README.rst"
+search = "/v{current_version}.svg"
+replace = "/v{new_version}.svg"
+
+[[tool.bumpversion.files]]
+filename = "README.rst"
+search = "/v{current_version}...main"
+replace = "/v{new_version}...main"
+
+[[tool.bumpversion.files]]
+filename = "docs/conf.py"
+search = 'version = release = "{current_version}"'
+replace = 'version = release = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "src/laser_core/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = ".cookiecutterrc"
+search = 'version: "{current_version}"'
+replace = 'version: "{new_version}"'
