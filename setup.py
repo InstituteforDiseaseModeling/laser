@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import re
 from pathlib import Path
 
@@ -35,4 +34,3 @@ setup(
     zip_safe=False,
     python_requires=">=3.7",
 )
-
