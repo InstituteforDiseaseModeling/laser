@@ -8,13 +8,14 @@ Contents
    readme
    installation
    usage
+   architecture
+   source/modules
    migration
+   pyramids
+   kmestimator
    contributing
    authors
    changelog
-   pyramids
-   kmestimator
-   source/modules
 
 Indices and tables
 ==================
