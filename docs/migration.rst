@@ -28,6 +28,61 @@ Special cases of the gravity model (as noted above, both population exponents ar
 - mean-field model: :math:`c = 0, a = 1, b = 1`
 - spatial diffusion: :math:`a = 0, b = 0`
 
+Example usage
+-------------
+
+Below is an example of how to use the gravity model to compute migration flows between populations located at specific distances. The example assumes unequal population sizes and calculates the number of migrants moving between nodes based on the gravity model.
+
+.. code-block:: python
+
+    import numpy as np
+    from laser_core.migration import gravity
+
+    # Define populations and distances
+    populations = np.array([5000, 10000, 15000, 20000, 25000])  # Unequal populations
+    distances = np.array([
+        [0.0, 10.0, 15.0, 20.0, 25.0],
+        [10.0, 0.0, 10.0, 15.0, 20.0],
+        [15.0, 10.0, 0.0, 10.0, 15.0],
+        [20.0, 15.0, 10.0, 0.0, 10.0],
+        [25.0, 20.0, 15.0, 10.0, 0.0]
+    ])
+
+    # Gravity model parameters
+    k = 0.1    # Scaling constant
+    a = 0.5    # Exponent for the population of the origin
+    b = 1.0    # Exponent for the population of the destination
+    c = 2.0    # Exponent for the distance
+
+    # Compute the gravity model network
+    migration_network = gravity(populations, distances, k=k, a=a, b=b, c=c)
+
+    # Normalize to ensure total migrations represent 1% of the population
+    total_population = np.sum(populations)
+    migration_fraction = 0.01  # 1% of the population migrates
+    scaling_factor = (total_population * migration_fraction) / np.sum(migration_network)
+    migration_network *= scaling_factor
+
+    # Generate a node ID array for agents
+    node_ids = np.concatenate([np.full(count, i) for i, count in enumerate(populations)])
+
+    # Initialize a 2D array for migration counts
+    migration_matrix = np.zeros_like(distances, dtype=int)
+
+    # Select migrants based on the gravity model
+    for origin in range(len(populations)):
+        for destination in range(len(populations)):
+            if origin != destination:
+                # Number of migrants to move from origin to destination
+                num_migrants = int(migration_network[origin, destination])
+                # Select migrants randomly
+                origin_ids = np.where(node_ids == origin)[0]
+                selected_migrants = np.random.choice(origin_ids, size=num_migrants, replace=False)
+                # Update the migration matrix
+                migration_matrix[origin, destination] = num_migrants
+
+This example demonstrates the end-to-end process of using the gravity model to calculate migration flows and randomly assign agents to those flows. The resulting migration matrix shows the number of individuals migrating between nodes.
+
 Capping the total fraction of population that can migrate / infectivity that can be exported on a given timestep
 ================================================================================================================
 
