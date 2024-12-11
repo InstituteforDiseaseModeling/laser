@@ -138,4 +138,3 @@ Conclusion
 ----------
 
 This example demonstrates a robust implementation of a single-node SIR model using `LASERFrame` and `PropertySet`. It showcases modular design, efficient result tracking, and intuitive visualization of epidemic dynamics. This example can be extended with features like vaccination or age-structured populations for advanced modeling.
-
