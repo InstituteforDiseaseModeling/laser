@@ -5,9 +5,60 @@ from pathlib import Path
 
 
 class PropertySet:
-    """A class that can be used to store properties in a dictionary-like object with `.property` access to properties."""
+    """A class that can be used to store properties in a dictionary-like object with `.property` access to properties.
+
+    Examples
+    --------
+    Basic Initialization:
+        >>> from laser_core.propertyset import PropertySet
+        >>> ps = PropertySet()
+        >>> ps['infection_status'] = 'infected'
+        >>> ps['age'] = 35
+        >>> print(ps.infection_status)  # Outputs: 'infected'
+        >>> print(ps['age'])            # Outputs: 35
+
+    Combining Two PropertySets:
+        >>> ps1 = PropertySet({'immunity': 'high', 'region': 'north'})
+        >>> ps2 = PropertySet({'infectivity': 0.7})
+        >>> combined_ps = ps1 + ps2
+        >>> print(combined_ps.to_dict())
+        {'immunity': 'high', 'region': 'north', 'infectivity': 0.7}
+
+    Creating a PropertySet from a Dictionary:
+        >>> ps = PropertySet({'mything': 0.4, 'that_other_thing': 42})
+        >>> print(ps.mything)            # Outputs: 0.4
+        >>> print(ps.that_other_thing)   # Outputs: 42
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42}
+
+    Save and Load:
+        >>> ps.save('properties.json')
+        >>> loaded_ps = PropertySet.load('properties.json')
+        >>> print(loaded_ps.to_dict())  # Outputs the saved properties
+
+    Property Access and Length:
+        >>> ps['status'] = 'susceptible'
+        >>> ps['exposure_timer'] = 5
+        >>> print(ps['status'])          # Outputs: 'susceptible'
+        >>> print(len(ps))               # Outputs: 4
+
+    In-Place Addition:
+        >>> ps += {'new_timer': 10, 'infectivity': 0.8}
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 5, 'new_timer': 10, 'infectivity': 0.8}
+    """
 
     def __init__(self, *bags):
+        """
+        Initialize a PropertySet to manage properties in a dictionary-like structure.
+
+        Parameters
+        ----------
+        *bags : iterable, optional
+            A sequence of key-value pairs (e.g., lists, tuples, dictionaries) to initialize
+            the PropertySet. Keys must be strings, and values can be any type.
+        """
+
         for bag in bags:
             assert isinstance(bag, (type(self), dict))
             for key, value in (bag.__dict__ if isinstance(bag, type(self)) else bag).items():
