@@ -25,14 +25,25 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
 
     class SIRModel:
         def __init__(self, params):
+            # Initialize the population LaserFrame
             self.population = LaserFrame(capacity=params.population_size)
+
+            # Add disease state property (0 = Susceptible, 1 = Infected, 2 = Recovered)
             self.population.add_scalar_property("disease_state", dtype=np.int32, default=0)
+
+            # Add a recovery timer property (for intrahost progression, optional for timing)
             self.population.add_scalar_property("recovery_timer", dtype=np.int32, default=0)
+
+            # Set initial conditions
             self.population.add(params.population_size)
-            self.population.disease_state[:] = 0
-            self.population.disease_state[0:10] = 1
+
+            # Model Parameters
             self.params = params
+
+            # Results tracking
             self.results = {"S": [], "I": [], "R": []}
+
+            # Components
             self.components = []
 
         def add_component(self, component):
@@ -76,12 +87,25 @@ The `IntrahostProgression` class manages recovery dynamics by updating infected 
     class IntrahostProgression:
         def __init__(self, model):
             self.population = model.population
-            self.recovery_rate = model.params.recovery_rate
+
+            # Seed the infection
+            num_initial_infected = int(0.01 * params.population_size)  # e.g., 1% initially infected
+            infected_indices = np.random.choice(params.population_size, size=num_initial_infected, replace=False)
+            self.population.disease_state[infected_indices] = 1
+
+            # Initialize recovery timer for initially infected individuals
+            initially_infected = self.population.disease_state == 1
+            self.population.recovery_timer[initially_infected] = np.random.randint(5, 15, size=initially_infected.sum())
 
         def step(self):
             infected = self.population.disease_state == 1
-            recoveries = np.random.rand(infected.sum()) < self.recovery_rate
-            self.population.disease_state[infected] = np.where(recoveries, 2, 1)
+
+            # Decrement recovery timer
+            self.population.recovery_timer[infected] -= 1
+
+            # Recover individuals whose recovery_timer has reached 0
+            recoveries = infected & (self.population.recovery_timer <= 0)
+            self.population.disease_state[recoveries] = 2
 
 Transmission Component
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,14 +122,25 @@ The `Transmission` class manages disease spread by modeling interactions between
         def step(self):
             susceptible = self.population.disease_state == 0
             infected = self.population.disease_state == 1
+
             num_susceptible = susceptible.sum()
             num_infected = infected.sum()
             population_size = len(self.population)
-            infection_probability = self.infection_rate * (num_infected / population_size)
+
+            # Fraction of infected and susceptible individuals
+            fraction_infected = num_infected / population_size
+            
+            # Transmission logic: Probability of infection per susceptible individual
+            infection_probability = self.infection_rate * fraction_infected
+
+            # Apply infection probability to all susceptible individuals
             new_infections = np.random.rand(num_susceptible) < infection_probability
+            
+            # Set new infections and initialize their recovery_timer
             susceptible_indices = np.where(susceptible)[0]
-            new_infected_indices = susceptible_indices[new_infections]
-            self.population.disease_state[new_infected_indices] = 1
+            newly_infected_indices = susceptible_indices[new_infections]
+            self.population.disease_state[newly_infected_indices] = 1
+            self.population.recovery_timer[newly_infected_indices] = np.random.randint(5, 15, size=newly_infected_indices.size)  # Random recovery time
 
 Simulation Parameters
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -117,7 +152,6 @@ The simulation parameters are defined using the `PropertySet` class.
     params = PropertySet({
         "population_size": 100_000,
         "infection_rate": 0.3,
-        "recovery_rate": 0.1,
         "timesteps": 160
     })
 
@@ -128,10 +162,17 @@ The model is initialized with the defined parameters, components are added, and 
 
 .. code-block:: python
 
+    # Initialize the model
     sir_model = SIRModel(params)
+
+    # Initialize and add components
     sir_model.add_component(IntrahostProgression(sir_model))
     sir_model.add_component(Transmission(sir_model))
+
+    # Run the simulation
     sir_model.run()
+
+    # Plot results
     sir_model.plot_results()
 
 Conclusion
