@@ -8,9 +8,7 @@ from idmlaser_cholera.utils import viz_2D, load_csv_maybe_header
 use_nb = True
 lib = None
 ll_lib = None
-psi_means = None
 seasonal_contact_data = None
-#infected_ids_type = ctypes.POINTER(ctypes.c_uint32)
 
 # Define the maximum number of infections you expect
 MAX_INFECTIONS = 100000000  # Adjust this to your expected maximum
@@ -24,66 +22,6 @@ RE = 6371.0  # Earth radius in km
 
 # Some of these are inputs and some are outputs
 # static inputs
-def init_psi_from_data( model, manifest ):
-    suitability_filename = manifest.psi_data
-    try:
-        data = np.genfromtxt(suitability_filename,delimiter=',', skip_header=1, dtype=None, encoding=None)
-    except Exception as ex:
-        print( str( ex ) )
-        # Not sure what a rule would be yet for when we'd want this to work (new user) and when it would be a very bad thing (real work).
-        # 
-        print( "WARNING: Running 'python -m idmlaser_cholera.tools.make_synthetic_suitability_data' and continuing." )
-        import idmlaser_cholera.tools.make_suitability_random_data
-        import pandas as pd
-        data = pd.read_csv(suitability_filename)
-        #raise ValueError( f"Couldn't find specific psi input data file: {suitability_filename}" )
-
-
-    # Convert the DataFrame into a NumPy array
-    suitability_data = data
-
-    # Get the shape of psi in the model
-    psi_shape = model.nodes.psi.shape
-
-    # Ensure the suitability_data matches the dimensions of psi, or take a subset if larger
-    suitability_subset = suitability_data.T[:model.nodes.psi.shape[0], :model.nodes.psi.shape[1]]
-
-    # Assign the subset of the data to the "psi" vector in the model
-    model.nodes.psi[:] = suitability_subset
-
-# some other ways of intializing that were useful
-#model.nodes.WASH_fraction = np.ones(model.nodes.count, dtype=np.float32) * 0.0
-#model.nodes.WASH_fraction = np.linspace(0.9, 1.0, model.nodes.count, dtype=np.float32)
-#wash_theta = np.loadtxt( manifest.wash_theta, delimiter="," )
-# mosaic, sorted by pop
-def finalize_WASH( model, input_WASH_setting ):
-    # Assume `model.nodes.count` and `model.nodes.ticks` are available
-    node_count = model.nodes.count
-    ticks = model.params.ticks
-
-    # Handle scalar input: Expand to a full 2D array
-    if np.isscalar(input_WASH_setting):
-        return np.full((node_count, ticks), input_WASH_setting, dtype=np.float32).T
-
-    # Handle 1D array: Expand along the time (second) dimension
-    elif input_WASH_setting.ndim == 1:
-        if len(input_WASH_setting) != node_count:
-            if len(input_WASH_setting) > node_count:
-                # Truncate to match node_count
-                input_WASH_setting = input_WASH_setting[:node_count]
-            else:
-                raise ValueError(f"Length of 1D array {len(input_WASH_setting)} must match the number of nodes {node_count}.")
-        return np.tile(input_WASH_setting[:, np.newaxis], (1, ticks)).T
-
-    # Handle 2D array: Verify dimensions and use as-is
-    elif input_WASH_setting.ndim == 2:
-        if input_WASH_setting.shape != (node_count, ticks):
-            raise ValueError("2D array dimensions must match (node_count, ticks).")
-        return input_WASH_setting.T
-
-    else:
-        raise ValueError("Input must be a scalar, 1D array, or 2D array.")
-
 def get_additive_seasonality_effect( model, tick ):
     # this line is a potential backup if no data s provided, but only for "I'm a new user and want this thing to just run"
     if seasonal_contact_data is not None:
@@ -108,11 +46,6 @@ def calc_distance(lat1, lon1, lat2, lon2):
 
 def init( model, manifest ):
     model.nodes.add_vector_property("network", model.nodes.count, dtype=np.float32)
-    # The climatically driven environmental suitability of V. cholerae by node and time
-    model.nodes.add_vector_property("psi", model.params.ticks, dtype=np.float32)
-
-    # theta: The proportion of the population that have adequate Water, Sanitation and Hygiene (WASH).
-    model.nodes.add_vector_property("WASH_fraction", model.params.ticks, dtype=np.float32) # leave at 0 for now, not used yet
 
     # report outputs
     model.nodes.add_vector_property("cases", model.params.ticks, dtype=np.uint32)
@@ -214,20 +147,6 @@ def init( model, manifest ):
     except Exception as ex:
         print( f"Failed to load {shared_lib_path}. No backup." )
 
-    init_psi_from_data( model, manifest )
-    if model.params.viz:
-        viz_2D( model, model.nodes.psi.T, label="PSI param", x_label="timestep", y_label="node" )
-
-    tmp_WASH_setting = np.array([0.760084782053426, 0.63228528227706, 0.62881883749221, 0.913309900436136, 0.662459438552131, 0.584967034702784, 0.626706892794503, 0.636079830581899, 0.669666481983608, 0.64894201077891, 0.696995593022847, 0.702195043279203, 0.560481455873029, 0.803807835653375, 0.601725306457658, 0.672665705198764, 0.802617145990318, 0.709158179331758, 0.627881103961712, 0.662058780328589, 0.670273659221199, 0.573613963043334, 0.779348244741159, 0.625693855744188, 0.725439309848231, 0.657335789147831, 0.812776283418475, 0.554660601903563, 0.534945174425158, 0.762547227258778, 0.472575435225232, 0.615583176673807, 0.745641645018617, 0.790012651929884, 0.687360184773828, 0.778921138655779, 0.631520091542042, 0.715102219034724, 0.691454014537071, 0.691454014537071, 0.691454014537071], dtype=np.float32)
-    model.nodes.WASH_fraction = finalize_WASH( model, tmp_WASH_setting )
-    # example how one might do a WASH intervention
-    # Set the second "half" of the time domain to 1.0 for every other node
-    #half_tick = model.params.ticks // 2
-    #model.nodes.WASH_fraction[:, half_tick:] = 1.0  # Every other row, starting from index 0
-    #model.nodes.WASH_fraction[:, :half_tick] = 0.0  # Every other row, starting from index 0
-    if model.params.viz:
-        viz_2D( model, model.nodes.WASH_fraction.T, label="WASH param", x_label="timestep", y_label="node" )
-
     try:
         global seasonal_contact_data 
         seasonal_contact_data = load_csv_maybe_header( manifest.seasonal_dynamics )
@@ -294,135 +213,6 @@ def tx_inner_nodes(susceptibilities, nodeids, forces, etimers, count, exp_mean, 
             new_infections_by_node[nodeid] = infections_left
 
     return
-
-def _get_enviro_beta_from_psi( beta_env0, psi ):
-    # See https://gilesjohnr.github.io/MOSAIC-docs/model-description.html#eq:system, 4.3.1
-    # psi is a numpy array of current suitability values for all nodes
-    # Calculate average suitability over time (for simplicity, use a rolling mean or a fixed window)
-    window_size = 10  # example window size, adjust as necessary
-    psi_avg = np.convolve(psi, np.ones(window_size)/window_size, mode='valid')
-
-    # Calculate environmental transmission rate
-    beta_env = beta_env0 * (1 + (psi - psi_avg[-1]) / psi_avg[-1])
-    return beta_env 
-
-# Sometimes I think it might be faster not numba-ing this function but I
-# want to try a compiled C version of it at some point.
-@nb.njit(
-    nb.float32[:](
-        nb.float32[:],
-        nb.float32[:],
-        nb.float32[:],
-        nb.float32[:],
-        nb.float32[:],
-        nb.float32[:],
-        nb.float32,
-        nb.float32,
-        nb.float32
-    ),
-    parallel=True
-    #, nogil=True, cache=True
-)
-def _get_enviro_foi(
-    new_contagion,
-    enviro_contagion, 
-    WASH_fraction, 
-    psi, 
-    psi_mean,
-    enviro_base_decay_rate, 
-    zeta, 
-    beta_env, 
-    kappa
-):
-    """
-    Calculate the environmental force of infection (FOI) for each node in the model, considering various
-    factors such as environmental decay, WASH practices, environmental suitability (psi), and transmission
-    parameters.
-
-    Parameters
-    ----------
-    new_contagion : np.ndarray, shape (num_nodes,), dtype=float32
-        Array representing the amount of newly shed contagion for each node at the current timestep.
-
-    enviro_contagion : np.ndarray, shape (num_nodes,), dtype=float32
-        Array representing the existing environmental contagion for each node. This value will be updated
-        based on decay rates, new contagion, WASH fraction, and other factors.
-
-    WASH_fraction : np.ndarray, shape (num_nodes,), dtype=float32
-        Array representing the effect of water, sanitation, and hygiene (WASH) interventions at each node.
-        Values should be between 0 and 1, where 0 means no reduction in contagion and 1 means complete
-        elimination of contagion.
-
-    psi : np.ndarray, shape (num_nodes,), dtype=float32
-        Array representing the environmental suitability for pathogen persistence at each node. Values
-        typically range from 0 to 1, where higher values indicate more favorable conditions for the pathogen.
-
-    enviro_base_decay_rate : float32
-        The base decay rate of environmental contagion, representing the natural reduction of contagion over
-        time. This should be a value between 0 and 1, where 0 means no decay and 1 means complete decay.
-
-    zeta : float32
-        A scaling factor applied to the newly shed contagion when adding it to the environmental contagion.
-        This allows for adjustment of how much new contagion contributes to the overall environmental
-        contagion.
-
-    beta_env : float32
-        A transmission parameter that represents the baseline rate at which environmental contagion
-        contributes to the force of infection. This value is adjusted by the psi suitability index.
-
-    kappa : float32
-        A threshold parameter used to control the non-linear effect of environmental contagion on the force
-        of infection. Larger values of kappa reduce the influence of environmental contagion on transmission
-        forces.
-
-    Returns
-    -------
-    forces_environmental : np.ndarray, shape (num_nodes,), dtype=float32
-        Array representing the calculated environmental force of infection for each node. This is based on
-        the updated environmental contagion and transmission parameters.
-
-    Notes
-    -----
-    The function performs the following steps:
-    1. Decay the existing environmental contagion using the base decay rate.
-    2. Add newly shed contagion to the environmental contagion, scaled by the zeta factor.
-    3. Apply WASH fraction to reduce the environmental contagion at each node.
-    4. Adjust the transmission rate (`beta_env`) using the psi suitability index for each node.
-    5. Calculate the force of infection for each node as a function of the environmental contagion and the
-       kappa parameter, which introduces a saturation effect at high levels of contagion.
-
-    The resulting `forces_environmental` array provides the force of infection for each node, which can be
-    used to model transmission dynamics in an agent-based or compartmental model.
-    """
-
-    invalid_psi = psi[(psi < 0) | (psi > 1.0)]  # Find any invalid values in the array
-    if invalid_psi.size > 0:
-        raise ValueError(f"psi contains invalid values: {invalid_psi}. Each value must be between 0 and 1.0")
-
-    num_nodes = enviro_contagion.shape[0]
-    forces_environmental = np.zeros(num_nodes, dtype=np.float32)
-
-    for node in nb.prange(num_nodes):
-        # Decay the environmental contagion by the base decay rate
-        enviro_contagion[node] *= (1 - enviro_base_decay_rate[node])
-
-        # Add newly shed contagion to the environmental contagion, adjusted by zeta
-        enviro_contagion[node] += new_contagion[node] * zeta
-
-        # Apply WASH fraction to reduce environmental contagion
-        enviro_contagion[node] *= (1 - WASH_fraction[node])
-        #print( f"enviro_contagion[{node}] = {repr(enviro_contagion[node])}, WASH_fraction[{node}] = {repr(WASH_fraction[node])}" )
-
-        # Calculate beta_env_effective using psi
-        beta_env_effective = beta_env * (1 + (psi[node] - psi_mean[node]) / psi_mean[node])
-
-        # Calculate the environmental transmission forces
-        forces_environmental[node] = beta_env_effective * (enviro_contagion[node] / (kappa + enviro_contagion[node]))
-  
-    # Might need to make sure this can never be negative?
-    #if np.any(forces_environmental<0):
-        #raise ValueError( f"{forces_environmental} has negative value." )
-    return forces_environmental
 
 def calculate_new_infections_by_node(total_forces, susceptibles):
     """
@@ -498,55 +288,27 @@ def step(model, tick) -> None:
     network = nodes.network
     transfer = (contagion * network).round().astype(np.uint32)
     # The migration functions seem to be able to make the contagion negative in certain contexts
-    #contagion += transfer.sum(axis=1)   # increment by incoming "migration"
-    #contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
-    #contagion *= delta # keeping delta at 1 for now, but this code should be correct
-    #contagion *= delta
+    contagion += transfer.sum(axis=1)   # increment by incoming "migration"
+    contagion -= transfer.sum(axis=0)   # decrement by outgoing "migration"
+    
+    # Compute the effective beta considering seasonality
+    beta_effective = model.params.beta + get_additive_seasonality_effect( model, tick )
+    #if np.any( beta_effective < 0 ):
+        #raise ValueError( "beta went negative after subtracting seasonality." )
+    #beta_effective = model.params.beta
 
-    global psi_means
-    if psi_means is None:
-        psi_means = np.mean(model.nodes.psi, axis=0)
-
-    # Code-based ways of toggling contact and enviro transmission routes on and off during perf investigations.
-    if True: # contact tx
-        # Compute the effective beta considering seasonality
-        beta_effective = model.params.beta + get_additive_seasonality_effect( model, tick )
-        #if np.any( beta_effective < 0 ):
-            #raise ValueError( "beta went negative after subtracting seasonality." )
-        #beta_effective = model.params.beta
-
-        #print( f"{contagion=}" )
-        # Update forces based on contagion and beta_effective
-        forces = nodes.forces
-        np.multiply(contagion, beta_effective, out=forces)
-        #print( f"{forces=}" )
-        np.divide(forces, model.nodes.population[tick], out=forces)  # per agent force of infection as a probability
-        #print( f"normalized {forces=}" )
-
-    #decay_delta = model.params.delta_min + model.nodes.psi[:,tick] * (model.params.delta_max - model.params.delta_min)
-    decay_delta = model.params.delta_min + model.nodes.psi[tick] * (model.params.delta_max - model.params.delta_min)
-
-    if True:
-        forces_environmental = _get_enviro_foi(
-            new_contagion=contagion,
-            enviro_contagion=model.nodes.enviro_contagion,  # Environmental contagion
-            WASH_fraction=model.nodes.WASH_fraction[tick],    # WASH fraction at each node
-            psi=model.nodes.psi[tick],                # Psi data for each node and timestep
-            psi_mean=psi_means,
-            enviro_base_decay_rate=decay_delta, # model.params.enviro_base_decay_rate,  # Decay rate
-            zeta=model.params.zeta,             # Shedding multiplier
-            beta_env=model.params.beta_env,     # Base environmental transmission rate
-            kappa=model.params.kappa            # Environmental scaling factor
-        )
+    #print( f"{contagion=}" )
+    # Update forces based on contagion and beta_effective
+    forces = nodes.forces
+    np.multiply(contagion, beta_effective, out=forces)
+    #print( f"{forces=}" )
+    np.divide(forces, model.nodes.population[tick], out=forces)  # per agent force of infection as a probability
+    #print( f"normalized {forces=}" )
 
     # Combine the contact transmission forces with the environmental transmission forces
     # `forces` are the contact transmission forces calculated elsewhere
     # `forces_environmental` are the environmental transmission forces computed in this section
-    total_forces = (forces + forces_environmental).astype(np.float32)
-    #total_forces = (forces_environmental).astype(np.float32) # enviro only
-    #total_forces = forces
-    #if np.any(total_forces<0):
-        #raise ValueError( f"{total_forces} has negative value." )
+    total_forces = forces
 
     new_infections = calculate_new_infections_by_node(total_forces, model.nodes.S[tick])
     model.nodes.NI[tick] = new_infections 
