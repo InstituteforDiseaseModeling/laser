@@ -39,3 +39,44 @@ E.g.::
     1 - Upper bound of age bin, inclusive
     2 - number of males in the age bin
     3 - number of females in the age bin
+
+Example
+=======
+
+.. code-block:: python
+
+    MCOL = 2
+    FCOL = 3
+
+    MINCOL = 0
+    MAXCOL = 1
+
+    pyramid = load_pyramid_csv(pyramid_file)
+    sampler = AliasedDistribution(pyramid[:, MCOL])    # We'll use the male population in this example.
+    n_agents = 100_000
+    samples = sampler.sample(n_agents)              # Sample 100,000 people from the distribution.
+    # samples will be bin indices, so we need to convert them to ages.
+    bin_min_age_days = pyramid[:, MINCOL] * 365          # minimum age for bin, in days (include this value)
+    bin_max_age_days = (pyramid[:, MAXCOL] + 1) * 365    # maximum age for bin, in days (exclude this value)
+    mask = np.zeros(n_agents, dtype=bool)
+    ages = np.zeros(n_agents, dtype=np.int32)
+    for i in range(len(pyramid)):   # for each possible bin value...
+        mask[:] = samples == i      # ...find the agents that belong to this bin
+        # ...and assign a random age, in days, within the bin
+        ages[mask] = np.random.randint(bin_min_age_days[i], bin_max_age_days[i], mask.sum())
+
+    # in some LASER models we convert current ages to dates of birth by negating the age
+    # dob = -ages
+
+Nigeria
+=======
+
+The population pyramid for Nigeria is available from <TBD>.
+
+Source: https://www.populationpyramid.net/nigeria/2024/
+
+.. image:: media/Nigeria-2024.png
+    :alt: Population pyramid for Nigeria in 2024
+
+.. image:: media/Nigeria-Sampled.png
+    :alt: Sampled population pyramid for Nigeria in 2024

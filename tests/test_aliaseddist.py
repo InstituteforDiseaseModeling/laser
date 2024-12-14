@@ -74,6 +74,16 @@ class TestAliasedDistribution(unittest.TestCase):
         assert pyramid[-1, 1] == 100, f"Expected pyramid[-1, 1] == 100 got {pyramid[-1, 1]=}"
         return
 
+    def test_load_pyramid_csv_string(self):
+        file = Path(__file__).parent / "data" / "us-pyramid-2023.csv"
+        pyramid = load_pyramid_csv(str(file))
+        assert pyramid.shape == (21, 4), f"Expected pyramid shape == (21, 4) got {pyramid.shape=}"
+        assert pyramid[0, 0] == 0, f"Expected pyramid[0, 0] == 0 got {pyramid[0, 0]=}"
+        assert pyramid[0, 1] == 4, f"Expected pyramid[0, 1] == 4 got {pyramid[0, 1]=}"
+        assert pyramid[-1, 0] == 100, f"Expected pyramid[-1, 0] == 100 got {pyramid[-1, 0]=}"
+        assert pyramid[-1, 1] == 100, f"Expected pyramid[-1, 1] == 100 got {pyramid[-1, 1]=}"
+        return
+
     def test_catch_bad_header(self):
         # Missing header line
         text = """0-4,9596708,9175309
