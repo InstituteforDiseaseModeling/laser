@@ -45,3 +45,18 @@ an array of predicted ages (in days) at death. The implementation assumes that
 the cumulative deaths input array to the estimator represents one year age bins.
 If you are using non-constant width age bins, you should manually convert bin
 indices returned from `predict_year_of_death()` to ages.
+
+Example
+=======
+
+.. code-block:: python
+
+    from laser_core.demographics import KaplanMeierEstimator
+
+    estimator = KaplanMeierEstimator(cumulative)
+    nagents = 100_000
+    dobs = np.zeros(nagents)    # dates of birth, newborns = 0
+    dods = estimator.predict_age_at_death(dobs, max_year=100)   # dates of death in days
+
+.. image:: media/Nigeria-NDD.png
+    :alt: Sampled non-disease deaths for newborns in Nigeria in 2024

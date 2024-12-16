@@ -21,4 +21,6 @@ include README.rst
 
 include *.md
 
+recursive-include examples *
+
 global-exclude *.py[cod] __pycache__/* *.so *.dylib .DS_Store

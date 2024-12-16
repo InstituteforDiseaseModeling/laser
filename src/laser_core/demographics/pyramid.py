@@ -121,6 +121,7 @@ def load_pyramid_csv(file: Path, verbose=False) -> np.ndarray:
 
     if verbose:
         print(f"Reading population pyramid data from '{file}' ...")
+    file = Path(file)
     with file.open("r") as f:
         lines = [line.strip() for line in f.readlines()]  # Use strip to remove newline characters
 
