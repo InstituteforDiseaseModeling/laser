@@ -41,7 +41,11 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
             self.params = params
 
             # Results tracking
-            self.results = {"S": [], "I": [], "R": []}
+            self.results = LaserFrame( capacity = 1 ) # number of nodes
+            self.results.add_vector_property( "S", length=params["timesteps"], dtype=np.float32 )
+            self.results.add_vector_property( "I", length=params["timesteps"], dtype=np.float32 )
+            self.results.add_vector_property( "R", length=params["timesteps"], dtype=np.float32 )
+
 
             # Components
             self.components = []
@@ -49,20 +53,20 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
         def add_component(self, component):
             self.components.append(component)
 
-        def track_results(self):
+        def track_results(self, tick):
             susceptible = (self.population.disease_state == 0).sum()
             infected = (self.population.disease_state == 1).sum()
             recovered = (self.population.disease_state == 2).sum()
             total = len(self.population)
-            self.results["S"].append(susceptible / total)
-            self.results["I"].append(infected / total)
-            self.results["R"].append(recovered / total)
+            self.results["S"][tick] = susceptible / total
+            self.results["I"][tick] = infected / total
+            self.results["R"][tick] = recovered / total
 
         def run(self):
-            for _ in range(self.params.timesteps):
+            for tick in range(self.params.timesteps):
                 for component in self.components:
                     component.step()
-                self.track_results()
+                self.track_results(tick)
 
         def plot_results(self):
             plt.figure(figsize=(10, 6))
