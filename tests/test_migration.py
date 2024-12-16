@@ -56,26 +56,22 @@ class TestMigrationFunctions(unittest.TestCase):
             "density/km^2",
             "latitude",
             "longitude",
-        ], print(f"us-cities.csv header: {self.header} doesn't match expected header")
-        assert len(self.city_data) == 336, print(f"us-cities.csv has {len(self.city_data)} rows, expected 336")
-        assert self.city_data[0] == City(name="New York", pop=8258035, lat=40.66, long=73.94), print(
-            f"{self.city_data[0].name=} != 'New York'"
-        )
-        assert self.city_data[-1] == City(name="Davenport", pop=100354, lat=41.56, long=90.60), print(
-            f"{self.city_data[-1].name=} != 'Davenport'"
-        )
+        ], f"us-cities.csv header: {self.header} doesn't match expected header"
+        assert len(self.city_data) == 336, f"us-cities.csv has {len(self.city_data)} rows, expected 336"
+        assert self.city_data[0] == City(name="New York", pop=8258035, lat=40.66, long=73.94), f"{self.city_data[0].name=} != 'New York'"
+        assert self.city_data[-1] == City(name="Davenport", pop=100354, lat=41.56, long=90.6), f"{self.city_data[-1].name=} != 'Davenport'"
 
-        assert len(self.pops) == 10, print(f"self.pops has {len(self.pops)} elements, expected 10")
-        assert self.distances.shape == (10, 10), print(f"self.distances has shape {self.distances.shape}, expected (10, 10)")
-        assert np.all(self.distances.diagonal() == 0), print("self.distances.diagonal() != 0")
-        assert np.all(self.distances == self.distances.T), print("self.distances is not symmetric")
+        assert len(self.pops) == 10, f"self.pops has {len(self.pops)} elements, expected 10"
+        assert self.distances.shape == (10, 10), f"self.distances has shape {self.distances.shape}, expected (10, 10)"
+        assert np.all(self.distances.diagonal() == 0), "self.distances.diagonal() != 0"
+        assert np.all(self.distances == self.distances.T), "self.distances is not symmetric"
 
-        assert np.isclose(self.distances[0, 1], 3957.13675, atol=0.00001), print(
-            f"New York to Los Angeles distance is {self.distances[0, 1]}, expected 3957.13675"
-        )
-        assert np.isclose(self.distances[0, 9], 1342.25107, atol=0.00001), print(
-            f"New York to Jacksonville distance is {self.distances[0, 9]}, expected 1342.25107"
-        )
+        assert np.isclose(
+            self.distances[0, 1], 3957.13675, atol=1e-05
+        ), f"New York to Los Angeles distance is {self.distances[0, 1]}, expected 3957.13675"
+        assert np.isclose(
+            self.distances[0, 9], 1342.25107, atol=1e-05
+        ), f"New York to Jacksonville distance is {self.distances[0, 9]}, expected 1342.25107"
 
         return
 
@@ -87,9 +83,9 @@ class TestMigrationFunctions(unittest.TestCase):
             for j in range(network.shape[1]):
                 if i != j:
                     dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * self.distances[i, j] ** (-1 * c)
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
         return
 
@@ -102,9 +98,9 @@ class TestMigrationFunctions(unittest.TestCase):
         network = row_normalizer(network, max_rowsum)
         for i in range(network.shape[0]):  # check 10 random values
             for j in range(network.shape[1]):
-                assert np.isclose(network[i, j], test_network[i, j]), print(
-                    f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
-                )
+                assert np.isclose(
+                    network[i, j], test_network[i, j]
+                ), f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
 
         return
 
@@ -120,9 +116,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if m != i and m != j:
                             competition = competition + ((self.pops[m] ** b) * self.distances[j][m] ** (-1 * c))
                     dist = k * (self.pops[i] ** a) * (self.pops[j] ** b) * (self.distances[i, j] ** (-1 * c)) * ((competition) ** delta)
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_stouffer_exclude_home(self):
         """Test the Stouffer migration function, excluding home."""
@@ -136,9 +132,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
                             mysum = mysum + self.pops[m]
                     dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_stouffer_include_home(self):
         """Test the Stouffer migration function, including home."""
@@ -152,9 +148,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if self.distances[i][m] <= self.distances[i][j]:
                             mysum = mysum + self.pops[m]
                     dist = k * (self.pops[i] ** a) * (self.pops[j] / mysum) ** b
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_stouffer_equidistant_nodes(self):
         """Test that we have appropriately handled the Stouffer model when there are multiple nodes equidistant from a source."""
@@ -173,9 +169,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if distances[i][m] <= distances[i][j]:
                             mysum = mysum + pops[m]
                     dist = k * (pops[i] ** a) * (pops[j] / mysum) ** b
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_radiation_exclude_home(self):
         """Test the radiation migration function, excluding home."""
@@ -189,9 +185,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if (m != i) and (self.distances[i][m] <= self.distances[i][j]):
                             mysum = mysum + self.pops[m]
                     dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_radiation_include_home(self):
         """Test the radiation migration function, including home."""
@@ -205,9 +201,9 @@ class TestMigrationFunctions(unittest.TestCase):
                         if self.distances[i][m] <= self.distances[i][j]:
                             mysum = mysum + self.pops[m]
                     dist = k * self.pops[i] * self.pops[j] / ((self.pops[i] + mysum) * (self.pops[i] + self.pops[j] + mysum))
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_radiation_equidistant_nodes(self):
         """Test that we have appropriately handled the radiation model when there are multiple nodes equidistant from a source."""
@@ -226,33 +222,33 @@ class TestMigrationFunctions(unittest.TestCase):
                         if (m != i) and (distances[i][m] <= distances[i][j]):
                             mysum = mysum + pops[m]
                     dist = k * pops[i] * pops[j] / ((pops[i] + mysum) * (pops[i] + pops[j] + mysum))
-                    assert np.isclose(network[i, j], dist), print(f"network[{i}, {j}] = {network[i, j]}, expected {dist=}")
+                    assert np.isclose(network[i, j], dist), f"network[{i}, {j}] = {network[i, j]}, expected {dist=}"
                 else:
-                    assert network[i, j] == 0, print(f"network[{i}, {j}] = {network[i, j]}, expected 0")
+                    assert network[i, j] == 0, f"network[{i}, {j}] = {network[i, j]}, expected 0"
 
     def test_distance_one_degree_longitude(self):
         """Test the distance function for one degree of longitude."""
-        assert np.isclose(distance(lat1=0, lon1=0, lat2=0, lon2=1), 111.19493, atol=0.00001), print(
-            f"1 degree longitude distance is {distance(lat1=0, lon1=0, lat2=0, lon2=1)}, expected 111.19493km"
-        )  # 1cm
+        assert np.isclose(
+            distance(lat1=0, lon1=0, lat2=0, lon2=1), 111.19493, atol=1e-05
+        ), f"1 degree longitude distance is {distance(lat1=0, lon1=0, lat2=0, lon2=1)}, expected 111.19493km"  # 1cm
 
     def test_distance_one_degree_latitude(self):
         """Test the distance function for one degree of latitude."""
-        assert np.isclose(distance(lat1=0, lon1=0, lat2=1, lon2=0), 111.19493, atol=0.00001), print(
-            f"1 degree latitude distance is {distance(lat1=0, lon1=0, lat2=1, lon2=0)}, expected 111.19493km"
-        )  # 1cm
+        assert np.isclose(
+            distance(lat1=0, lon1=0, lat2=1, lon2=0), 111.19493, atol=1e-05
+        ), f"1 degree latitude distance is {distance(lat1=0, lon1=0, lat2=1, lon2=0)}, expected 111.19493km"  # 1cm
 
     def test_distance_nyc_la(self):
         """Test the distance function for New York City to Los Angeles."""
-        assert np.isclose(distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41), 3957.13675, atol=0.00001), print(
-            f"NYC to LA distance is {distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41)}, expected 3957.13675km"
-        )  # 1cm
+        assert np.isclose(
+            distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41), 3957.13675, atol=1e-05
+        ), f"NYC to LA distance is {distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41)}, expected 3957.13675km"  # 1cm
 
     def test_distance_across_equator(self):
         """Test the distance function for crossing the equator."""
-        assert np.isclose(distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474), 507.29393, atol=0.00001), print(
-            f"Kampala to Nairobi (crossing the equator) distance is {distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474)}, expected 507.29393km"
-        )  # 1cm
+        assert np.isclose(
+            distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474), 507.29393, atol=1e-05
+        ), f"Kampala to Nairobi (crossing the equator) distance is {distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474)}, expected 507.29393km"  # 1cm
 
         return
 
@@ -264,9 +260,9 @@ class TestMigrationFunctions(unittest.TestCase):
         lon2 = np.array([1, 0, 118.41, 36.8474])  # 1, 0, Los Angeles, Nairobi
         distances = distance(lat1, lon1, lat2, lon2)
         expected = np.array([111.19493, 111.19493, 3957.13675, 507.29393])
-        assert np.allclose(distances, expected, atol=0.00001), print(
-            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
-        )
+        assert np.allclose(
+            distances, expected, atol=1e-05
+        ), f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
 
         return
 
@@ -279,9 +275,9 @@ class TestMigrationFunctions(unittest.TestCase):
         expected = np.array(
             [0.00000, 3957.13675, 1154.88510, 2283.37528, 3444.88038, 124.08572, 2547.74127, 3906.51957, 2206.50912, 1342.25107]
         )
-        assert np.allclose(distances, expected, atol=0.00001), print(
-            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
-        )
+        assert np.allclose(
+            distances, expected, atol=1e-05
+        ), f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
 
         return
 
@@ -295,9 +291,9 @@ class TestMigrationFunctions(unittest.TestCase):
         expected = np.array(
             [0.00000, 3957.13675, 1154.88510, 2283.37528, 3444.88038, 124.08572, 2547.74127, 3906.51957, 2206.50912, 1342.25107]
         )
-        assert np.allclose(distances, expected, atol=0.00001), print(
-            f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
-        )
+        assert np.allclose(
+            distances, expected, atol=1e-05
+        ), f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
 
         return
 

@@ -133,13 +133,13 @@ The `Transmission` class manages disease spread by modeling interactions between
 
             # Fraction of infected and susceptible individuals
             fraction_infected = num_infected / population_size
-            
+
             # Transmission logic: Probability of infection per susceptible individual
             infection_probability = self.infection_rate * fraction_infected
 
             # Apply infection probability to all susceptible individuals
             new_infections = np.random.rand(num_susceptible) < infection_probability
-            
+
             # Set new infections and initialize their recovery_timer
             susceptible_indices = np.where(susceptible)[0]
             newly_infected_indices = susceptible_indices[new_infections]
