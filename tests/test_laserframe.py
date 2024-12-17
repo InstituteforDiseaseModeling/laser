@@ -42,7 +42,7 @@ import unittest
 import numpy as np
 import pytest
 
-from laser_core.laserframe import LaserFrame
+from laser_core import LaserFrame
 
 
 class TestLaserFrame(unittest.TestCase):
