@@ -77,7 +77,7 @@ class LaserFrame:
         Add a scalar property to the class.
 
         This method initializes a new scalar property for the class instance. The property is
-        stored as a NumPy array with a specified data type and default value.
+        stored as a 1-D NumPy array (scalar / entry) with a specified data type and default value.
 
         Parameters:
 
@@ -98,7 +98,7 @@ class LaserFrame:
         """
         Adds a vector property to the object.
 
-        This method initializes a new property with the given name as a NumPy array.
+        This method initializes a new property with the given name as a 2-D NumPy array (vector per entry).
 
         The array will have a shape of (length, self._capacity) and will be filled
         with the specified default value. The data type of the array elements is
@@ -118,6 +118,32 @@ class LaserFrame:
 
         # initialize the property to a NumPy array with of size (length, self._capacity), dtype, and default value
         setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        return
+
+    def add_array_property(self, name: str, shape: tuple, dtype=np.uint32, default=0) -> None:
+        """
+        Adds an array property to the object.
+
+        This method initializes a new property with the given name as a multi-dimensional NumPy array.
+
+        The array will have the given shape (note that there is no implied dimension of size self._capacity),
+        datatype (default is np.uint32), and default value (default is 0).
+
+        Parameters:
+
+            name (str): The name of the property to be added.
+            shape (tuple): The shape of the array.
+            dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
+            default (scalar, optional): The default value to fill the array with, default is 0.
+
+        Returns:
+
+            None
+
+        """
+
+        # initialize the property to a NumPy array with given shape, dtype, and default value
+        setattr(self, name, np.full(shape, default, dtype=dtype))
         return
 
     @property
