@@ -57,9 +57,7 @@ class LaserFrame:
             raise ValueError(f"Initial count must be a non-negative integer, got {initial_count}.")
 
         if initial_count > capacity:
-            raise ValueError(
-                f"Initial count ({initial_count}) cannot exceed capacity ({capacity})."
-            )
+            raise ValueError(f"Initial count ({initial_count}) cannot exceed capacity ({capacity}).")
 
         self._count = initial_count
         self._capacity = capacity
