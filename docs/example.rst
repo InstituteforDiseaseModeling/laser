@@ -58,9 +58,9 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
             infected = (self.population.disease_state == 1).sum()
             recovered = (self.population.disease_state == 2).sum()
             total = len(self.population)
-            self.results["S"][tick] = susceptible / total
-            self.results["I"][tick] = infected / total
-            self.results["R"][tick] = recovered / total
+            self.results.S[tick] = susceptible / total
+            self.results.I[tick] = infected / total
+            self.results.R[tick] = recovered / total
 
         def run(self):
             for tick in range(self.params.timesteps):
@@ -70,9 +70,9 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
 
         def plot_results(self):
             plt.figure(figsize=(10, 6))
-            plt.plot(self.results["S"], label="Susceptible (S)", color="blue")
-            plt.plot(self.results["I"], label="Infected (I)", color="red")
-            plt.plot(self.results["R"], label="Recovered (R)", color="green")
+            plt.plot(self.results.S, label="Susceptible (S)", color="blue")
+            plt.plot(self.results.I, label="Infected (I)", color="red")
+            plt.plot(self.results.R, label="Recovered (R)", color="green")
             plt.title("SIR Model Dynamics with LASER Components")
             plt.xlabel("Time (Timesteps)")
             plt.ylabel("Fraction of Population")
