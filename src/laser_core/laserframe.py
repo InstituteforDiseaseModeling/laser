@@ -32,20 +32,37 @@ class LaserFrame:
     allocated data for agents (generally 1-D or scalar) or for nodes|patches (e.g., 1-D for
     scalar value per patch or 2-D for time-varying per patch)."""
 
-    def __init__(self, capacity: int, **kwargs):
+    def __init__(self, capacity: int, initial_count: int = -1, **kwargs):
         """
         Initialize a LaserFrame object.
 
         Parameters:
-
             capacity (int): The maximum capacity of the population (number of agents).
+                            Must be a positive integer.
+            initial_count (int): The initial number of agents in the population.
+                                 Must be a positive integer <= capacity.
             **kwargs: Additional keyword arguments to set as attributes of the object.
 
-        Returns:
+        Raises:
+            ValueError: If capacity or initial_count is not a positive integer,
+                        or if initial_count is greater than capacity.
 
+        Returns:
             None
         """
-        self._count = 0
+        if not isinstance(capacity, int) or capacity <= 0:
+            raise ValueError(f"Capacity must be a positive integer, got {capacity}.")
+
+        if initial_count == -1:
+            initial_count = capacity
+
+        if not isinstance(initial_count, int) or initial_count < 0:
+            raise ValueError(f"Initial count must be a non-negative integer, got {initial_count}.")
+
+        if initial_count > capacity:
+            raise ValueError(f"Initial count ({initial_count}) cannot exceed capacity ({capacity}).")
+
+        self._count = initial_count
         self._capacity = capacity
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -131,7 +148,7 @@ class LaserFrame:
         """
         Adds the specified count to the current count of the LaserFrame.
 
-        This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised.
+        This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised. This method is typically used to add new births during the simulation.
 
         Parameters:
 
