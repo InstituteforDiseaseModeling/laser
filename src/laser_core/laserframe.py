@@ -32,7 +32,7 @@ class LaserFrame:
     allocated data for agents (generally 1-D or scalar) or for nodes|patches (e.g., 1-D for
     scalar value per patch or 2-D for time-varying per patch)."""
 
-    def __init__(self, capacity: int, initial_count=-1: int, **kwargs):
+    def __init__(self, capacity: int, initial_count: int = -1, **kwargs):
         """
         Initialize a LaserFrame object.
 

@@ -47,13 +47,13 @@ from laser_core.laserframe import LaserFrame
 
 class TestLaserFrame(unittest.TestCase):
     def test_init(self):
-        pop = LaserFrame(1024)
+        pop = LaserFrame(1024,initial_count=0)
         assert pop.capacity == 1024
         assert pop.count == 0
         assert len(pop) == pop.count
 
     def test_init_with_properties(self):
-        pop = LaserFrame(1024, start_year=1944, source="https://ourworldindata.org/grapher/life-expectancy?country=~USA")
+        pop = LaserFrame(1024, initial_count=0, start_year=1944, source="https://ourworldindata.org/grapher/life-expectancy?country=~USA")
         assert pop.capacity == 1024
         assert pop.count == 0
         assert len(pop) == pop.count
@@ -85,18 +85,12 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.events.shape == (365, 1024)
 
     def test_add_agents(self):
-        pop = LaserFrame(1024)
-        istart, iend = pop.add(100)
-        assert istart == 0
-        assert iend == 100
+        pop = LaserFrame(1024,100)
         assert pop.count == 100
         assert len(pop) == pop.count
 
     def test_add_agents_again(self):
-        pop = LaserFrame(1024)
-        istart, iend = pop.add(100)
-        assert istart == 0
-        assert iend == 100
+        pop = LaserFrame(1024,100)
         assert pop.count == 100
         assert len(pop) == pop.count
 
@@ -107,10 +101,7 @@ class TestLaserFrame(unittest.TestCase):
         assert len(pop) == pop.count
 
     def test_add_too_many_agents(self):
-        pop = LaserFrame(1024)
-        istart, iend = pop.add(1000)
-        assert istart == 0
-        assert iend == 1000
+        pop = LaserFrame(1024,1000)
         assert pop.count == 1000
         assert len(pop) == pop.count
 
@@ -120,10 +111,11 @@ class TestLaserFrame(unittest.TestCase):
             pop.add(100)
 
     def test_sort(self):
-        pop = LaserFrame(1024)
+        pop = LaserFrame(1024,initial_count=100)
         pop.add_scalar_property("age", default=0)
         pop.add_scalar_property("height", default=0.0, dtype=np.float32)
-        istart, iend = pop.add(100)
+        istart = 0
+        iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)  # random ages 0-100 years
         original_age = np.array(pop.age[: pop.count])
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
@@ -134,10 +126,11 @@ class TestLaserFrame(unittest.TestCase):
         assert np.all(pop.height[: pop.count] == original_height[indices])
 
     def test_sort_sanity_check(self):
-        pop = LaserFrame(1024)
+        pop = LaserFrame(1024,initial_count=100)
         pop.add_scalar_property("age", default=0)
         pop.add_scalar_property("height", default=0.0, dtype=np.float32)
-        istart, iend = pop.add(100)
+        istart = 0
+        iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)
         indices = np.argsort(pop.age[: pop.count])
 
@@ -151,10 +144,11 @@ class TestLaserFrame(unittest.TestCase):
             pop.sort(indices.astype(np.float32), verbose=1)
 
     def test_squash(self):
-        pop = LaserFrame(1024)
+        pop = LaserFrame(1024,initial_count=100)
         pop.add_scalar_property("age", default=0)
         pop.add_scalar_property("height", default=0.0, dtype=np.float32)
-        istart, iend = pop.add(100)
+        istart = 0
+        iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)  # random ages 0-100 years
         original_age = np.array(pop.age[: pop.count])
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
@@ -166,10 +160,11 @@ class TestLaserFrame(unittest.TestCase):
         assert np.all(pop.height[: pop.count] == original_height[keep])
 
     def test_squash_sanity_checks(self):
-        pop = LaserFrame(1024)
+        pop = LaserFrame(1024,initial_count=100)
         pop.add_scalar_property("age", default=0)
         pop.add_scalar_property("height", default=0.0, dtype=np.float32)
-        istart, iend = pop.add(100)
+        istart = 0
+        iend = 100
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)
         keep = pop.age[: pop.count] >= 40
 
