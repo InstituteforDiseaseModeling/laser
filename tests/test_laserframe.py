@@ -52,6 +52,18 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.count == 0
         assert len(pop) == pop.count
 
+    def test_init_with_count(self):
+        pop = LaserFrame(1024, initial_count=128)
+        assert pop.capacity == 1024
+        assert pop.count == 128
+        assert len(pop) == pop.count
+
+    def test_init_with_count_minus_one(self):
+        pop = LaserFrame(1024, initial_count=-1)
+        assert pop.capacity == 1024
+        assert pop.count == 1024
+        assert len(pop) == pop.count
+
     def test_init_with_properties(self):
         pop = LaserFrame(1024, initial_count=0, start_year=1944, source="https://ourworldindata.org/grapher/life-expectancy?country=~USA")
         assert pop.capacity == 1024
@@ -88,16 +100,19 @@ class TestLaserFrame(unittest.TestCase):
         pop = LaserFrame(1024, 100)
         assert pop.count == 100
         assert len(pop) == pop.count
+        istart, iend = pop.add(200)
+        assert istart == 100
+        assert iend == 300
+        assert pop.count == 300
+        assert len(pop) == pop.count
 
     def test_add_agents_again(self):
         pop = LaserFrame(1024, 100)
-        assert pop.count == 100
-        assert len(pop) == pop.count
-
-        istart, iend = pop.add(100)
-        assert istart == 100
-        assert iend == 200
-        assert pop.count == 200
+        istart, iend = pop.add(200)
+        istart, iend = pop.add(500)
+        assert istart == 300
+        assert iend == 800
+        assert pop.count == 800
         assert len(pop) == pop.count
 
     def test_add_too_many_agents(self):
@@ -176,6 +191,32 @@ class TestLaserFrame(unittest.TestCase):
 
         with pytest.raises(TypeError, match=re.escape("Indices must be a boolean array (got float32)")):
             pop.squash(keep.astype(np.float32), verbose=1)
+
+    def test_init_bad_capacity1(self):
+        capacity = "5150"
+        with pytest.raises(ValueError, match=re.escape(f"Capacity must be a positive integer, got {capacity}.")):
+            _ = LaserFrame(capacity=capacity)
+
+    def test_init_bad_capacity2(self):
+        capacity = -5150
+        with pytest.raises(ValueError, match=re.escape(f"Capacity must be a positive integer, got {capacity}.")):
+            _ = LaserFrame(capacity=capacity)
+
+    def test_init_bad_initial_count1(self):
+        initial_count = "5150"
+        with pytest.raises(ValueError, match=re.escape(f"Initial count must be a non-negative integer, got {initial_count}.")):
+            _ = LaserFrame(capacity=65536, initial_count=initial_count)
+
+    def test_init_bad_initial_count2(self):
+        initial_count = -5150
+        with pytest.raises(ValueError, match=re.escape(f"Initial count must be a non-negative integer, got {initial_count}.")):
+            _ = LaserFrame(capacity=65536, initial_count=initial_count)
+
+    def test_init_bad_initial_count3(self):
+        capacity = 65536
+        initial_count = 1_000_000
+        with pytest.raises(ValueError, match=re.escape(f"Initial count ({initial_count}) cannot exceed capacity ({capacity}).")):
+            _ = LaserFrame(capacity=capacity, initial_count=initial_count)
 
 
 if __name__ == "__main__":
