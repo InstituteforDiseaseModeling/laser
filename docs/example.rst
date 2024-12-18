@@ -25,8 +25,11 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
 
     class SIRModel:
         def __init__(self, params):
+            # Model Parameters
+            self.params = params
+
             # Initialize the population LaserFrame
-            self.population = LaserFrame(capacity=params.population_size)
+            self.population = LaserFrame(capacity=params.population_size,initial_count=params.population_size)
 
             # Add disease state property (0 = Susceptible, 1 = Infected, 2 = Recovered)
             self.population.add_scalar_property("disease_state", dtype=np.int32, default=0)
@@ -34,18 +37,11 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
             # Add a recovery timer property (for intrahost progression, optional for timing)
             self.population.add_scalar_property("recovery_timer", dtype=np.int32, default=0)
 
-            # Set initial conditions
-            self.population.add(params.population_size)
-
-            # Model Parameters
-            self.params = params
-
             # Results tracking
             self.results = LaserFrame( capacity = 1 ) # number of nodes
             self.results.add_vector_property( "S", length=params["timesteps"], dtype=np.float32 )
             self.results.add_vector_property( "I", length=params["timesteps"], dtype=np.float32 )
             self.results.add_vector_property( "R", length=params["timesteps"], dtype=np.float32 )
-
 
             # Components
             self.components = []
@@ -57,7 +53,7 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
             susceptible = (self.population.disease_state == 0).sum()
             infected = (self.population.disease_state == 1).sum()
             recovered = (self.population.disease_state == 2).sum()
-            total = len(self.population)
+            total = self.population.count
             self.results.S[tick] = susceptible / total
             self.results.I[tick] = infected / total
             self.results.R[tick] = recovered / total

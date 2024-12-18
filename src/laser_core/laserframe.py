@@ -148,7 +148,7 @@ class LaserFrame:
         """
         Adds the specified count to the current count of the LaserFrame.
 
-        This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised. This method is typically used to initialize the frame with the initial population or to add new births during the simulation.
+        This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised. This method is typically used to add new births during the simulation.
 
         Parameters:
 
