@@ -32,7 +32,7 @@ class LaserFrame:
     allocated data for agents (generally 1-D or scalar) or for nodes|patches (e.g., 1-D for
     scalar value per patch or 2-D for time-varying per patch)."""
 
-    def __init__(self, capacity: int, initial_count: int, **kwargs):
+    def __init__(self, capacity: int, initial_count=-1: int, **kwargs):
         """
         Initialize a LaserFrame object.
 
@@ -52,6 +52,9 @@ class LaserFrame:
         """
         if not isinstance(capacity, int) or capacity <= 0:
             raise ValueError(f"Capacity must be a positive integer, got {capacity}.")
+
+        if initial_count == -1:
+            initial_count=capacity
 
         if not isinstance(initial_count, int) or initial_count < 0:
             raise ValueError(f"Initial count must be a non-negative integer, got {initial_count}.")
