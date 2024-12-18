@@ -54,7 +54,7 @@ class LaserFrame:
             raise ValueError(f"Capacity must be a positive integer, got {capacity}.")
 
         if initial_count == -1:
-            initial_count=capacity
+            initial_count = capacity
 
         if not isinstance(initial_count, int) or initial_count < 0:
             raise ValueError(f"Initial count must be a non-negative integer, got {initial_count}.")
