@@ -1,6 +1,6 @@
-===============
+=================
 SIR Model Example
-===============
+=================
 
 This document provides a comprehensive example of a single-node Susceptible-Infected-Recovered (SIR) model implemented using the `LASERFrame` and `PropertySet` libraries. This example demonstrates how to structure a disease transmission model, include components for transmission and recovery, and visualize results. The example highlights features such as reporting and plotting for model evaluation.
 

@@ -61,7 +61,7 @@ laser\_core.sortedqueue module
    :show-inheritance:
 
 laser\_core.utils module
-------------------------------
+------------------------
 
 .. automodule:: laser_core.utils
    :members:

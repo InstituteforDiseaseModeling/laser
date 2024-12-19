@@ -40,10 +40,6 @@ Sections
 
 Model Class
 ===========
-.. autoclass:: VitalDynamicsModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Code for VitalDynamicsModel
 ---------------------------
@@ -171,10 +167,6 @@ Code for VitalDynamicsModel
 
 Births Component
 ================
-.. autoclass:: BirthsComponent
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Code for BirthsComponent
 -------------------------
@@ -221,10 +213,6 @@ Code for BirthsComponent
 
 Deaths Component
 ================
-.. autoclass:: DeathsComponent
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Code for DeathsComponent
 -------------------------
@@ -265,7 +253,6 @@ Code for DeathsComponent
 
 Utility Functions
 =================
-.. autofunction:: create_cumulative_deaths
 
 Code for Utility Functions
 --------------------------
@@ -341,4 +328,3 @@ Conclusion
 ----------
 
 The Vital Dynamics example demonstrates how to use LASER's modular components to simulate realistic population dynamics over time, including births, deaths, and age-structured demographics. By combining the ``KaplanMeierEstimator`` for mortality predictions with dynamic birth rates and agent-based properties, this example highlights the flexibility and scalability of the LASER framework for demographic modeling. Users can extend this baseline example with additional components, such as migration or disease dynamics, to create more complex simulations tailored to their specific research questions. This example serves as a foundational building block for models requiring detailed population structure and temporal dynamics.
-
