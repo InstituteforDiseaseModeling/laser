@@ -57,6 +57,10 @@ class KaplanMeierEstimator:
 
                 If the source type is not one of the accepted types (np.ndarray, list, Path, str).
 
+            Value Error
+
+                If the source inputs contain negative values or are not monotonically non-decreasing.
+
         Notes:
 
             - If the source is a file path, the file should contain comma-separated values with the data in the second column.
@@ -76,6 +80,12 @@ class KaplanMeierEstimator:
             source = np.array(source, dtype=np.uint32)
         if not isinstance(source, np.ndarray):
             raise TypeError(f"Invalid source type: {tsource}")
+
+        if not np.all(source >= 0):
+            raise ValueError(f"Input values should be >= 0:\n\t{source}")
+
+        if not np.all(np.diff(source.astype(np.int32)) >= 0):
+            raise ValueError(f"Input values should be monotonically non-decreasing:\n\t{source}")
 
         self._cumulative_deaths = np.insert(source.astype(np.uint32), 0, 0)
 
