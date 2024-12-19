@@ -14,6 +14,7 @@ Contents
    pyramids
    kmestimator
    example
+   vdexample
    contributing
    authors
    changelog
