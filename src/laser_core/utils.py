@@ -17,6 +17,7 @@ Functions:
 
 import click
 import numpy as np
+
 from laser_core.migration import distance
 
 

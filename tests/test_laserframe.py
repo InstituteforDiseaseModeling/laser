@@ -136,7 +136,7 @@ class TestLaserFrame(unittest.TestCase):
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
         original_height = np.array(pop.height[: pop.count])
         indices = np.argsort(pop.age[: pop.count])
-        pop.sort(indices, verbose=True)
+        pop.sort(indices, verbose=False)
         assert np.all(pop.age[: pop.count] == np.sort(original_age))
         assert np.all(pop.height[: pop.count] == original_height[indices])
 
@@ -169,7 +169,7 @@ class TestLaserFrame(unittest.TestCase):
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
         original_height = np.array(pop.height[: pop.count])
         keep = pop.age[: pop.count] >= 40
-        pop.squash(keep, verbose=True)
+        pop.squash(keep, verbose=False)
         assert pop.count == keep.sum()
         assert np.all(pop.age[: pop.count] == original_age[keep])
         assert np.all(pop.height[: pop.count] == original_height[keep])
