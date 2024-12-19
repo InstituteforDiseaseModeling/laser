@@ -13,6 +13,8 @@ Contents
    migration
    pyramids
    kmestimator
+   example
+   vdexample
    contributing
    authors
    changelog

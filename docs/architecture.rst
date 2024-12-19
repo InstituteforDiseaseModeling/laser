@@ -11,6 +11,28 @@ Users define the set of agent properties and implement model behavior through **
 
 The modular architecture enables developers to easily extend the framework by adding custom properties and components, making LASER adaptable to diverse modeling requirements.
 
+Principles
+==========
+
+The core principle of LASER's design is to optimize computational efficiency by aligning the system with what modern CPUs and GPUs excel at—performing billions of floating-point operations per second—while minimizing costly operations like runtime memory allocation and random memory access. To achieve this:
+
+1. **Preallocate Memory:**
+   All required memory (e.g., arrays, data structures) is allocated at initialization. This eliminates the need for dynamic memory allocations during runtime, which can introduce latency and fragmentation.
+
+2. **Sequential Array Access:**
+   Data is processed by iterating sequentially through preallocated arrays, ideally only once per timestep. This design ensures cache-friendly operations and minimizes the overhead of random memory access.
+
+3. **Fixed Data Structures:**
+   Instead of resizing data structures (e.g., appending to lists), the system works with fixed-size arrays where the data for all entities (e.g., agents, reports) is pre-allocated. For instance:
+
+   - Agents are marked as "dead" rather than removed, allowing the array size to remain constant.
+   - For births, "preborn" agents are included in the array from the start, with their activation deferred until the appropriate timestep.
+
+4. **Time-Specific Data Slots:**
+   Reports and outputs allocate data slots for every timestep and location in advance. This enables efficient insertion of results during runtime without requiring dynamic resizing.
+
+By adhering to these principles, LASER achieves a highly efficient, scalable system, minimizing the bottlenecks caused by memory management and ensuring smooth timestep progression.
+
 Layout
 ======
 
@@ -65,7 +87,7 @@ The top-level script serves as the orchestrator for the simulation and consists 
    Import and initialize all components (also referred to as phase or step functions). Components define the simulation's logic, such as updating age, managing infections, or handling migration. If all component code resides within the same script, importing may not be necessary.
 
 4. **Simulation Loop**:
-   Execute the main simulation loop. For each timestep, call the step function for every active component in the order defined by your simulation logic. This loop progresses the simulation, updating agent properties and state variables.
+   Execute the main simulation loop. For each timestep, call the step function for every active component in the order defined by your simulation logic. This loop progresses the simulation, updating agent properties and state variables. Counters to track (and record) model state are also updated during each step.
 
 5. **Output and Analysis**:
    After the simulation completes, generate outputs such as reports, visualizations, or summary statistics. These outputs should provide insights into the simulation's results, such as disease spread, migration patterns, or demographic changes.
@@ -138,19 +160,45 @@ There is no requirement for any particular input files for laser-core. You're fr
 
 Output Files
 ============
-`laser-core` does not output data to disk. It's up to you to collect and write csv or other data files as needed.
+`laser-core` does not output data to disk. It's up to you to collect and write csv or other data files as needed. HDF5 file format is preferred for large output files.
 
 Demographics
 ============
 
-- **Age Structure**
+Age Structure
+-------------
+
   If you want to work with age structure for a short simulation which doesn't need births you can just give everyone an age (based on distribution) and increment it each timestep. The laser_core.demographics.pyramid module is provided to support the initialization of agents with plausible initial ages.
 
-- **Births**
-  If you want to model fertility, we recommend giving everyone, at least during initialization, a date of birth, such that people currently alive get an implied age-at-startup and people not yet born get their expected birthday. In LASER we strive to keep arrays contiguous and fixed size, so we want to create these preborns at the beginning in age order and then 'activate' them as the simulation time reaches their expected birthday. If you're comfortable working with negative birthdays and don't need to calculate current ages a lot, you can use real valued integer dates-of-birth. If you are using fertility but not age structure, the only function of date of birth is literally to find the day to birth them.
 
-- **Deaths**
-  The recommended way of doing mortality in LASER is by precalculating a lifespan for each agent, rather than probabilistically kill agents as the simulation runs. This can take different forms: If you prefer to track agent age, you can also have an agent lifespan. Alternatively, if you are just using `date_of_birth` you can have a `date_of_death`, where theses 'dates' are really simulation times ('sim day of birth' and 'sim day of death'). Also, in LASER we strive to leave the contiguous arrays of agent data in place, without adding or deleting elements (allocating or freeing). This means that to model mortality, we prefer to 'kill' agents by doing either 1) check that their age is greater than their lifespan (or that the current timestep is greater than their 'sim day of death') in each component that cares, or 2) Set an active flag to false or a dead flag to true. The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, laser_core.demographics.kmestimator is provided to support these calculations.
+Births
+------
+
+Preborn Management in LASER
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+LASER's design philosophy emphasizes contiguous and fixed-size arrays, meaning all agents—both currently active and preborn—are created at the start of the simulation. Preborns are "activated" as they are born, rather than being dynamically added. Several approaches to handling preborns while adhering to these principles are outlined below:
+
+1. **Negative and Positive Birthdays**:
+   - Assign ``date_of_birth`` values in the past (negative) for active agents.
+   - Assign ``date_of_birth`` values in the future (positive) for preborns.
+
+2. **Unified Preborn Marker**:
+   - Set all preborns' ``date_of_birth`` to a placeholder value (e.g., ``-1``).
+   - Update the ``date_of_birth`` to the current timestep when a preborn is born.
+
+3. **Active Flag Only** (if not modeling age structure):
+   - If the model doesn't require age structure, you can skip ``date_of_birth`` entirely. Instead, use an ``active`` flag. Preborns start with ``active = False`` and are switched to ``active = True`` during the fertility step. This simplifies implementation while remaining consistent with LASER principles.
+
+Calculating Age from Birthday
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If calculating age isn't frequent or essential, you can avoid explicitly tracking an ``age`` property. Instead, compute age dynamically as the difference between the current timestep (``now``) and ``date_of_birth``. For models that depend on age-specific dynamics (e.g., fertility rates by age group), consider adding a dedicated ``age`` property that updates at each timestep.
+
+Deaths
+------
+  The recommended way of doing mortality in LASER is by precalculating a lifespan for each agent, rather than probabilistically killing agents as the simulation runs. This can take different forms: If you prefer to track agent age, you can also have an agent lifespan. Alternatively, if you are just using `date_of_birth` you can have a `date_of_death`, where theses 'dates' are really simulation times ('sim day of birth' and 'sim day of death'). Also, in LASER, as mentioned in the 'Principles' section, we strive to leave the contiguous arrays of agent data in place, without adding or deleting elements (allocating or freeing). This means that to model mortality, we prefer to 'kill' agents by doing either 1) check that their age is greater than their lifespan (or that the current timestep is greater than their 'sim day of death') in each component that cares, or 2) Set an active flag to false or a dead flag to true. The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, laser_core.demographics.kmestimator is provided to support these calculations.
+
 
 User Customizability
 ====================
