@@ -60,6 +60,14 @@ laser\_core.sortedqueue module
    :undoc-members:
    :show-inheritance:
 
+laser\_core.utils module
+------------------------
+
+.. automodule:: laser_core.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

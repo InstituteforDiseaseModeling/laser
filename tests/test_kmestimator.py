@@ -221,6 +221,24 @@ class TestKaplanMeierEstimator(unittest.TestCase):
 
         return
 
+    def test_invalid_input_scenario1(self):
+        input = np.array(self.cumulative_deaths)
+        imiddle = input.shape[0] // 2
+        input[imiddle], input[imiddle + 1] = input[imiddle + 1], input[imiddle]
+        with pytest.raises(ValueError, match=re.escape("Input values should be monotonically non-decreasing:")):
+            _ = KaplanMeierEstimator(input)
+
+        return
+
+    def test_invalid_input_scenario2(self):
+        input = np.array(self.cumulative_deaths, dtype=np.int32)
+        imiddle = input.shape[0] // 2
+        input -= input[imiddle]
+        with pytest.raises(ValueError, match=re.escape("Input values should be >= 0:")):
+            _ = KaplanMeierEstimator(input)
+
+        return
+
 
 def _compare_estimators(etest, eexpected, max_year=100):
     """
