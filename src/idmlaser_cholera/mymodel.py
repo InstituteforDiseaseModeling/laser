@@ -124,8 +124,8 @@ class Model:
     def _save_pops_in_nodes(self):
         """Initialize the node populations."""
         node_count = len(self.nn_nodes)
-        self.nodes = Population(capacity=node_count)
-        self.nodes.add(node_count)
+        self.nodes = Population(capacity=node_count, initial_pop=node_count)
+        #self.nodes.add(node_count)
         self.nodes.add_vector_property("population", self.params.ticks + 1)
         self.nodes.population[0] = self.initial_populations
         self.nodes.nn_nodes = self.nn_nodes

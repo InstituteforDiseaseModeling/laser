@@ -87,10 +87,10 @@ def check_hdf5_attributes(hdf5_filename, initial_populations, age_distribution, 
 from laser_core.laserframe import LaserFrame
 
 class ExtendedLF(LaserFrame):
-    def __init__(self, capacity, **kwargs):
+    def __init__(self, capacity, initial_count=-1, **kwargs):
         # Initialize the parent class
         self.expected_new_deaths_per_year = None
-        super().__init__(capacity, **kwargs)
+        super().__init__(capacity, initial_count=int(initial_count), **kwargs)
 
     # Add scalar properties to model.population
     def add_properties_from_schema( self, schema ):
@@ -190,18 +190,18 @@ class ExtendedLF(LaserFrame):
         # Adjust capacity by growth and add a 1% buffer
         capacity *= growth
         capacity *= 1.01  # 1% buffer
-        capacity = np.uint32(np.round(capacity))
+        capacity = int(np.round(capacity))
         
         print(f"required {capacity=:,}")
         print(f"Allocating capacity for {capacity:,} individuals")
         
         # Initialize the Population object with calculated capacity
-        population = ExtendedLF(capacity)
+        population = ExtendedLF(capacity, initial_count=initial_populations.sum())
         model.population = population   # type: ignore
         
         # Add initial population to the model's population and return capacity
-        ifirst, ilast = population.add(initial_populations.sum())
-        print(f"{ifirst=:,}, {ilast=:,}")
+        #ifirst, ilast = population.add(initial_populations.sum())
+        #print(f"{ifirst=:,}, {ilast=:,}")
         
         return capacity
 
