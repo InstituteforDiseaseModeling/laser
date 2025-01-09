@@ -67,6 +67,10 @@ def init( model, manifest ):
         locations[i, 1] = longitude
     #locations = np.radians(locations)
 
+    # Initialize tx_hetero_factor to values drawn from 0.5 to 2.0 (for now)
+    # untested
+    model.population.tx_hetero_factor = np.random.uniform(0.5, 2.0, size=model.population.capacity)
+
 # TODO: Consider keeping the distances and periodically recalculating the network values as the populations change
     a = model.params.a
     b = model.params.b
@@ -79,6 +83,8 @@ def init( model, manifest ):
             popj = initial_populations[j]
             network[i,j] = network[j,i] = k * (popi**a) * (popj**b) / (calc_distance(*locations[i], *locations[j])**c)
     network /= np.power(initial_populations.sum(), c)    # normalize by total population^2
+
+    #network *= 1000
 
     print(f"Upper left corner of network looks like this (before limiting to max_frac):\n{network[:4,:4]}")
 
