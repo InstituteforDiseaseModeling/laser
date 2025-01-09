@@ -157,10 +157,32 @@ iv_map = {
 }
 
 def step(model, tick):
+    if tick > 0 and tick %7 == 0:
+        # Find the index of the node with the highest value for tick-1
+        node_with_highest_value = np.argmax(model.nodes.NI[tick-1, :])
+
+# Get the highest value itself
+        highest_value = model.nodes.NI[tick-1, node_with_highest_value]
+
+        if highest_value > 1000:
+            print(f"Node with the highest value: {node_with_highest_value}")
+            print(f"Highest value: {highest_value}")
+            campaign_sia = SIA(
+                tick=tick,
+                nodes=[node_with_highest_value],
+                coverage=0.5,
+                age_days_min=0.5 * 365,
+                age_days_max=5 * 365,
+            )
+
+            invoke_sia(campaign_sia, model, tick)
+
+    """
     while len(todo) > 0 and todo[0][0] == tick:
         campaign = todo.pop(0)
         campaign_nodes_np = np.array(campaign.nodes)
         campaign.nodes.clear()
         campaign.nodes.extend( campaign_nodes_np[campaign_nodes_np < model.nodes.count].tolist() ) # maybe not permanent code
         iv_map[type(campaign)](campaign, model, tick)
+    """
 
