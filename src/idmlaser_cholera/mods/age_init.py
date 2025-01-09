@@ -57,8 +57,7 @@ def init( model, manifest ):
     capacity = model.population.capacity
 
     print("Creating aliased distribution...")
-    #aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,4])
-    aliased_distribution = pyramid.AliasedDistribution(age_distribution[4])
+    aliased_distribution = pyramid.AliasedDistribution(age_distribution[:,2]+age_distribution[:,3])
     count_active = initial_populations.sum()
 
     print(f"Sampling {count_active:,} ages... {model.population.count=:,}")
@@ -72,6 +71,7 @@ def init( model, manifest ):
         mask[:count_active] = (buckets == i)    # indices of agents in this age group bucket
         # draw uniformly between the start and end of the age group bucket
         try:
+            #print( f"Generating ages between {minimum_age[i]} and {limit_age[i]} for age bucket {i}." )
             model.population.dob[mask] = np.random.randint(low=minimum_age[i], high=limit_age[i], size=mask.sum())
         except Exception as ex:
             print( str( ex ) )

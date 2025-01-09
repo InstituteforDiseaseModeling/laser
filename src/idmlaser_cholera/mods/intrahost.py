@@ -126,10 +126,10 @@ def _infection_update(count, itimer, sus_timer, susceptibility, tick):
             if itimer[i] <= 0:
                 susceptibility[i] = 0
                 #sus_timer[i] = np.random.randint(2*365, 4*365) # waning
-                uniform_random_value = np.random.uniform(0, 1)
+                ### uniform_random_value = np.random.uniform(0, 1)
                 # Calculate durations using inverse CDF
-                immune_duration = -np.log(1 - uniform_random_value) / decay_rate
-                sus_timer[i] = min(1+immune_duration, 3650)
+                ### immune_duration = -np.log(1 - uniform_random_value) / decay_rate
+                ### sus_timer[i] = min(1+immune_duration, 3650)
                 #print( f"acquired init sus_timer = {sus_timer[i]}" )
 
     return
