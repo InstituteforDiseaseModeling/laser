@@ -1,5 +1,6 @@
 # Compiler and flags
-CXX = g++
+#CXX = g++
+CXX = g++-14
 CXXFLAGS = -shared -O3 -march=native -fPIC -flto -fopenmp -ffast-math
 #CXXFLAGS = -shared -g -march=native -fPIC -flto -fopenmp -ffast-math
 

@@ -69,6 +69,7 @@ def init( model, manifest ):
 
     # Initialize tx_hetero_factor to values drawn from 0.5 to 2.0 (for now)
     # untested
+    #model.population.tx_hetero_factor = np.ones(model.population.capacity)*1.5
     model.population.tx_hetero_factor = np.random.uniform(0.5, 2.0, size=model.population.capacity)
 
 # TODO: Consider keeping the distances and periodically recalculating the network values as the populations change
@@ -84,7 +85,7 @@ def init( model, manifest ):
             network[i,j] = network[j,i] = k * (popi**a) * (popj**b) / (calc_distance(*locations[i], *locations[j])**c)
     network /= np.power(initial_populations.sum(), c)    # normalize by total population^2
 
-    #network *= 1000
+    network *= 1000
 
     print(f"Upper left corner of network looks like this (before limiting to max_frac):\n{network[:4,:4]}")
 
@@ -288,7 +289,13 @@ def step(model, tick) -> None:
     print( f"RAW {model.nodes.W[tick]=}" )
     print( f"RAW {model.nodes.R[tick]=}" )
     """
-    contagion += model.nodes.I[tick]
+    #contagion += model.nodes.I[tick]
+    # Mask for individuals with a non-zero itimer
+    infected_mask = model.population.itimer > 0
+
+    # Sum the tx_hetero_factor values for the infected individuals, grouped by node
+    contagion = np.zeros(len(model.nodes.S[tick])) # blanking on where we keep node_count
+    np.add.at(contagion, model.population.nodeid[infected_mask], model.population.tx_hetero_factor[infected_mask])
     #print( f"RAW {contagion=}" )
 
     network = nodes.network

@@ -150,7 +150,8 @@ class Model:
         self.nodes.initial_infections = np.uint32(
             np.round(np.random.poisson(self.params.prevalence * self.initial_populations))
         )
-
+        self.nodes.initial_infections[1:] = 0
+        
         # It would be cleaner if these didn't need to be here
         age_init.init(self, self.manifest)
         immunity.init(self)

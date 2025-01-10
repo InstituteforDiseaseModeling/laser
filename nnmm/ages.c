@@ -10,7 +10,9 @@
 #include <math.h>
 #include <pthread.h>
 #include <omp.h>
+#ifdef __AVX2__
 #include <immintrin.h>
+#endif
 
 #define SIMD_WIDTH 8     // AVX2 processes 8 integers at a time
 unsigned recovered_counter = 0;
@@ -47,6 +49,7 @@ void update_ages(unsigned long int stop_idx, int *ages) {
     }
 }
 
+#ifdef __AVX2__
 // avxv2
 void update_ages_simd(unsigned long int stop_idx, float *ages) {
     // Note that we could make sure not to increase ages of agents who have already exceeded
@@ -70,6 +73,7 @@ void update_ages_simd(unsigned long int stop_idx, float *ages) {
         _mm256_storeu_ps(&ages[i], ages_vec);
     }
 }
+#endif
 
 void update_ages_and_report(
     unsigned long int count,

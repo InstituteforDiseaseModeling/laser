@@ -26,7 +26,7 @@ meta_params = PropertySet({
 # parameter?
 
 measles_params = PropertySet({
-    "exp_mean": np.float32(2.0),
+    "exp_mean": np.float32(3.0),
     "exp_std": np.float32(1.0),
     "inf_mean": np.float32(6.0),
     "inf_std": np.float32(2.0),
@@ -69,7 +69,7 @@ parser.add_argument(
 # Parse the arguments
 args = parser.parse_args()
 params = PropertySet(meta_params, measles_params, network_params) # type: ignore
-params.beta = 0.4 # model.params.r_naught / model.params.inf_mean # type: ignore
+params.beta = 1.4 # model.params.r_naught / model.params.inf_mean # type: ignore
 # Assign the input directory to model.params.input_dir
 params.input_dir = args.input_dir
 params.viz = args.viz  # This will be True if --viz is specified, False otherwise
@@ -121,7 +121,7 @@ model.phases = [
     #intrahost.step2, # type: ignore
     transmission.step, # type: ignore
     #ri.step, # type: ignore
-    immunity.step, # type: ignore
+    #immunity.step, # type: ignore
     #sia.step, # type: ignore 
 ]
 
