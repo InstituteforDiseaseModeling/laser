@@ -344,12 +344,18 @@ def distance(lat1, lon1, lat2, lon2):
     This function uses the Haversine formula to compute the distance between two points
     specified by their latitude and longitude in decimal degrees.
 
+    If all arguments are scalars, will return a single scalar distance, (lat1, lon1) to (lat2, lon2).
+
+    If lat2, lon2 are vectors, will return a vector of distances, (lat1, lon1) to each lat/lon in lat2, lon2.
+
+    If lat1, lon1 and lat2, lon2 are vectors, will return a matrix with shape (N, M) of distances where N is the length of lat1/lon1 and M is the length of lat2/lon2.
+
     Parameters:
 
-        lat1 (float): Latitude of the first point in decimal degrees.
-        lon1 (float): Longitude of the first point in decimal degrees.
-        lat2 (float): Latitude of the second point in decimal degrees.
-        lon2 (float): Longitude of the second point in decimal degrees.
+        lat1 (float): Latitude of the first point(s) in decimal degrees [-90, 90].
+        lon1 (float): Longitude of the first point(s) in decimal degrees [-180, 180].
+        lat2 (float): Latitude of the second point(s) in decimal degrees [-90, 90].
+        lon2 (float): Longitude of the second point(s) in decimal degrees [-180, 180].
 
     Returns:
 
@@ -366,20 +372,36 @@ def distance(lat1, lon1, lat2, lon2):
     _has_values((-90 <= lat2) & (lat2 <= 90), "lat2 must be in the range [-90, 90]")
     _has_values((-180 <= lon2) & (lon2 <= 180), "lon2 must be in the range [-180, 180]")
 
+    lat1 = np.array(lat1).flatten()
+    lon1 = np.array(lon1).flatten()
+    lat2 = np.array(lat2).flatten()
+    lon2 = np.array(lon2).flatten()
+
+    _has_shape(lon1, lat1.shape, f"lat1 and lon1 must have the same shape ({lat1.shape=}, {lon1.shape=})")
+    _has_shape(lon2, lat2.shape, f"lat2 and lon2 must have the same shape ({lat2.shape=}, {lon2.shape=})")
+
     # convert to radians
     lat1 = np.radians(lat1)
     lon1 = np.radians(lon1)
     lat2 = np.radians(lat2)
     lon2 = np.radians(lon2)
-    # haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
-    c = 2 * np.arcsin(np.sqrt(a))
+    d = np.zeros((lat1.size, lat2.size))
+    for index in range(lat1.size):
+        # haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
+        dlat = lat2 - lat1[index]
+        dlon = lon2 - lon1[index]
+        a = np.sin(dlat / 2) ** 2 + np.cos(lat1[index]) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+        d[index, :] = a
+    d = 2 * np.arcsin(np.sqrt(d))
     RE = 6371.0  # Earth radius in km
-    d = RE * c
+    d *= RE
 
-    return d
+    if d.size == 1:
+        return d[0, 0]  # return a scalar
+    elif np.any(np.array(d.shape) == 1):
+        return d.reshape((d.size,))  # return a vector (1-D)
+
+    return d  # return NxM matrix (len(lat1/lon1) x len(lat2/lon2))
 
 
 # Sanity checks

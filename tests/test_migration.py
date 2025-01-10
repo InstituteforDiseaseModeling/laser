@@ -26,8 +26,9 @@ class TestMigrationFunctions(unittest.TestCase):
             lat_col = 9
             long_col = 10
             # [:-2] removes the degree symbol and "N" or "W"
+            # -long because all US cities are West
             return City(
-                name=row[name_col], pop=int(row[pop_col].replace(",", "")), lat=float(row[lat_col][:-2]), long=float(row[long_col][:-2])
+                name=row[name_col], pop=int(row[pop_col].replace(",", "")), lat=float(row[lat_col][:-2]), long=-float(row[long_col][:-2])
             )
 
         cities = Path(__file__).parent.absolute() / "data" / "us-cities.csv"
@@ -39,6 +40,12 @@ class TestMigrationFunctions(unittest.TestCase):
         top_ten = cls.city_data[0:10]
         cls.pops = np.array([city.pop for city in top_ten])
         cls.distances = np.array([[distance(city1.lat, city1.long, city2.lat, city2.long) for city2 in top_ten] for city1 in top_ten])
+
+        cls.new_york = cls.city_data[0]
+        cls.los_angeles = cls.city_data[1]
+
+        cls.kampala = City(name="Kampala", pop=0, lat=0.3152, long=32.5816)
+        cls.nairobi = City(name="Nairobi", pop=0, lat=-1.3032, long=36.8474)
 
         return
 
@@ -58,8 +65,11 @@ class TestMigrationFunctions(unittest.TestCase):
             "longitude",
         ], f"us-cities.csv header: {self.header} doesn't match expected header"
         assert len(self.city_data) == 336, f"us-cities.csv has {len(self.city_data)} rows, expected 336"
-        assert self.city_data[0] == City(name="New York", pop=8258035, lat=40.66, long=73.94), f"{self.city_data[0].name=} != 'New York'"
-        assert self.city_data[-1] == City(name="Davenport", pop=100354, lat=41.56, long=90.6), f"{self.city_data[-1].name=} != 'Davenport'"
+        assert self.city_data[0] == City(name="New York", pop=8_258_035, lat=40.66, long=-73.94), f"{self.city_data[0].name=} != 'New York'"
+        assert self.city_data[1] == City(
+            name="Los Angeles", pop=3_820_914, lat=34.02, long=-118.41
+        ), f"{self.city_data[1].name=} != 'Los Angeles'"
+        assert self.city_data[-1] == City(name="Davenport", pop=100354, lat=41.56, long=-90.6), f"{self.city_data[-1].name=} != 'Davenport'"
 
         assert len(self.pops) == 10, f"self.pops has {len(self.pops)} elements, expected 10"
         assert self.distances.shape == (10, 10), f"self.distances has shape {self.distances.shape}, expected (10, 10)"
@@ -241,25 +251,40 @@ class TestMigrationFunctions(unittest.TestCase):
     def test_distance_nyc_la(self):
         """Test the distance function for New York City to Los Angeles."""
         assert np.isclose(
-            distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41), 3957.13675, atol=1e-05
-        ), f"NYC to LA distance is {distance(lat1=40.66, lon1=73.94, lat2=34.02, lon2=118.41)}, expected 3957.13675km"  # 1cm
+            d := distance(lat1=self.new_york.lat, lon1=self.new_york.long, lat2=self.los_angeles.lat, lon2=self.los_angeles.long),
+            3957.13675,
+            atol=1e-05,
+        ), f"NYC to LA distance is {d}, expected 3957.13675km"  # 1cm
 
     def test_distance_across_equator(self):
         """Test the distance function for crossing the equator."""
         assert np.isclose(
-            distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474), 507.29393, atol=1e-05
-        ), f"Kampala to Nairobi (crossing the equator) distance is {distance(lat1=0.3152, lon1=32.5816, lat2=-1.3032, lon2=36.8474)}, expected 507.29393km"  # 1cm
+            d := distance(lat1=self.kampala.lat, lon1=self.kampala.long, lat2=self.nairobi.lat, lon2=self.nairobi.long),
+            507.29393,
+            atol=1e-05,
+        ), f"Kampala to Nairobi (crossing the equator) distance is {d}, expected 507.29393km"  # 1cm
 
         return
 
     def test_distance_with_arrays(self):
         """Test the distance function with arrays."""
-        lat1 = np.array([0, 0, 40.66, 0.3152])  # 0, 0, New York, Kampala
-        lon1 = np.array([0, 0, 73.94, 32.5816])  # 0, 0, New York, Kampala
-        lat2 = np.array([0, 1, 34.02, -1.3032])  # 0, 1, Los Angeles, Nairobi
-        lon2 = np.array([1, 0, 118.41, 36.8474])  # 1, 0, Los Angeles, Nairobi
+        lat1 = np.array([0, self.new_york.lat, self.kampala.lat])  # 0, New York, Kampala
+        lon1 = np.array([0, self.new_york.long, self.kampala.long])  # 0, New York, Kampala
+        lat2 = np.array([0, 1, self.los_angeles.lat, self.nairobi.lat])  # 0, 1, Los Angeles, Nairobi
+        lon2 = np.array([1, 0, self.los_angeles.long, self.nairobi.long])  # 1, 0, Los Angeles, Nairobi
         distances = distance(lat1, lon1, lat2, lon2)
-        expected = np.array([111.19493, 111.19493, 3957.13675, 507.29393])
+        expected = np.array(
+            [
+                [111.19493, 111.19493, 12590.05805, 4099.44246],  # (0,0)    to [(0,1), (1,0), Los Angeles, Nairobi]
+                [8743.51340, 8586.53448, 3957.13675, 11841.98183],  # New York to [(0,1), (1,0), Los Angeles, Nairobi]  NY-Nairobi 11,844km
+                [
+                    3511.87051,
+                    3623.44186,
+                    15144.87664,
+                    507.29393,
+                ],  # Kampala  to [(0,1), (1,0), Los Angeles, Nairobi]  Kampala-Los Angeles 15,136km
+            ]
+        )
         assert np.allclose(
             distances, expected, atol=1e-05
         ), f"distance({lat1=}, {lon1=}, {lat2=}, {lon2=}) = {distances}, expected {expected=}"
