@@ -19,8 +19,8 @@ Usage Example:
     laser_frame.squash(np.array([True, False, True, False, True, False, True, False, True, False]))
 
 Attributes:
-    _count (int): The current count of agents.
-    _capacity (int): The maximum capacity of the population.
+    count (int): The current count of active elements.
+    capacity (int): The maximum capacity of the frame.
 """
 
 import numpy as np
@@ -37,9 +37,9 @@ class LaserFrame:
         Initialize a LaserFrame object.
 
         Parameters:
-            capacity (int): The maximum capacity of the population (number of agents).
+            capacity (int): The maximum capacity of the frame.
                             Must be a positive integer.
-            initial_count (int): The initial number of agents in the population.
+            initial_count (int): The initial number of active elements in the frame.
                                  Must be a positive integer <= capacity.
             **kwargs: Additional keyword arguments to set as attributes of the object.
 
@@ -206,17 +206,17 @@ class LaserFrame:
 
         Parameters:
 
-            indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the population count (`self._count`).
+            indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the frame count (`self._count`).
 
             verbose (bool, optional): If True, prints the sorting progress for each numpy array attribute. Defaults to False.
 
         Raises:
 
-            AssertionError: If `indices` is not an integer array or if its length does not match the population count.
+            AssertionError: If `indices` is not an integer array or if its length does not match the frame count of active elements.
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")
-        _has_shape(indices, (self._count,), f"Indices must have the same length as the population count ({self._count})")
+        _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.integer, f"Indices must be an integer array (got {indices.dtype})")
 
         for key, value in self.__dict__.items():
@@ -235,12 +235,12 @@ class LaserFrame:
 
         Parameters:
 
-            indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current population count.
+            indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current frame active element count.
             verbose (bool, optional): If True, prints detailed information about the squashing process. Defaults to False.
 
         Raises:
 
-            AssertionError: If `indices` is not a boolean array or if its length does not match the current population count.
+            AssertionError: If `indices` is not a boolean array or if its length does not match the current frame active element count.
 
         Returns:
 
@@ -248,7 +248,7 @@ class LaserFrame:
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")
-        _has_shape(indices, (self._count,), f"Indices must have the same length as the population count ({self._count})")
+        _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.bool_, f"Indices must be a boolean array (got {indices.dtype})")
 
         current_count = self._count

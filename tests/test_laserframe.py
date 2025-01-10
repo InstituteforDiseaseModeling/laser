@@ -172,7 +172,9 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.sort(indices.tolist(), verbose=True)
 
-        with pytest.raises(TypeError, match=re.escape(f"Indices must have the same length as the population count ({pop.count})")):
+        with pytest.raises(
+            TypeError, match=re.escape(f"Indices must have the same length as the frame active element count ({pop.count})")
+        ):
             pop.sort(indices[0:50], verbose=True)
 
         with pytest.raises(TypeError, match=re.escape("Indices must be an integer array (got float32)")):
@@ -206,7 +208,9 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.squash(keep.tolist(), verbose=True)
 
-        with pytest.raises(TypeError, match=re.escape(f"Indices must have the same length as the population count ({pop.count})")):
+        with pytest.raises(
+            TypeError, match=re.escape(f"Indices must have the same length as the frame active element count ({pop.count})")
+        ):
             pop.squash(keep[0:50], verbose=True)
 
         with pytest.raises(TypeError, match=re.escape("Indices must be a boolean array (got float32)")):
