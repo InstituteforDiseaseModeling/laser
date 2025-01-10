@@ -21,6 +21,20 @@ import numpy as np
 from laser_core.migration import distance
 
 
+def __deprecated(msg):
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            click.echo(f"WARNING: {msg}")
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+@__deprecated(
+    "This function is deprecated and will be removed in a future release. Use the distance function from the migration module instead."
+)
 def calc_distances(latitudes: np.ndarray, longitudes: np.ndarray, verbose: bool = False) -> np.ndarray:
     """
     Calculate the pairwise distances between points given their latitudes and longitudes.
@@ -74,7 +88,6 @@ def calc_capacity(population: np.uint32, nticks: np.uint32, cbr: np.float32, ver
     # where P(t) is the population at time t, P(0) is the initial population, and t is the number of ticks
     # We need to allocate space for the population data for each tick
     # We will use the maximum population growth to estimate the capacity
-    # We will use the maximum population growth to estimate the capacity
     daily_rate = (cbr / 1000) / 365.0  # CBR is per 1000 people per year
     capacity = np.uint32(population * (1 + daily_rate) ** nticks)
 
@@ -106,9 +119,10 @@ def seed_infections_randomly(model, ninfections: int = 100) -> None:
     # Seed initial infections in random locations at the start of the simulation
     cinfections = 0
     while cinfections < ninfections:
-        index = model.prng.integers(0, model.population.count)
-        if model.population.susceptibility[index] > 0:
-            model.population.itimer[index] = model.params.inf_mean
+        index = model.prng.integers(0, model.agents.count)
+        if model.agents.susceptibility[index] > 0:
+            model.agents.itimer[index] = model.params.inf_mean
+            model.agents.susceptibility[index] = 0
             cinfections += 1
 
     return
@@ -135,9 +149,10 @@ def seed_infections_in_patch(model, ipatch: int, ninfections: int = 100) -> None
     # Seed initial infections in a specific location at the start of the simulation
     cinfections = 0
     while cinfections < ninfections:
-        index = model.prng.integers(0, model.population.count)
-        if model.population.susceptibility[index] > 0 and model.population.nodeid[index] == ipatch:
-            model.population.itimer[index] = model.params.inf_mean
+        index = model.prng.integers(0, model.agents.count)
+        if model.agents.susceptibility[index] > 0 and model.agents.nodeid[index] == ipatch:
+            model.agents.itimer[index] = model.params.inf_mean
+            model.agents.susceptibility[index] = 0
             cinfections += 1
 
     return
