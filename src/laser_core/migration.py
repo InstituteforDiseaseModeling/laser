@@ -118,6 +118,7 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
 
     return network
 
+
 def row_normalizer(network, max_rowsum):
     """
     Normalizes the rows of a given network matrix such that no row sum exceeds a specified maximum value.
