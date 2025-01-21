@@ -47,7 +47,7 @@ If you are using non-constant width age bins, you should manually convert bin
 indices returned from `predict_year_of_death()` to ages.
 
 Example
-=======
+-------
 
 .. code-block:: python
 
