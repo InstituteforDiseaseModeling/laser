@@ -62,3 +62,23 @@ mathjax3_config = {"TeX": {"Macros": {"small": ["{\\scriptstyle #1}", 1]}}}
 # sphinx/builders/linkcheck.py:86: RemovedInSphinx80Warning: The default value for 'linkcheck_report_timeouts_as_broken' will change to False in Sphinx 8, meaning that request timeouts will be reported with a new 'timeout' status, instead of as 'broken'. This is intended to provide more detail as to the failure mode. See https://github.com/sphinx-doc/sphinx/issues/11868 for details.
 #   warnings.warn(deprecation_msg, RemovedInSphinx80Warning, stacklevel=1)
 linkcheck_report_timeouts_as_broken = False
+
+# Enable LaTeX PDF generation
+extensions += ["sphinx.ext.imgmath"]
+
+# Add custom LaTeX settings
+latex_elements = {
+    # Customize the title page or other LaTeX settings if needed
+    'papersize': 'letterpaper',  # Options: letterpaper or a4paper
+    'pointsize': '10pt',
+    'preamble': r'''
+    \usepackage{amsmath}
+    \usepackage{amssymb}
+    ''',
+}
+
+# Define LaTeX output file name
+latex_documents = [
+    ('index', 'LASER.tex', 'LASER Documentation',
+     'Gates Foundation', 'manual'),
+]
