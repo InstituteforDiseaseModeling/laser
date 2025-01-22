@@ -27,14 +27,14 @@ def test_distribute_population_skewed_zero_nodes():
 
 
 def test_distribute_population_skewed_zero_population():
-    with pytest.raises(ValueError, match="Population must be greater than 0"):
+    with pytest.raises(ValueError, match="Total population must be greater than 0."):
         distribute_population_skewed(0, 5, 0.3)
 
 
 def test_distribute_population_skewed_invalid_fraction():
-    with pytest.raises(ValueError, match="Fraction must be between 0 and 1"):
+    with pytest.raises(ValueError, match="Fraction of rural population must be between 0 and 1."):
         distribute_population_skewed(1000, 5, -0.1)
-    with pytest.raises(ValueError, match="Fraction must be between 0 and 1"):
+    with pytest.raises(ValueError, match="Fraction of rural population must be between 0 and 1."):
         distribute_population_skewed(1000, 5, 1.5)
 
 
@@ -67,12 +67,12 @@ def test_distribute_population_tapered_large_nodes():
 
 
 def test_distribute_population_tapered_zero_nodes():
-    with pytest.raises(ValueError, match="Number of nodes must be greater than 0"):
+    with pytest.raises(ValueError, match="Both total_population and num_nodes must be greater than 0."):
         distribute_population_tapered(1000, 0)
 
 
 def test_distribute_population_tapered_zero_population():
-    with pytest.raises(ValueError, match="Population must be greater than 0"):
+    with pytest.raises(ValueError, match="Both total_population and num_nodes must be greater than 0."):
         distribute_population_tapered(0, 5)
 
 
