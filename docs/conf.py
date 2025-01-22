@@ -69,16 +69,15 @@ extensions += ["sphinx.ext.imgmath"]
 # Add custom LaTeX settings
 latex_elements = {
     # Customize the title page or other LaTeX settings if needed
-    'papersize': 'letterpaper',  # Options: letterpaper or a4paper
-    'pointsize': '10pt',
-    'preamble': r'''
+    "papersize": "letterpaper",  # Options: letterpaper or a4paper
+    "pointsize": "10pt",
+    "preamble": r"""
     \usepackage{amsmath}
     \usepackage{amssymb}
-    ''',
+    """,
 }
 
 # Define LaTeX output file name
 latex_documents = [
-    ('index', 'LASER.tex', 'LASER Documentation',
-     'Gates Foundation', 'manual'),
+    ("index", "LASER.tex", "LASER Documentation", "Gates Foundation", "manual"),
 ]

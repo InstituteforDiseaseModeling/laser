@@ -53,6 +53,14 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
     >>> distribute_population_skewed(tot_pop, num_nodes, frac_rural)
     [300, 136, 64]
     """
+    # Valid input data checks
+    if tot_pop <= 0:
+        raise ValueError("Total population must be greater than 0.")
+    if num_nodes <= 0:
+        raise ValueError("Number of nodes must be greater than 0.")
+    if not (0 <= frac_rural <= 1):
+        raise ValueError("Fraction of rural population must be between 0 and 1.")
+
     # Generate node sizes
     nsizes = np.exp(-np.log(np.random.rand(num_nodes - 1)))
     nsizes = frac_rural * nsizes / np.sum(nsizes)

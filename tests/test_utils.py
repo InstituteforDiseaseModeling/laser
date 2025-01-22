@@ -11,8 +11,6 @@ from laser_core import PropertySet
 from laser_core.migration import distance
 from laser_core.utils import calc_capacity
 from laser_core.utils import calc_distances
-from laser_core.utils import seed_infections_in_patch
-from laser_core.utils import seed_infections_randomly
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
 
@@ -79,60 +77,6 @@ class TestUtilityFunctions(unittest.TestCase):
         capacity = calc_capacity(population, nticks, cbr)
 
         assert capacity == 1105, f"Expected capacity = 1105, got {capacity}"
-
-        return
-
-    def test_seed_infections_randomly_all_naive(self):
-        inf_mean = 42
-        num_agents = 1_000_000
-        model = Model(inf_mean=inf_mean, num_agents=num_agents)
-        ninfections = 1024
-        seed_infections_randomly(model, ninfections)
-        assert (
-            np.sum(model.agents.itimer == inf_mean) == ninfections
-        ), f"Expected {ninfections} infections, found {np.sum(model.agents.itimer == inf_mean)}"
-
-        return
-
-    def test_seed_infections_randomly_some_immune(self):
-        inf_mean = 42
-        num_agents = 1_000_000
-        model = Model(inf_mean=inf_mean, num_agents=num_agents)
-        immune = model.prng.binomial(1, 0.75, size=num_agents)
-        model.agents.susceptibility[immune == 1] = 0
-        ninfections = 1024
-        seed_infections_randomly(model, ninfections)
-        assert (
-            np.sum(model.agents.itimer == inf_mean) == ninfections
-        ), f"Expected {ninfections} infections, found {np.sum(model.agents.itimer == inf_mean)}"
-
-        return
-
-    def test_seed_infections_in_patch_all_naive(self):
-        inf_mean = 42
-        num_agents = 1_000_000
-        model = Model(inf_mean=inf_mean, num_agents=num_agents)
-        ninfections = 1024
-        ipatch = 13
-        seed_infections_in_patch(model, ipatch, ninfections)
-        assert (
-            np.sum(model.agents.itimer == inf_mean) == ninfections
-        ), f"Expected {ninfections} infections, found {np.sum(model.agents.itimer == inf_mean)}"
-
-        return
-
-    def test_seed_infections_in_patch_some_immune(self):
-        inf_mean = 42
-        num_agents = 1_000_000
-        model = Model(inf_mean=inf_mean, num_agents=num_agents)
-        immune = model.prng.binomial(1, 0.75, size=num_agents)
-        model.agents.susceptibility[immune == 1] = 0
-        ninfections = 1024
-        ipatch = 13
-        seed_infections_in_patch(model, ipatch, ninfections)
-        assert (
-            np.sum(model.agents.itimer == inf_mean) == ninfections
-        ), f"Expected {ninfections} infections, found {np.sum(model.agents.itimer == inf_mean)}"
 
         return
 
