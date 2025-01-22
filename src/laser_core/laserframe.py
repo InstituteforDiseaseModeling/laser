@@ -19,8 +19,8 @@ Usage Example:
     laser_frame.squash(np.array([True, False, True, False, True, False, True, False, True, False]))
 
 Attributes:
-    _count (int): The current count of agents.
-    _capacity (int): The maximum capacity of the population.
+    count (int): The current count of active elements.
+    capacity (int): The maximum capacity of the frame.
 """
 
 import numpy as np
@@ -37,9 +37,9 @@ class LaserFrame:
         Initialize a LaserFrame object.
 
         Parameters:
-            capacity (int): The maximum capacity of the population (number of agents).
+            capacity (int): The maximum capacity of the frame.
                             Must be a positive integer.
-            initial_count (int): The initial number of agents in the population.
+            initial_count (int): The initial number of active elements in the frame.
                                  Must be a positive integer <= capacity.
             **kwargs: Additional keyword arguments to set as attributes of the object.
 
@@ -77,7 +77,7 @@ class LaserFrame:
         Add a scalar property to the class.
 
         This method initializes a new scalar property for the class instance. The property is
-        stored as a NumPy array with a specified data type and default value.
+        stored as a 1-D NumPy array (scalar / entry) with a specified data type and default value.
 
         Parameters:
 
@@ -98,7 +98,7 @@ class LaserFrame:
         """
         Adds a vector property to the object.
 
-        This method initializes a new property with the given name as a NumPy array.
+        This method initializes a new property with the given name as a 2-D NumPy array (vector per entry).
 
         The array will have a shape of (length, self._capacity) and will be filled
         with the specified default value. The data type of the array elements is
@@ -118,6 +118,32 @@ class LaserFrame:
 
         # initialize the property to a NumPy array with of size (length, self._capacity), dtype, and default value
         setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        return
+
+    def add_array_property(self, name: str, shape: tuple, dtype=np.uint32, default=0) -> None:
+        """
+        Adds an array property to the object.
+
+        This method initializes a new property with the given name as a multi-dimensional NumPy array.
+
+        The array will have the given shape (note that there is no implied dimension of size self._capacity),
+        datatype (default is np.uint32), and default value (default is 0).
+
+        Parameters:
+
+            name (str): The name of the property to be added.
+            shape (tuple): The shape of the array.
+            dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
+            default (scalar, optional): The default value to fill the array with, default is 0.
+
+        Returns:
+
+            None
+
+        """
+
+        # initialize the property to a NumPy array with given shape, dtype, and default value
+        setattr(self, name, np.full(shape, default, dtype=dtype))
         return
 
     @property
@@ -180,17 +206,17 @@ class LaserFrame:
 
         Parameters:
 
-            indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the population count (`self._count`).
+            indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the frame count (`self._count`).
 
             verbose (bool, optional): If True, prints the sorting progress for each numpy array attribute. Defaults to False.
 
         Raises:
 
-            AssertionError: If `indices` is not an integer array or if its length does not match the population count.
+            AssertionError: If `indices` is not an integer array or if its length does not match the frame count of active elements.
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")
-        _has_shape(indices, (self._count,), f"Indices must have the same length as the population count ({self._count})")
+        _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.integer, f"Indices must be an integer array (got {indices.dtype})")
 
         for key, value in self.__dict__.items():
@@ -209,12 +235,12 @@ class LaserFrame:
 
         Parameters:
 
-            indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current population count.
+            indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current frame active element count.
             verbose (bool, optional): If True, prints detailed information about the squashing process. Defaults to False.
 
         Raises:
 
-            AssertionError: If `indices` is not a boolean array or if its length does not match the current population count.
+            AssertionError: If `indices` is not a boolean array or if its length does not match the current frame active element count.
 
         Returns:
 
@@ -222,7 +248,7 @@ class LaserFrame:
         """
 
         _is_instance(indices, np.ndarray, f"Indices must be a numpy array (got {type(indices)})")
-        _has_shape(indices, (self._count,), f"Indices must have the same length as the population count ({self._count})")
+        _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.bool_, f"Indices must be a boolean array (got {indices.dtype})")
 
         current_count = self._count

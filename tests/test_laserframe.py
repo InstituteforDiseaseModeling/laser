@@ -42,7 +42,7 @@ import unittest
 import numpy as np
 import pytest
 
-from laser_core.laserframe import LaserFrame
+from laser_core import LaserFrame
 
 
 class TestLaserFrame(unittest.TestCase):
@@ -95,6 +95,26 @@ class TestLaserFrame(unittest.TestCase):
         pop.add_vector_property("events", 365, default=1)
         assert np.all(pop.events == 1)
         assert pop.events.shape == (365, 1024)
+
+    def test_add_array_property(self):
+        pop = LaserFrame(1024)
+        pop.add_array_property("events", (365, 1024))
+        assert np.all(pop.events == 0)
+        assert pop.events.shape == (365, 1024)
+
+    def test_add_array_property_with_value(self):
+        pop = LaserFrame(1024)
+        pop.add_array_property("events", (365, 1024), default=42)
+        assert np.all(pop.events == 42)
+        assert pop.events.shape == (365, 1024)
+
+    def test_add_array_property_with_dtype(self):
+        pop = LaserFrame(1024)
+        default = np.float32(-3.14159265)
+        pop.add_array_property("events", (365, 1024), dtype=np.float32, default=default)
+        assert np.all(pop.events == default)
+        assert pop.events.shape == (365, 1024)
+        assert pop.events.dtype == np.float32
 
     def test_add_agents(self):
         pop = LaserFrame(1024, 100)
@@ -152,7 +172,9 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.sort(indices.tolist(), verbose=True)
 
-        with pytest.raises(TypeError, match=re.escape(f"Indices must have the same length as the population count ({pop.count})")):
+        with pytest.raises(
+            TypeError, match=re.escape(f"Indices must have the same length as the frame active element count ({pop.count})")
+        ):
             pop.sort(indices[0:50], verbose=True)
 
         with pytest.raises(TypeError, match=re.escape("Indices must be an integer array (got float32)")):
@@ -186,7 +208,9 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.squash(keep.tolist(), verbose=True)
 
-        with pytest.raises(TypeError, match=re.escape(f"Indices must have the same length as the population count ({pop.count})")):
+        with pytest.raises(
+            TypeError, match=re.escape(f"Indices must have the same length as the frame active element count ({pop.count})")
+        ):
             pop.squash(keep[0:50], verbose=True)
 
         with pytest.raises(TypeError, match=re.escape("Indices must be a boolean array (got float32)")):

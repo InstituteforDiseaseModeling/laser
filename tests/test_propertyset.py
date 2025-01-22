@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from laser_core.propertyset import PropertySet
+from laser_core import PropertySet
 
 
 class TestPropertySet(unittest.TestCase):

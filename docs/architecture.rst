@@ -71,7 +71,7 @@ The top-level script serves as the orchestrator for the simulation and consists 
            pass
 
        # Initialize the model and its population
-       from laser_core.laserframe import LaserFrame
+       from laser_core import LaserFrame
        model = Model()
        # Create the agent population with max size 1000
        model.population = LaserFrame(capacity=1000)
