@@ -27,19 +27,19 @@ Overview
     :alt: Coverage Status
     :target: https://app.codecov.io/github/InstituteforDiseaseModeling/laser
 
-.. |version| image:: https://img.shields.io/pypi/v/idmlaser.svg
+.. |version| image:: https://img.shields.io/pypi/v/laser-core.svg
     :alt: PyPI Package latest release
     :target: https://pypi.org/project/laser-core/
 
-.. |wheel| image:: https://img.shields.io/pypi/wheel/idmlaser.svg
+.. |wheel| image:: https://img.shields.io/pypi/wheel/laser-core.svg
     :alt: PyPI Wheel
     :target: https://pypi.org/project/laser-core/
 
-.. |supported-versions| image:: https://img.shields.io/pypi/pyversions/idmlaser.svg
+.. |supported-versions| image:: https://img.shields.io/pypi/pyversions/laser-core.svg
     :alt: Supported versions
     :target: https://pypi.org/project/laser-core/
 
-.. |supported-implementations| image:: https://img.shields.io/pypi/implementation/idmlaser.svg
+.. |supported-implementations| image:: https://img.shields.io/pypi/implementation/laser-core.svg
     :alt: Supported implementations
     :target: https://pypi.org/project/laser-core/
 
