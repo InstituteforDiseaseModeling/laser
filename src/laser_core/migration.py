@@ -63,7 +63,7 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
             Exponent for the population size of the destination node.
         c (float):
             Exponent for the distance between nodes, controlling how distance impacts flows.
-        **kwargs:
+        \*\*kwargs:
             Additional keyword arguments (not used in the current implementation).
 
     **Returns**:
