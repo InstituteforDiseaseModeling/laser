@@ -22,7 +22,8 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
         The total number of nodes among which the population will be distributed.
     frac_rural : float
         The fraction of the total population to be assigned to rural nodes
-        (value between 0 and 1). Defaults to 0.3.
+        (value between 0 and 1). Defaults to 0.3. The 0 node is the single urban
+        node and has (1-frac_rural) of the population.
 
     Returns
     -------
@@ -78,7 +79,7 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
     return np.array(npops, dtype=np.uint32)
 
 
-def distribute_population_tapered(total_population, num_nodes):
+def distribute_population_tapered(tot_pop, num_nodes):
     """
     Distribute a total population heterogeneously across a given number of nodes.
 
@@ -88,11 +89,11 @@ def distribute_population_tapered(total_population, num_nodes):
     ensuring that even the smallest node has a non-negligible share.
 
     The function ensures the sum of the distributed populations matches the
-    `total_population` exactly by adjusting the largest node if rounding introduces discrepancies.
+    `tot_pop` exactly by adjusting the largest node if rounding introduces discrepancies.
 
     Parameters
     ----------
-    total_population : int
+    tot_pop : int
         The total population to distribute. Must be a positive integer.
     num_nodes : int
         The number of nodes to distribute the population across. Must be a positive integer.
@@ -106,13 +107,13 @@ def distribute_population_tapered(total_population, num_nodes):
     Raises
     ------
     ValueError
-        If `total_population` or `num_nodes` is not greater than 0.
+        If `tot_pop` or `num_nodes` is not greater than 0.
 
     Notes
     -----
     - The logarithmic-like distribution ensures that Node 0 has the highest population,
       and subsequent nodes receive progressively smaller proportions.
-    - The function guarantees that the sum of the returned array equals `total_population`.
+    - The function guarantees that the sum of the returned array equals `tot_pop`.
 
     Examples
     --------
@@ -138,18 +139,18 @@ def distribute_population_tapered(total_population, num_nodes):
     >>> pop.sum()
     1000
     """
-    if num_nodes <= 0 or total_population <= 0:
-        raise ValueError("Both total_population and num_nodes must be greater than 0.")
+    if num_nodes <= 0 or tot_pop <= 0:
+        raise ValueError("Both tot_pop and num_nodes must be greater than 0.")
 
     # Generate a logarithmic-like declining distribution
     weights = np.logspace(0, -1, num=num_nodes, base=10)  # Declines logarithmically
     weights = weights / weights.sum()  # Normalize weights to sum to 1
 
     # Scale weights to the total population and round to integers
-    population_distribution = np.round(weights * total_population).astype(int)
+    population_distribution = np.round(weights * tot_pop).astype(int)
 
-    # Ensure the sum matches the total_population by adjusting the largest node
-    difference = total_population - population_distribution.sum()
+    # Ensure the sum matches the tot_pop by adjusting the largest node
+    difference = tot_pop - population_distribution.sum()
     population_distribution[0] += difference  # Adjust Node 0 (largest) to make up the difference
 
     return population_distribution

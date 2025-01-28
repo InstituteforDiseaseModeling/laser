@@ -15,6 +15,16 @@ def test_distribute_population_skewed_basic():
     assert abs(sum(result[:2]) / 1000 - 0.8) <= 0.1  # Verify rural fraction compliance
 
 
+# Test the basic functionality of distribute_population_skewed, default
+# Same test as above, but tests letting frac_rural default
+def test_distribute_population_skewed_basic_default():
+    np.random.seed(42)  # Set seed for reproducibility
+    result = distribute_population_skewed(tot_pop=1000, num_nodes=5)
+    assert sum(result) == 1000  # Check total population remains constant
+    assert len(result) == 5  # Verify the correct number of nodes
+    assert abs(sum(result[:2]) / 1000 - 0.8) <= 0.1  # Verify rural fraction compliance
+
+
 # Test an alternative scenario with distribute_population_skewed
 # Verifies the function correctly handles a population of 500 and a rural fraction of 40%.
 def test_distribute_population_skewed_alternative():
@@ -51,7 +61,7 @@ def test_distribute_population_skewed_invalid_fraction():
 # Test the basic functionality of distribute_population_tapered
 # Verifies that the function correctly handles a population of 1000 across 5 nodes.
 def test_distribute_population_tapered_basic():
-    result = distribute_population_tapered(total_population=1000, num_nodes=5)
+    result = distribute_population_tapered(tot_pop=1000, num_nodes=5)
     assert sum(result) == 1000  # Ensure total population matches input
     assert len(result) == 5  # Verify the correct number of nodes
     assert result[0] > result[1]  # Check tapering pattern
@@ -61,7 +71,7 @@ def test_distribute_population_tapered_basic():
 # Test edge case with small total population for distribute_population_tapered
 # Ensures the function can handle small numbers without errors.
 def test_distribute_population_tapered_small_population():
-    result = distribute_population_tapered(total_population=10, num_nodes=4)
+    result = distribute_population_tapered(tot_pop=10, num_nodes=4)
     assert sum(result) == 10  # Check total population matches input
     assert len(result) == 4  # Verify the correct number of nodes
 
@@ -69,7 +79,7 @@ def test_distribute_population_tapered_small_population():
 # Test case where total population is evenly distributed among nodes
 # Ensures the function can handle equal division correctly.
 def test_distribute_population_tapered_equal_distribution():
-    result = distribute_population_tapered(total_population=10, num_nodes=10)
+    result = distribute_population_tapered(tot_pop=10, num_nodes=10)
     assert sum(result) == 10  # Ensure total population matches input
     assert len(result) == 10  # Verify the correct number of nodes
     assert 0 in result  # Verify some nodes may have zero population
@@ -78,7 +88,7 @@ def test_distribute_population_tapered_equal_distribution():
 # Test case with a large number of nodes relative to population
 # Ensures the function handles large node counts gracefully.
 def test_distribute_population_tapered_large_nodes():
-    result = distribute_population_tapered(total_population=100, num_nodes=50)
+    result = distribute_population_tapered(tot_pop=100, num_nodes=50)
     assert sum(result) == 100  # Ensure total population matches input
     assert len(result) == 50  # Verify the correct number of nodes
     assert result[0] > result[-1]  # Check tapering pattern
@@ -87,20 +97,20 @@ def test_distribute_population_tapered_large_nodes():
 # Test edge case where number of nodes is zero
 # Ensures the function raises a ValueError for invalid input.
 def test_distribute_population_tapered_zero_nodes():
-    with pytest.raises(ValueError, match="Both total_population and num_nodes must be greater than 0."):
-        distribute_population_tapered(total_population=1000, num_nodes=0)
+    with pytest.raises(ValueError, match="Both tot_pop and num_nodes must be greater than 0."):
+        distribute_population_tapered(tot_pop=1000, num_nodes=0)
 
 
 # Test edge case where total population is zero
 # Ensures the function raises a ValueError for invalid input.
 def test_distribute_population_tapered_zero_population():
-    with pytest.raises(ValueError, match="Both total_population and num_nodes must be greater than 0."):
-        distribute_population_tapered(total_population=0, num_nodes=5)
+    with pytest.raises(ValueError, match="Both tot_pop and num_nodes must be greater than 0."):
+        distribute_population_tapered(tot_pop=0, num_nodes=5)
 
 
 # Test adjustment logic in distribute_population_tapered
 # Verifies that the function correctly adjusts the population to match input.
 def test_distribute_population_tapered_adjustment():
-    result = distribute_population_tapered(total_population=1200, num_nodes=3)
+    result = distribute_population_tapered(tot_pop=1200, num_nodes=3)
     assert sum(result) == 1200  # Ensure total population matches input
     assert len(result) == 3  # Verify the correct number of nodes
