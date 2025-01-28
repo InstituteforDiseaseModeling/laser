@@ -15,6 +15,7 @@ Contents
    kmestimator
    example
    vdexample
+   spatialexample
    contributing
    authors
    changelog

@@ -41,7 +41,7 @@ E.g.::
     3 - number of females in the age bin
 
 Example
-=======
+-------
 
 .. code-block:: python
 
@@ -79,7 +79,7 @@ Example
     # dob = -ages
 
 Nigeria
-=======
+-------
 
 The population pyramid for Nigeria is available from <TBD>.
 

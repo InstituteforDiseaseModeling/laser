@@ -8,11 +8,6 @@ Functions:
     calc_capacity(population: np.uint32, nticks: np.uint32, cbr: np.float32, verbose: bool = False) -> np.uint32:
         Calculate the population capacity after a given number of ticks based on a constant birth rate.
 
-    seed_infections_randomly(model, ninfections: int = 100) -> None:
-        Seed initial infections in random locations at the start of the simulation.
-
-    seed_infections_in_patch(model, ipatch: int, ninfections: int = 100) -> None:
-        Seed initial infections in a specific location at the start of the simulation.
 """
 
 import click
@@ -97,62 +92,3 @@ def calc_capacity(population: np.uint32, nticks: np.uint32, cbr: np.float32, ver
         click.echo(f"Alternate growth:  {population:,} … {alternate:,}")
 
     return capacity
-
-
-def seed_infections_randomly(model, ninfections: int = 100) -> None:
-    """
-    Seed initial infections in random locations at the start of the simulation.
-    This function randomly selects individuals from the population and seeds
-    them with an infection, based on the specified number of initial infections.
-
-    Args:
-
-        model: The simulation model containing the population and parameters.
-        ninfections (int, optional): The number of initial infections to seed.
-                                     Defaults to 100.
-
-    Returns:
-
-        None
-    """
-
-    # Seed initial infections in random locations at the start of the simulation
-    cinfections = 0
-    while cinfections < ninfections:
-        index = model.prng.integers(0, model.agents.count)
-        if model.agents.susceptibility[index] > 0:
-            model.agents.itimer[index] = model.params.inf_mean
-            model.agents.susceptibility[index] = 0
-            cinfections += 1
-
-    return
-
-
-def seed_infections_in_patch(model, ipatch: int, ninfections: int = 100) -> None:
-    """
-    Seed initial infections in a specific patch of the population at the start of the simulation.
-    This function randomly selects individuals from the specified patch and sets their infection timer
-    to the mean infection duration, effectively marking them as infected. The process continues until
-    the desired number of initial infections is reached.
-
-    Args:
-
-        model: The simulation model containing the population and parameters.
-        ipatch (int): The identifier of the patch where infections should be seeded.
-        ninfections (int, optional): The number of initial infections to seed. Defaults to 100.
-
-    Returns:
-
-        None
-    """
-
-    # Seed initial infections in a specific location at the start of the simulation
-    cinfections = 0
-    while cinfections < ninfections:
-        index = model.prng.integers(0, model.agents.count)
-        if model.agents.susceptibility[index] > 0 and model.agents.nodeid[index] == ipatch:
-            model.agents.itimer[index] = model.params.inf_mean
-            model.agents.susceptibility[index] = 0
-            cinfections += 1
-
-    return

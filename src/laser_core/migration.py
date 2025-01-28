@@ -33,43 +33,87 @@ import numpy as np
 
 def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: float, c: float, **kwargs):
     r"""
-    Calculate a gravity model network with an optional maximum export fraction constraint.
-    This function computes a gravity model network based on the provided populations
-    and distances, and, if specified, then normalizes the rows of the resulting network matrix
-    such that no row exceeds the specified maximum export fraction.
+    Calculate a gravity model network.
 
-    Mathematical formula:
+    This function computes a gravity model network based on the provided populations and distances.
+    The gravity model estimates migration or interaction flows between populations using a mathematical formula
+    that incorporates scaling, population sizes, and distances.
 
-        element-by-element: :math:`network_{i,j} = k \times p_i^a \times p_j^b / distance_{i,j}^c`
+    **Mathematical Formula**:
 
-        as implemented in NumPy math:
+    .. math::
+        network_{i,j} = k \cdot \frac{p_i^a \cdot p_j^b}{distance_{i,j}^c}
 
-            ``network = k * (pops[:, np.newaxis] ** a) * (pops ** b) * (distances ** (-1 * c))``
+    As implemented in NumPy:
 
-    Parameters:
+    .. code-block:: python
 
-        pops (numpy.ndarray): 1D array of populations.
-        distances (numpy.ndarray): 2D array of distances between the populations.
-        k (float): Scaling constant.
-        a (float): Exponent for the population of the origin.
-        b (float): Exponent for the population of the destination.
-        c (float): Exponent for the distance.
-        \*\*kwargs: Additional keyword arguments (not used in the current implementation).
+        network = k * (pops[:, np.newaxis] ** a) * (pops ** b) * (distances ** (-1 * c))
 
-    Returns:
+    **Parameters**:
+        pops (numpy.ndarray):
+            1D array of population sizes for each node.
+        distances (numpy.ndarray):
+            2D array of distances between nodes. Must be symmetric, with self-distances (diagonal) handled.
+        k (float):
+            Scaling constant to adjust the overall magnitude of interaction flows.
+        a (float):
+            Exponent for the population size of the origin node.
+        b (float):
+            Exponent for the population size of the destination node.
+        c (float):
+            Exponent for the distance between nodes, controlling how distance impacts flows.
+        \*\*kwargs:
+            Additional keyword arguments (not used in the current implementation).
 
-        numpy.ndarray: A matrix representing the gravity model network with rows optionally normalized to respect the maximum export fraction.
+    **Returns**:
+        numpy.ndarray:
+            A 2D matrix representing the interaction network, where each element `network[i, j]` corresponds
+            to the flow from node `i` to node `j`.
+
+    **Example Usage**:
+
+    .. code-block:: python
+
+        import numpy as np
+        from gravity_model import gravity
+
+        # Define populations and distances
+        populations = np.array([1000, 500, 200])
+        distances = np.array([
+            [0, 2, 3],
+            [2, 0, 1],
+            [3, 1, 0]
+        ])
+
+        # Parameters for the gravity model
+        k = 0.5
+        a = 1.0
+        b = 1.0
+        c = 2.0
+
+        # Compute the gravity model network
+        migration_network = gravity(populations, distances, k, a, b, c)
+
+        print("Migration Network:")
+        print(migration_network)
+
+    **Notes**:
+        - The diagonal of the `distances` array is set to `1` internally to avoid division by zero.
+        - The diagonal of the output `network` matrix is set to `0` to represent no self-loops.
+        - Ensure the `distances` matrix is symmetric and non-negative.
     """
-    # KM: Taking out "max_frac" as a parameter.  The "row_normalizer" can be applied to any network, so let's just make it a separate helper function
-    # without tying it to the gravity model (or adding max_frac as a parameter to every network, where all it does is pass the final network through row_normalizer
-    #  - if we want to make a migration model class instead of separate functions, we can revisit that)
-    # Sanity checks
+    # Ensure pops and distances are valid
     _sanity_checks(pops, distances, a=a, b=b, c=c, k=k)
 
+    # Prevent division by zero by setting diagonal to 1
     distances1 = distances.copy()
-    np.fill_diagonal(distances1, 1)  # Prevent division by zero in `distances ** (-1 * c)`
+    np.fill_diagonal(distances1, 1)
+
+    # Compute the gravity model network
     network = k * (pops[:, np.newaxis] ** a) * (pops**b) * (distances1 ** (-1 * c))
 
+    # Set the diagonal of the network to 0
     np.fill_diagonal(network, 0)
 
     return network
