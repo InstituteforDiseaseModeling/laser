@@ -1,29 +1,15 @@
 import csv
 import unittest
 from collections import namedtuple
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 
-from laser_core import LaserFrame
-from laser_core import PropertySet
 from laser_core.migration import distance
 from laser_core.utils import calc_capacity
 from laser_core.utils import calc_distances
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
-
-
-class Model:
-    def __init__(self, inf_mean=42, num_agents=1_000_000):
-        self.prng = np.random.default_rng(datetime.now().microsecond)  # noqa: DTZ005
-        self.agents = LaserFrame(num_agents)
-        self.agents.add_scalar_property("nodeid", dtype=np.uint16, default=0)
-        self.agents.add_scalar_property("susceptibility", dtype=np.uint8, default=1)
-        self.agents.add_scalar_property("itimer", dtype=np.uint8, default=0)
-        self.agents.nodeid[:] = (np.arange(self.agents.count) // (num_agents // 100)).astype(self.agents.nodeid.dtype)
-        self.params = PropertySet({"inf_mean": inf_mean})
 
 
 class TestUtilityFunctions(unittest.TestCase):
