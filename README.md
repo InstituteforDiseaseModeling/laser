@@ -36,16 +36,20 @@ Documentation can be found [here](https://docs.idmod.org/projects/laser/en/lates
 ```bash
 git clone https://github.com/InstituteforDiseaseModeling/laser-core.git
 ```
-2. install [`uv`](https://github.com/astral-sh/uv?tab=readme-ov-file#installation)
-3. change to the `laser-core` directory with
+2. install [`uv`](https://github.com/astral-sh/uv?tab=readme-ov-file#installation) _in your system [Python]_, i.e. _before_ creating and activating a virtual environment
+3. install `tox` as a tool in `uv` with the `tox-uv` plugin with
+```bash
+uv tool install tox --with tox-uv
+```
+4. change to the `laser-core` directory with
 ```bash
 cd laser-core
 ```
-4. create a virtual environment for development with
+5. create a virtual environment for development with
 ```bash
 uv venv
 ```
-5. activate the virtual environment with
+6. activate the virtual environment with
 
 **Mac or Linux:**
 ```bash
@@ -55,11 +59,6 @@ source .venv/bin/activate
 **Windows:**
 ```batch
 .venv\bin\Activate
-```
-
-6. install `tox` with the `tox-uv` plugin with
-```bash
-uv tool install tox --with tox-uv
 ```
 
 Now you can run tests in the `tests` directory or run the entire check+docs+test suite with ```tox```. Running ```tox``` will run several consistency checks, build documentation, run tests against the supported versions of Python, and create a code coverage report based on the test suite. Note that the first run of ```tox``` may take a few minutes (~5). Subsequent runs should be quicker depending on the speed of your machine and the test suite (~2 minutes). You can use ```tox``` to run tests against a single version of Python with, for example, ```tox -e py310```.
