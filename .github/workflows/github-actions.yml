@@ -1,4 +1,4 @@
-name: test-and-build-wheels
+name: build-and-test-with-wheels
 on: [pull_request, workflow_dispatch]
 jobs:
   test:
