@@ -20,6 +20,14 @@ laser\_core.cli module
    :undoc-members:
    :show-inheritance:
 
+laser\_core.extension module
+----------------------------
+
+.. automodule:: laser_core.extension
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 laser\_core.laserframe module
 -----------------------------
 
