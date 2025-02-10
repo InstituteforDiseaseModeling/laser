@@ -93,18 +93,18 @@ Model Class
 
             # Record results: reporting could actually be a component if we wanted. Or it can be
             # done in a log/report function in the relevant component (e.g., Transmission)
-            self.results.S[self.current_timestep, :] = np.array([
+            self.results.S[self.current_timestep, :] = [
                 np.sum(self.population.disease_state[self.population.node_id == i] == 0)
                 for i in range(self.nodes)
-            ])
-            self.results.I[self.current_timestep, :] = np.array([
+            ]
+            self.results.I[self.current_timestep, :] = [
                 np.sum(self.population.disease_state[self.population.node_id == i] == 1)
                 for i in range(self.nodes)
-            ])
-            self.results.R[self.current_timestep, :] = np.array([
+            ]
+            self.results.R[self.current_timestep, :] = [
                 np.sum(self.population.disease_state[self.population.node_id == i] == 2)
                 for i in range(self.nodes)
-            ])
+            ]
 
         def add_component(self, component):
             """
@@ -378,6 +378,9 @@ Discussion
 
 This simple spatial example with migration creates a set of nodes with synthetic populations and a linear connection structure. The 0th node is the 'urban' node, with the largest population, and where we seed the infection. The migration matrix just connects nodes to the next node (by index). So we expect to see infection travel sequentially from node to node. We break the connection at node 13 just to show we can.
 
+Migration in 2 Dimensions
+-------------------------
+
 Now we make things a bit more interesting by taking a similar set of nodes, but creating a migration matrix from the gravtiy function, so we effectively have a 2D network with rates proportional to population sizes. Distances are still very synthetic. We change our migration function as well since we have to be a little smarter when our matrix isn't sparse.
 
 Migration Component (2D)
@@ -486,9 +489,6 @@ Discussion
 ^^^^^^^^^^
 
 This example is more advanced than our first one since it moves from 1 dimension to 2, and is fully connected. We should see infection spread from the large seed node to most or potentially all of the other nodes (depending on transmission rates and migration rates and stochasticity) in a way that is broadly a function of the other nodes' populations. Though since the smaller nodes don't vary massively in population and since the model is stochastic, it will be a general correlation.
-
-Now we make things a bit more interesting by taking a similar set of nodes, but creating a migration matrix from the gravtiy function, so we effectively have a 2D network with rates proportional to population sizes. Distances are still very synthetic. We change our migration function as well since we have to be a little smarter when our matrix isn't sparse.
-
 
 Simple Spatial SIR Model with Real Data
 =======================================
@@ -633,30 +633,14 @@ This section describes an alternative approach to modeling migration by using in
             a, b, c, k = self.model.params.a, self.model.params.b, self.model.params.c, self.model.params.k
 
             # Compute all pairwise distances in one call (this speeds up initialization significantly)
+            # from laser_core.migration import gravity, row_normalizer
+            # from laser_core.utils import calc_distances
             distances = calc_distances(self.locations[:, 0], self.locations[:, 1])
             self.network = gravity(initial_populations, distances, k, a, b, c)
             self.network /= np.power(initial_populations.sum(), c)  # Normalize
-            self.cap_network_flow()
+            self.network = row_normalizer(self.network, 0.01) # 0.01=max_frac
 
-        def cap_network_flow(self):
-            """
-            Caps the total fraction of population that can migrate infection in a given timestep.
-            This prevents unrealistically high transmission rates in a single step.
-            """
-            max_frac = 0.01  # Limit transmission migration to prevent overflow
-            for row in range(self.network.shape[0]):
-                total_outflow = self.network[row].sum()
-                if total_outflow > max_frac:
-                    self.network[row] *= max_frac / total_outflow  # Normalize outgoing
-
-            # Also cap incoming infection migration to maintain balance
-            network_incoming = self.network.T
-            for col in range(network_incoming.shape[0]):
-                total_inflow = network_incoming[col].sum()
-                if total_inflow > max_frac:
-                    network_incoming[col] *= max_frac / total_inflow
-
-        def step(self):
+       def step(self):
             """
             Simulates disease transmission and infection migration across the network.
 
