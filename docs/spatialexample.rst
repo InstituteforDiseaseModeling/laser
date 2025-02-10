@@ -574,3 +574,131 @@ Discussion
 ^^^^^^^^^^
 
 We load the population data from the csv file, round and scale down (optional), and assign node ids. The shuffling is probably optional, but helps avoid biasing. We exploit the distance function from laser_utils (import not in code snippet).
+
+.. _alternative_migration:
+
+Alternative Migration Approach
+-------------------------------
+
+This section describes an alternative approach to modeling migration by using infection migration rather than individual movement. This method allows for computational efficiency while maintaining accurate disease transmission dynamics. Note we don't use any MigrationComponent or migration_timer in this solution.
+
+.. code-block:: python
+
+    import numpy as np
+    from laser_core.migration import gravity
+    from laser_core.utils import calc_distances
+
+    class TransmissionComponent:
+        """
+        Transmission Component
+        =======================
+
+        This class models the transmission of disease using "infection migration"
+        instead of human movement. Instead of tracking individual movement,
+        infection is spread probabilistically based on a gravity-inspired network.
+
+        This approach can significantly improve computational efficiency for
+        large-scale spatial epidemic simulations.
+
+        Attributes:
+        ------------
+        model : object
+            The simulation model containing population and node information.
+        network : ndarray
+            A matrix representing the transmission probabilities between nodes.
+        locations : ndarray
+            Array of node latitude and longitude coordinates.
+        """
+        def __init__(self, model):
+            """
+            Initializes the transmission component by computing the infection migration network.
+
+            Parameters:
+            -----------
+            model : object
+                The simulation model containing population and node information.
+            """
+            self.model = model
+            model.nodes.add_vector_property("network", length=model.nodes.count, dtype=np.float32)
+            self.network = model.nodes.network
+
+            # Extract node locations and populations from model.population_data
+            self.locations = np.column_stack((model.population_data["centroid_lat"], model.population_data["centroid_long"]))
+            initial_populations = np.array(model.population_data["population"])
+
+            # Initialize heterogeneous transmission factor per agent (0.5 to 2.0)
+            self.model.population.tx_hetero_factor = np.random.uniform(0.5, 2.0, size=model.population.capacity)
+
+            # Compute the infection migration network based on node populations.
+            a, b, c, k = self.model.params.a, self.model.params.b, self.model.params.c, self.model.params.k
+
+            # Compute all pairwise distances in one call (this speeds up initialization significantly)
+            distances = calc_distances(self.locations[:, 0], self.locations[:, 1])
+            self.network = gravity(initial_populations, distances, k, a, b, c)
+            self.network /= np.power(initial_populations.sum(), c)  # Normalize
+            self.cap_network_flow()
+
+        def cap_network_flow(self):
+            """
+            Caps the total fraction of population that can migrate infection in a given timestep.
+            This prevents unrealistically high transmission rates in a single step.
+            """
+            max_frac = 0.01  # Limit transmission migration to prevent overflow
+            for row in range(self.network.shape[0]):
+                total_outflow = self.network[row].sum()
+                if total_outflow > max_frac:
+                    self.network[row] *= max_frac / total_outflow  # Normalize outgoing
+
+            # Also cap incoming infection migration to maintain balance
+            network_incoming = self.network.T
+            for col in range(network_incoming.shape[0]):
+                total_inflow = network_incoming[col].sum()
+                if total_inflow > max_frac:
+                    network_incoming[col] *= max_frac / total_inflow
+
+        def step(self):
+            """
+            Simulates disease transmission and infection migration across the network.
+
+            New infections are determined deterministically based on contagion levels and susceptible fraction.
+            """
+            contagious_indices = np.where(self.model.population.disease_state == 1)[0]
+            values = self.model.population.tx_hetero_factor[contagious_indices]  # Apply heterogeneity factor
+
+            # Compute contagion levels per node
+            contagion = np.bincount(
+                self.model.population.node_id[contagious_indices],
+                weights=values,
+                minlength=self.model.nodes.count
+            ).astype(np.float64)
+
+            # Apply network-based infection movement
+            transfer = (contagion * self.network).round().astype(np.float64)
+
+            # Ensure net contagion remains positive after movement
+            contagion += transfer.sum(axis=1) - transfer.sum(axis=0)
+            contagion = np.maximum(contagion, 0)  # Prevent negative contagion
+
+            # Infect susceptible individuals in each node deterministically
+            for i in range(self.model.nodes.count):
+                node_population = np.where(self.model.population.node_id == i)[0]
+                susceptible = node_population[self.model.population.disease_state[node_population] == 0]
+
+                if len(susceptible) > 0:
+                    # Compute new infections deterministically based on prevalence and susceptible fraction
+                    num_new_infections = int(min(len(susceptible), (
+                        self.model.params.transmission_rate * contagion[i] * len(susceptible) / len(node_population)
+                    )))
+
+                    # Randomly select susceptible individuals for infection
+                    new_infected_indices = np.random.choice(susceptible, size=num_new_infections, replace=False)
+                    self.model.population.disease_state[new_infected_indices] = 1
+
+                    # Assign recovery timers to newly infected individuals
+                    self.model.population.recovery_timer[new_infected_indices] = np.random.randint(5, 15, size=num_new_infections)
+
+            # TODO: Potential Performance Improvement: Consider using a sparse representation for `network`
+            # if many connections have very low probability. This would speed up matrix multiplications significantly.
+
+            # TODO: Investigate parallelization of contagion computation for large-scale simulations
+            # using Numba or JIT compilation to optimize the loop structure.
