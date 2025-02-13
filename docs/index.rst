@@ -16,6 +16,7 @@ Contents
    example
    vdexample
    spatialexample
+   performance
    contributing
    authors
    changelog
