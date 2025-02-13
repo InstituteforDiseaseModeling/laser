@@ -2,7 +2,7 @@
 LASER Performance Optimization
 ===============================
 
-It's fairly easy to generate working LASER model code that uses NumPy and performs well for populations of 100,000 agents. We expect LASER code to perform efficiently for up to **200,000,000 agents**. The challenge is how to get there.
+It's fairly easy to generate working LASER model code that uses NumPy and performs well for populations of 100,000 agents. We expect LASER code to perform efficiently for **200,000,000 agents** (or more). The challenge is how to get there.
 
 Identifying Performance Bottlenecks
 -----------------------------------
@@ -26,7 +26,7 @@ The first step is to **add simple timing code** that tracks the total time spent
                 elapsed_time = end_time - start_time
                 component_name = component.__class__.__name__
 
-This often reveals **the top 1 to 3 performance bottlenecks**. Focus first on the biggest offender—it provides the most opportunity for speedup. Often, the largest bottleneck is **not** what you might instinctively expect. Avoid optimizing a component only to find out it contributes just **5% of the total runtime**. Also, make sure that your reporting code is being measured and reported, ideally in its own 'bucket'. This may be easier or harder depending on how you are doing reporting. Since reporting usually involves counting over the entire population, it usually shows up as a hotspot sooner or later. Fortunately, it's usually fairly easy to speed up. Or even eliminate.
+This often reveals **the top 1 to 3 performance bottlenecks**. Focus first on the biggest offender—it provides the most opportunity for speedup. Often, the largest bottleneck is **not** what you might instinctively expect. Avoid optimizing a component only to find out it contributes just **a small percentage of the total runtime**. A modest improvement in the runtime of an "expensive" component is often more effective than spending a lot of time on highly optimizing a component which only accounts for a small fraction of runtime. Also, make sure that your reporting code is being measured and reported, ideally in its own 'bucket'. This may be easier or harder depending on how you are doing reporting. Since reporting usually involves counting over the entire population, it usually shows up as a hotspot sooner or later. Fortunately, it's usually fairly easy to speed up. Or even eliminate.
 
 Leveraging AI for Code Optimization
 -----------------------------------
@@ -35,7 +35,7 @@ Once you've identified the **slowest component**, the easiest way to improve per
 
 .. code-block:: text
 
-   "This code is way too slow. How can we speed it up? The arrays are all about 1e6 or 1e7 in size."
+   "This code is much too slow. (My arrays are all about 1e6 or 1e7 in size.)"
 
 If your code consists mainly of **for-loops** without much **NumPy**, you can add:
 
@@ -61,7 +61,8 @@ After achieving good performance with **NumPy**, consider trying **Numba** for f
 
 Even if you're new to Numba, **ChatGPT** can generate optimized solutions easily. Keep in mind:
 
-- **Numba moves back to for-loops** (unlike NumPy, which prefers vectorization).
+- **Numba moves back to explicit for-loops** (unlike NumPy, which uses vectorization syntax).
+
 - GPT's first solution may use ``range`` instead of ``prange``. Prompt it with:
 
   .. code-block:: text
@@ -82,7 +83,7 @@ Further Tricks
 
 - Don't duplicate: Sometimes reporting will duplicate transmission code and need to be combined.
 - Never append. There may be cases where you are collecting information as it happens without knowing ahead of time how many rows/entries/elements you'll need. This is easy in Python using list appending, for example, but that's a performance killer. Really try to find a way to figure out ahead of time how many entries there will be, and then allocate memory for that, and insert into the existing row.
-- Some components have long time-scales, like mortality. By default you are probably going to end up do most component steps every timestep. You can probably get away with doing mortality updates, for example, far less often. You can experiement with weekly, fortnightly or monthly updates, depending on the timescale of the component you're optimizing. Just be sure to move everything forward by a week if you're only doing the update every week. And expect "blocky" plots. Note that there are fancier solutions like 'strided sharding' (details omitted).
+- Some components have long time-scales, like mortality. By default you are probably going to end up doing most component steps every timestep. You can probably get away with doing mortality updates, for example, far less often. You can experiement with weekly, fortnightly or monthly updates, depending on the timescale of the component you're optimizing. Just be sure to move everything forward by a week if you're only doing the update every week. And expect "blocky" plots. Note that there are fancier solutions like 'strided sharding' (details omitted).
 
 When **prompting AI**, use **questions rather than directives**. Example:
 
@@ -105,7 +106,7 @@ If the best **Numba** solution still isn't fast enough, consider **compiled C**.
 
      "Can you generate an OpenMP solution with the best pragmas?"
 
-- The more CPU cores available, the **greater the potential speedup**. That said, it's usually a case of diminishing returns as one goes from 8 cores to 16 and to 32. Our research shows that often you're better off running 4 sims across 8 cores each than running 1 sim on all 32 cores available. Also be aware that with both Numba and OpenMP, you can constrain the number of cores used to less than the number available but setting the appropriate environment variable.
+- The more CPU cores available, the **greater the potential speedup**. That said, it's usually a case of diminishing returns as one goes from 8 cores to 16 and to 32. Our research shows that often you're better off running 4 sims across 8 cores each than running 1 sim on all 32 cores available. Also be aware that with both Numba and OpenMP you can constrain the number of cores used to less than the number available by setting the appropriate environment variable. (Numba environment variable = NUMBA_NUM_THREADS; OpenMP environment variable = OMP_NUM_THREADS)
 
 Advanced Hardware-Dependent Performance Improvements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
