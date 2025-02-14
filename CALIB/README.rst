@@ -1,7 +1,3 @@
----
-
-### **reStructuredText (`README.rst`)**
-```rst
 LASER Calibration with Optuna
 =============================
 
