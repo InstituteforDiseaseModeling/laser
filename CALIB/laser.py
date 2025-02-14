@@ -2,12 +2,46 @@ import csv
 import json
 from pathlib import Path
 
+import click
 import matplotlib.pyplot as plt
+import numba
 import numpy as np
 
 from laser_core.demographics.spatialpops import distribute_population_tapered as dpt
 from laser_core.laserframe import LaserFrame
 from laser_core.migration import gravity
+
+
+@numba.njit(parallel=True)
+def fast_reporting(node_id, disease_state, results, current_timestep, nodes):
+    """
+    Optimized reporting function using thread-local storage (TLS) for parallel accumulation.
+    """
+    num_threads = numba.get_num_threads()  # Get number of parallel threads
+
+    # Thread-local storage: One array per thread to avoid race conditions
+    local_s = np.zeros((num_threads, nodes), dtype=np.int32)
+    local_i = np.zeros((num_threads, nodes), dtype=np.int32)
+    local_r = np.zeros((num_threads, nodes), dtype=np.int32)
+
+    # Parallel accumulation
+    for i in numba.prange(len(node_id)):  # Loop through all agents in parallel
+        thread_id = numba.get_thread_id()  # Get the current thread ID
+        node = node_id[i]
+        state = disease_state[i]
+        if state == 0:
+            local_s[thread_id, node] += 1
+        elif state == 1:
+            local_i[thread_id, node] += 1
+        elif state == 2:
+            local_r[thread_id, node] += 1
+
+    # Merge thread-local storage into the final results
+    for t in range(num_threads):
+        for j in numba.prange(nodes):
+            results[current_timestep, j, 0] += local_s[t, j]
+            results[current_timestep, j, 1] += local_i[t, j]
+            results[current_timestep, j, 2] += local_r[t, j]
 
 
 # Define the model
@@ -70,13 +104,6 @@ class MultiNodeSIRModel:
         for component in self.components:
             component.step()
 
-        # Record results
-        for i in range(self.nodes):
-            in_node = self.population.node_id == i
-            self.results[self.current_timestep, i, 0] = (self.population.disease_state[in_node] == 0).sum()
-            self.results[self.current_timestep, i, 1] = (self.population.disease_state[in_node] == 1).sum()
-            self.results[self.current_timestep, i, 2] = (self.population.disease_state[in_node] == 2).sum()
-
     def run(self):
         """
         Runs the simulation for the configured number of timesteps.
@@ -94,7 +121,7 @@ class MultiNodeSIRModel:
         Args:
             filename (str): Path to the output file.
         """
-        with Path.open(filename, mode="w", newline="") as file:
+        with Path(filename).open(mode="w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["Timestep", "Node", "Susceptible", "Infected", "Recovered"])
             for t in range(self.params["timesteps"]):
@@ -106,7 +133,7 @@ class MultiNodeSIRModel:
         Plots the prevalence of infected agents over time for all nodes.
         """
         plt.figure(figsize=(10, 6))
-        for i in range(self.nodes):
+        for i in [0]:  # range(self.nodes):
             prevalence = self.results[:, i, 1] / self.results[:, i, :].sum(axis=1)
             plt.plot(prevalence, label=f"Node {i}")
         plt.title("Prevalence Across All Nodes")
@@ -249,12 +276,12 @@ class MigrationComponent2D:
 
         np.random.shuffle(migrating_indices)
 
-        origins = model.population.node_id[migrating_indices]
-        origin_counts = np.bincount(origins, minlength=model.params["nodes"])
+        origins = self.model.population.node_id[migrating_indices]
+        origin_counts = np.bincount(origins, minlength=self.model.params["nodes"])
 
         offset = 0
 
-        for origin in range(model.params["nodes"]):
+        for origin in range(self.model.params["nodes"]):
             count = origin_counts[origin]
             if count == 0:
                 continue
@@ -269,8 +296,8 @@ class MigrationComponent2D:
 
             fraction_row = row / row_sum
             destination_counts = np.random.multinomial(count, fraction_row)
-            destinations = np.repeat(np.arange(model.params["nodes"]), destination_counts)
-            model.population.node_id[origin_slice] = destinations[:count]
+            destinations = np.repeat(np.arange(self.model.params["nodes"]), destination_counts)
+            self.model.population.node_id[origin_slice] = destinations[:count]
 
         # Reset migration timers for migrated agents
         self.model.population.migration_timer[migrating_indices] = np.random.randint(
@@ -306,14 +333,24 @@ class TransmissionComponent:
         """
         Simulates disease transmission for each node in the current timestep.
         """
+        last_timestep = self.model.current_timestep  # Last recorded timestep
+        results = self.model.results  # Shortcut for clarity
+
+        fast_reporting(
+            self.model.population.node_id,
+            self.model.population.disease_state,
+            self.model.results,
+            self.model.current_timestep,
+            self.model.nodes,
+        )
+
         for i in range(self.model.nodes):
+            # Use precomputed values instead of recalculating
             in_node = self.model.population.node_id == i
             susceptible = in_node & (self.model.population.disease_state == 0)
-            infected = in_node & (self.model.population.disease_state == 1)
-
-            num_susceptible = susceptible.sum()
-            num_infected = infected.sum()
-            total_in_node = in_node.sum()
+            num_infected = results[last_timestep, i, 1]
+            num_susceptible = int(susceptible.sum())
+            total_in_node = num_susceptible + num_infected + results[last_timestep, i, 2]
 
             if total_in_node > 0 and num_infected > 0 and num_susceptible > 0:
                 infectious_fraction = num_infected / total_in_node
@@ -362,19 +399,36 @@ params = {
     "nodes": 20,
     "timesteps": 300,
     "initial_infected_fraction": 0.01,
-    "transmission_rate": 0.30354568979090724,
-    "migration_rate": 0.0002769784990315575
+    "transmission_rate": 0.15,
+    "migration_rate": 0.005
 }
-#"""
-with Path("params.json").open() as par:
-    params = json.load(par)
+"""
 
 
-# Run simulation
-model = MultiNodeSIRModel(params)
-model.add_component(MigrationComponent2D(model))
-model.add_component(TransmissionComponent(model))
-model.add_component(RecoveryComponent(model))
-model.run()
-model.save_results("simulation_results.csv")
-# model.plot_results()
+@click.command()
+@click.option("-p", "--params", default="params.json", help="Path to parameters JSON file")
+@click.option("-o", "--output", default="simulation_results.csv", help="Output filename for simulation results")
+@click.option("--plot", is_flag=True, help="Enable plotting of results")
+def main(params, output, plot):
+    # We expect some part of optuna to set the params.json as a prior step
+    with Path(params).open("r") as par:
+        params = json.load(par)
+
+    # Run simulation
+    model = MultiNodeSIRModel(params)
+    model.add_component(TransmissionComponent(model))
+    model.add_component(RecoveryComponent(model))
+    model.add_component(MigrationComponent2D(model))
+    model.run()
+
+    # Save raw results for optuna to analyze; this might actually be annoyingly slow across a full calibration. But it's simple
+    # One can either store hdf5 or do the post-proc 'analyzer' step first and just save that.
+    model.save_results(output)
+
+    # Don't want to plot
+    if plot:
+        model.plot_results()
+
+
+if __name__ == "__main__":
+    main()

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import find_peaks
 
-laser_script = Path("laser.py").resolve(strict=True)
+laser_script = Path("laser_faster.py").resolve(strict=True)
 
 
 def evaluate_3_weights(results_csv):
@@ -112,7 +112,7 @@ def objective(trial):
     params = {
         "population_size": 500_000,
         "nodes": 20,
-        "timesteps": 300,
+        "timesteps": 500,
         "initial_infected_fraction": 0.01,
         "transmission_rate": transmission_rate,
         "migration_rate": migration_rate,
@@ -124,14 +124,14 @@ def objective(trial):
 
     # Run laser.py as a subprocess
     try:
-        # Run the model 3 times and collect results
+        # Run the model 4 times and collect results
         scores = []
-        for _ in range(3):
+        for _ in range(4):
             subprocess.run([sys.executable, str(laser_script)], check=True)
             # subprocess.run(["python", "laser.py"], check=True)
 
             # Wait until RESULTS_FILE is written
-            while not Path.exists(RESULTS_FILE):
+            while not Path(RESULTS_FILE).exists():
                 time.sleep(0.1)
 
             score = evaluate_3_weights(RESULTS_FILE)  # Evaluate results
