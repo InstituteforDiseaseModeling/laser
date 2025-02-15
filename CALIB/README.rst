@@ -92,7 +92,7 @@ Next Steps
 - Increase the number of trials to improve calibration accuracy.
 - Experiment with different outbreak seeding strategies.
 
-Acknowledgments
----------------
+Summary
+-------
 
-This project demonstrates **Optuna-based epidemic model calibration** and is designed for researchers interested in disease modeling and parameter estimation.
+This project demonstrates **LASER and Optuna-based epidemic model calibration** and is designed for researchers interested in large scale spatial disease modeling and parameter estimation.
