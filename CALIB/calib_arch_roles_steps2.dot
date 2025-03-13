@@ -1,0 +1,69 @@
+digraph OptunaCalibrationWorkflow {
+    rankdir=TB;
+    node [shape=box, fontname="Arial"];
+
+    # Define roles (placed outside of steps)
+    modeler [label="Modeler (User)", style=filled, fillcolor=lightblue, shape=ellipse];
+    developer [label="Developer", style=filled, fillcolor=lightgreen, shape=ellipse];
+    it_admin [label="IT Admin", style=filled, fillcolor=lightgray, shape=ellipse];
+
+    # Step 1: Model Definition (Only Modeler)
+    subgraph cluster_step1 {
+        label="1️⃣ Model Definition (Python Only)";
+        style=dashed;
+
+        model_definition [label="Define Model Code (Python)", style=filled, fillcolor=lightblue];
+        model_file [label="model.py", shape=parallelogram, style=filled, fillcolor=white];
+
+        model_definition -> model_file [label="Writes"];
+    }
+    modeler -> model_definition [label="Defines Model"];
+
+    # Step 2: Local Calibration (Modeler + Developer)
+    subgraph cluster_step2 {
+        label="2️⃣ Local Calibration (Docker)";
+        style=dashed;
+
+        objective_function [label="Define Calibration Inputs/Outputs\n(objective.py)", style=filled, fillcolor=lightblue];
+        local_run [label="Run Local Calibration (`run.py`)", style=filled, fillcolor=lightblue];
+
+        local_workers [label="Local Worker Containers\n(laser.py + Optuna)", style=filled, fillcolor=lightgreen];
+        local_db [label="Local Database\n(SQLite/MySQL)", shape=cylinder, style=filled, fillcolor=lightgray];
+        local_storage [label="Local Persistent Storage\n(Mounted Volume)", shape=cylinder, style=filled, fillcolor=gold];
+
+        objective_function -> local_run [label="Uses"];
+        local_run -> local_workers [label="Spawns Workers"];
+        local_workers -> local_db [label="Store Results"];
+        local_db -> local_storage [label="File I/O", dir=both];
+    }
+    modeler -> objective_function [label="Defines Inputs/Outputs"];
+    modeler -> local_run [label="Runs Calibration Locally"];
+    developer -> local_workers [label="Supports Debugging & Docker"];
+
+    # Step 3: Remote Calibration (Modeler + Developer + IT Admin)
+    subgraph cluster_step3 {
+        label="3️⃣ Remote Calibration (K8s)";
+        style=dashed;
+
+        remote_run [label="Run Full Calibration (`run.py`)\n(No Extra Config)", style=filled, fillcolor=lightblue];
+        monitor_results [label="Monitor Progress & Plots", style=filled, fillcolor=lightblue];
+
+        cloud_controller [label="Controller (K8s Pod) + Optuna", style=filled, fillcolor=lightblue];
+        cloud_workers [label="Worker Pods (Auto-Scaling)", style=filled, fillcolor=lightgreen];
+        cloud_db [label="Cloud Database\n(PostgreSQL/MySQL)", shape=cylinder, style=filled, fillcolor=lightgray];
+        cloud_storage [label="Cloud Storage\n(Azure Blob / S3 / GCS)", shape=cylinder, style=filled, fillcolor=gold];
+
+        remote_run -> cloud_controller [label="Runs on Cluster"];
+        cloud_controller -> cloud_workers [label="Manages Workers"];
+        cloud_workers -> cloud_db [label="Store Results"];
+        cloud_db -> cloud_storage [label="Persistent Data", dir=both];
+
+        remote_run -> monitor_results [label="Check Progress"];
+    }
+    modeler -> remote_run [label="Runs Calibration on Cluster"];
+    modeler -> monitor_results [label="Monitors Progress"];
+
+    developer -> cloud_workers [label="Supports Debugging"];
+    it_admin -> cloud_controller [label="Configures K8s & Cloud"];
+    it_admin -> cloud_storage [label="Configures"];
+}

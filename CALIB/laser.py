@@ -423,6 +423,7 @@ def main(params, output, plot):
 
     # Save raw results for optuna to analyze; this might actually be annoyingly slow across a full calibration. But it's simple
     # One can either store hdf5 or do the post-proc 'analyzer' step first and just save that.
+    print(f"DEBUG Saving {output}")
     model.save_results(output)
 
     # Don't want to plot

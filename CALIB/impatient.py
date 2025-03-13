@@ -4,10 +4,12 @@ import sys
 from pathlib import Path
 
 import optuna
+from mysql_storage import get_storage_url
 
 # Define the storage URL
-storage_url = "sqlite:///optuna_study.db"
-study = optuna.create_study(direction="minimize", storage=storage_url, study_name="spatial_demo_calibration4", load_if_exists=True)
+# storage_url = "sqlite:///optuna_study.db"
+storage_url = get_storage_url()
+study = optuna.create_study(direction="minimize", storage=storage_url, study_name="spatial_demo_calibr8n", load_if_exists=True)
 
 # Get the best parameters found so far
 best_params = study.best_params

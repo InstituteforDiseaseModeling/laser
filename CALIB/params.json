@@ -3,6 +3,6 @@
     "nodes": 20,
     "timesteps": 500,
     "initial_infected_fraction": 0.01,
-    "transmission_rate": 0.12136021946167216,
-    "migration_rate": 0.006133821199258909
+    "transmission_rate": 0.18678284058706085,
+    "migration_rate": 0.005292946619501252
 }
