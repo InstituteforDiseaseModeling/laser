@@ -164,7 +164,7 @@ RESULTS_FILE = "simulation_results.csv"
 def objective(trial):
     """Optuna objective function that runs laser.py with trial parameters and evaluates results."""
 
-    Path.unlink(RESULTS_FILE)
+    Path(RESULTS_FILE).unlink(missing_ok=True)
 
     # Suggest values for calibration
     migration_rate = trial.suggest_float("migration_rate", 0.0001, 0.01)
@@ -200,14 +200,15 @@ def objective(trial):
         # Run the model 4 times and collect results
         scores = []
         for _ in range(4):
-            subprocess.run(get_docker_runstring(), check=True)
-            # subprocess.run(["python", "laser.py"], check=True)
+            # subprocess.run(get_docker_runstring(), check=True)
+            # subprocess.run(["python3", "laser.py"], check=True)
+            subprocess.run(get_native_runstring(), check=True)
 
             # Wait until RESULTS_FILE is written
             while not Path(RESULTS_FILE).exists():
                 time.sleep(0.1)
 
-            score = evaluate_3_weights_better(RESULTS_FILE)  # Evaluate results
+            score = evaluate_3_weights(RESULTS_FILE)  # Evaluate results
             scores.append(score)
 
         # Return the average score
