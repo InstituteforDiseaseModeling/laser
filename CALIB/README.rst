@@ -96,3 +96,27 @@ Summary
 -------
 
 This project demonstrates **LASER and Optuna-based epidemic model calibration** and is designed for researchers interested in large scale spatial disease modeling and parameter estimation.
+
+Dockerized
+----------
+
+Network Start
+^^^^^^^^^^^^^
+
+docker network create optuna-network
+
+DB Start
+^^^^^^^^
+
+docker run -d --name optuna-mysql --network optuna-network -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=optuna_db mysql:latest
+
+Optuna Workers
+^^^^^^^^^^^^^^
+
+docker build -t docker.io/library/calib-worker:latest
+docker run --rm --name calib-worker --network optuna-network -e STORAGE_URL="mysql+pymysql://root@optuna-mysql/mysql" docker.io/library/calib-worker:latest&
+
+View Results
+^^^^^^^^^^^^
+
+python3 impatient_mysqldocker.py

@@ -3,13 +3,12 @@ import sys
 from pathlib import Path
 
 import optuna
-from mysql_storage import get_storage_url
 from objective import objective
 
 # Run Optuna optimization
 study = optuna.create_study(direction="minimize")
-storage_url = get_storage_url()
-# storage_url = "sqlite:///optuna_study.db"  # SQLite file-based DB
+# storage_url = get_storage_url()
+storage_url = "sqlite:///optuna_study.db"  # SQLite file-based DB
 # You can use non-default samplers if you want; we'll go with the default
 # sampler = optuna.samplers.CmaEsSampler()
 # optuna.delete_study(study_name="spatial_demo_calibr8n", storage=storage_url)
