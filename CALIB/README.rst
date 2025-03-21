@@ -43,7 +43,7 @@ Before running the calibration, install the required dependencies:
 
 .. code-block:: bash
 
-    pip install optuna numpy matplotlib
+    pip install -r requirements.txt
 
 Running Calibration
 -------------------
