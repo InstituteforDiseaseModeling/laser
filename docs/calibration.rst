@@ -9,8 +9,8 @@ Prerequisites
 - Python environment with `laser-core`, `optuna`, `pandas`, and `numpy` installed.
 - (Optional) Docker Desktop installed if running distributed calibration.
 
-Steps
------
+Simple Local Calibration
+------------------------
 
 1. **Expose Parameters in Your Model**
    Ensure your LASER model can load and apply parameters you wish to calibrate. These are typically passed through a `params` dictionary or a `PropertySet` and might include:
@@ -72,6 +72,9 @@ Steps
 
    This is helpful for debugging. Consider running a scaled-down version of your model to save time.
 
+Local Dockerized Calibration
+----------------------------
+
 6. **Dockerize Your Model and Objective**
    Use the provided `Dockerfile` to build a container that includes both your model and objective function.
 
@@ -86,36 +89,20 @@ Steps
 
        docker network create optuna-network
 
-8. **Set Environment Variables**
-   Define these in your shell:
+8. **Launch MySQL Database Container**
 
    .. code-block:: shell
 
-       export MYSQL_USER=optuna
-       export MYSQL_PASSWORD=superSecretPassword
-       export MYSQL_DB=optunaDatabase
-       export MYSQL_ROOT_PASSWORD=root-password
-       export NUM_TRIALS=100
-       export STUDY_NAME=test_polio_calib
+       docker run -d --name optuna-mysql --network optuna-network -p 3306:3306 \
+         -e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+         -e MYSQL_DATABASE=optuna_db mysql:latest
 
-9. **Launch MySQL Database Container**
-
-   .. code-block:: shell
-
-       docker run --rm --network optuna-network \
-         --name optuna-mysql \
-         -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD \
-         -e MYSQL_DATABASE=$MYSQL_DB \
-         -e MYSQL_USER=$MYSQL_USER \
-         -e MYSQL_PASSWORD=$MYSQL_PASSWORD \
-         -d mysql:8
-
-10. **Launch Calibration Worker**
+9. **Launch Calibration Worker**
 
     .. code-block:: shell
 
         docker run --rm --network optuna-network \
-          -e STORAGE_URL="mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@optuna-mysql:3306/${MYSQL_DB}" \
+          -e STORAGE_URL="mysql+pymysql://root@optuna-mysql:3306/optuna_db" \
           calib-worker:latest
 
     **Troubleshooting:** If this fails, try running the worker interactively and debug inside:
@@ -124,28 +111,31 @@ Steps
 
         docker run -it --network optuna-network --entrypoint /bin/bash calib-worker:latest
 
-11. **Monitor Calibration Progress**
+10. **Monitor Calibration Progress**
 
     Use Optuna CLI:
 
     .. code-block:: shell
 
         optuna trials \
-          --study-name=$STUDY_NAME \
-          --storage "mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@localhost:3306/${MYSQL_DB}"
+          --study-name=test_polio_calib \
+          --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
 
         optuna best-trial \
-          --study-name=$STUDY_NAME \
-          --storage "mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@localhost:3306/${MYSQL_DB}"
+          --study-name=test_polio_calib \
+          --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
 
-12. **Push Docker Image to Registry (Optional)**
+Cloud Calibration
+------------------
+
+11. **Push Docker Image to Registry (Optional)**
 
     .. code-block:: shell
 
         docker tag calib-worker:latest your-registry/laser/laser-polio:latest
         docker push your-registry/laser/laser-polio:latest
 
-13. **Cloud Deployment (Optional)**
+12. **Cloud Deployment (Optional)**
 
     If running in the cloud (e.g., Azure):
 
@@ -155,21 +145,31 @@ Steps
 
           python3 run_create_study.py
 
-    - Forward port to local machine:
-
-      .. code-block:: shell
-
-          kubectl port-forward mysql-0 3306:3306 &
-
     - Launch multiple workers:
 
       .. code-block:: shell
 
           python3 run_workers.py
 
-14. **View Final Results**
+13. **View Final Results**
 
-    Same Optuna CLI commands as before. You can also export all trials for visualization or further analysis.
+    - Forward port to local machine:
+
+      .. code-block:: shell
+
+          kubectl port-forward mysql-0 3306:3306 &
+
+    - Use Optuna CLI to check results:
+
+      .. code-block:: shell
+
+          optuna trials \
+            --study-name=test_polio_calib \
+            --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+
+          optuna best-trial \
+            --study-name=test_polio_calib \
+            --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
 
 Expected Output
 ---------------
@@ -181,7 +181,7 @@ Error Handling
 --------------
 - Missing CSVs: Ensure output files are written by the model before scoring.
 - Model crashes: Check Docker logs (`docker logs <container>`) or run interactively.
-- Database connection errors: Confirm network and env vars. MySQL must be reachable from workers.
+- Database connection errors: Confirm Docker network and container health. Ensure MySQL is listening on the expected port.
 
 Next Steps
 ----------
