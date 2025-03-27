@@ -116,7 +116,7 @@ Local Dockerized Calibration
 
 10. **Monitor Calibration Progress**
 
-    Use Optuna CLI:
+    Use Optuna CLI. You should be able to pip install optuna.
 
     .. code-block:: shell
 
@@ -131,31 +131,32 @@ Local Dockerized Calibration
 Cloud Calibration
 ------------------
 
-11. **Push Docker Image to Registry (Optional)**
+11. **Push Docker Image to Registry**
 
     .. code-block:: shell
 
         docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
-12. **Cloud Deployment (Optional)**
+12. **Cloud Deployment**
 
-    If running in the cloud (e.g., Azure):
+    This step assumes you have secured access to an Azure Kubernetes Service cluster.
 
     - Create the study from Python:
 
       .. code-block:: shell
 
-          python3 run_create_study.py
+          cd calib
+          python3 create_study.py
 
     - Launch multiple workers:
 
       .. code-block:: shell
 
-          python3 run_workers.py
+          python3 run_calib_workers.py
 
 13. **View Final Results**
 
-    - Forward port to local machine:
+    - Forward port to local machine. Note that is the first to rely on installing `kubectl`:
 
       .. code-block:: shell
 
