@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: optuna-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: optuna_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    networks:
+      - optuna_network
+
+  worker:
+    build: .
+    depends_on:
+      - mysql
+    environment:
+      - STORAGE_URL=mysql+pymysql://user:password@optuna-mysql/optuna_db
+    networks:
+      - optuna_network
+
+networks:
+  optuna_network:

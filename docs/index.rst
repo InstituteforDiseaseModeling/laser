@@ -17,6 +17,7 @@ Contents
    vdexample
    spatialexample
    performance
+   calibration
    contributing
    authors
    changelog
