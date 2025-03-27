@@ -76,11 +76,11 @@ Local Dockerized Calibration
 ----------------------------
 
 6. **Dockerize Your Model and Objective**
-   Use the provided `Dockerfile` to build a container that includes both your model and objective function.
+   Use the provided `Dockerfile` to build a container that includes both your model and objective function. Do this from the main directory.
 
    .. code-block:: shell
 
-       docker build -t calib-worker .
+       docker build . -f calib/Dockerfile -t idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
 7. **Create Docker Network**
    You'll need a shared network so your workers and database container can communicate:
@@ -101,15 +101,18 @@ Local Dockerized Calibration
 
     .. code-block:: shell
 
-        docker run --rm --network optuna-network \
-          -e STORAGE_URL="mysql+pymysql://root@optuna-mysql:3306/optuna_db" \
-          calib-worker:latest
+        docker run --rm --name calib_worker --network optuna-network \
+          -e STORAGE_URL="mysql://root@optuna-mysql:3306/optuna_db" \
+          idm-docker-staging.packages.idmod.org/laser/laser-polio:latest \
+          --study-name test_polio_calib --num-trials 1
+
+    If that works, you can change the study name or number of trials.
 
     **Troubleshooting:** If this fails, try running the worker interactively and debug inside:
 
     .. code-block:: shell
 
-        docker run -it --network optuna-network --entrypoint /bin/bash calib-worker:latest
+        docker run -it --network optuna-network --entrypoint /bin/bash idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
 10. **Monitor Calibration Progress**
 
@@ -119,11 +122,11 @@ Local Dockerized Calibration
 
         optuna trials \
           --study-name=test_polio_calib \
-          --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+          --storage "mysql+pymysql://root:@localhost:3306/optuna_db"
 
         optuna best-trial \
           --study-name=test_polio_calib \
-          --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+          --storage "mysql+pymysql://root:@localhost:3306/optuna_db"
 
 Cloud Calibration
 ------------------
@@ -132,8 +135,7 @@ Cloud Calibration
 
     .. code-block:: shell
 
-        docker tag calib-worker:latest your-registry/laser/laser-polio:latest
-        docker push your-registry/laser/laser-polio:latest
+        docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
 12. **Cloud Deployment (Optional)**
 
