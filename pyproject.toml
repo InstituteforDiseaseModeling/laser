@@ -18,7 +18,6 @@ requires-python = ">=3.9,<3.13"
 keywords = ["spatial modeling", "disease eradication", "agent-based modeling"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -63,7 +62,7 @@ Documentation = "https://docs.idmod.org/projects/laser/en/latest/"
 Changelog = "https://docs.idmod.org/projects/laser/en/latest/changelog.html"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=76.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.ruff.per-file-ignores]
