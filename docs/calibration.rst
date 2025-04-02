@@ -67,11 +67,13 @@ Simple Local Calibration
    Use the `calib/worker.py` helper to run a local test study with a small number of trials.
 
    **Linux/macOS (Bash or similar):**
+
    .. code-block:: shell
 
        export STORAGE_URL=sqlite:///example.db && python3 calib/worker.py --num-trials=10
 
    **Windows (PowerShell):**
+
    .. code-block:: powershell
 
        $env:STORAGE_URL="sqlite:///example.db"; python calib/worker.py --num-trials=10
