@@ -64,11 +64,17 @@ Simple Local Calibration
    **Expected Result:** A numeric score. If it crashes, check CSV paths and data types.
 
 5. **Run Simple Calibration (SQLite, No Docker)**
-   Use the `run_optuna.py` helper to run a local test study with a small number of trials:
+   Use the `calib/worker.py` helper to run a local test study with a small number of trials.
 
+   **Linux/macOS (Bash or similar):**
    .. code-block:: shell
 
-       python run_optuna.py --study-name test --num-trials 5 --storage sqlite:///example.db
+       export STORAGE_URL=sqlite:///example.db && python3 calib/worker.py --num-trials=10
+
+   **Windows (PowerShell):**
+   .. code-block:: powershell
+
+       $env:STORAGE_URL="sqlite:///example.db"; python calib/worker.py --num-trials=10
 
    This is helpful for debugging. Consider running a scaled-down version of your model to save time.
 
