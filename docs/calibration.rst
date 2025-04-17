@@ -141,20 +141,28 @@ Cloud Calibration
 
 11. **Push Docker Image to Registry**
 
+    If you've built a new docker image, you'll want to push it so it's available to AKS.
+
     .. code-block:: shell
 
         docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
 12. **Cloud Deployment**
 
-    This step assumes you have secured access to an Azure Kubernetes Service cluster.
+    This step assumes you have secured access to an Azure Kubernetes Service (AKS) cluster. You may need to obtain or generate a new kube config file. Detailed instructions for that are not included here. This step assumes the cluster
+    corresponding to your config is up and accessible.
 
-    - Create the study from Python:
+    .. code-block:: shell
 
-      .. code-block:: shell
+       cd calib/cloud
 
-          cd calib
-          python3 create_study.py
+    - Edit config file. Edit `cloud_calib_config.py` to set the storage_url to:
+
+    .. code-block:: python
+
+        "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+
+    And set the study name and number of trials per your preference. Detailed documentation of the other parameters is not included here.
 
     - Launch multiple workers:
 
@@ -164,7 +172,7 @@ Cloud Calibration
 
 13. **View Final Results**
 
-    - Forward port to local machine. Note that is the first to rely on installing `kubectl`:
+    - Forward port to local machine. Note that is the first instruction to rely on installing `kubectl`. Open a bash shell if necessary.
 
       .. code-block:: shell
 
@@ -182,6 +190,19 @@ Cloud Calibration
             --study-name=test_polio_calib \
             --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
 
+    - Generate a report on disk about the study (can be run during study or at end).
+
+      .. code-block:: shell
+
+          python3 report_calib_aks.py
+
+    - Launch Optuna Dashboard
+
+      .. code-block:: shell
+
+          python -c "import optuna_dashboard; optuna_dashboard.run_server('mysql+pymysql://optuna:superSecretPassword@127.0.0.1:3306/optunaDatabase')"
+
+
 Expected Output
 ---------------
 - A best-fit parameter set (`R0`, etc.) that minimizes error.
@@ -193,6 +214,74 @@ Error Handling
 - Missing CSVs: Ensure output files are written by the model before scoring.
 - Model crashes: Check Docker logs (`docker logs <container>`) or run interactively.
 - Database connection errors: Confirm Docker network and container health. Ensure MySQL is listening on the expected port.
+
+Iterative Development Cycle
+---------------------------
+
+.. image:: media/workflow.png
+   :alt: LASER Calibration Development Workflow
+   :align: center
+   :width: 800px
+
+Workflow Steps
+~~~~~~~~~~~~~~
+
+1. **Test & Run Locally**
+
+    Test your model and calibration code locally before committing or containerizing.
+
+    .. code-block:: shell
+
+        python3 calibrate.py --study-name=test_local --num-trials=3
+
+2. **Push to GitHub**
+
+    Push your changes to GitHub and submit a pull request for review. Once approved, merge to the default branch (e.g. `main` or `develop`).
+
+3. **GHA Build & Publish Wheel**
+
+    GitHub Actions (GHA) will automatically build a Python wheel and publish it to your private PyPI/Artifactory.
+
+4. **Docker Build (using wheel)**
+
+    On your local machine, build a Docker image using the freshly published wheel.
+
+    .. code-block:: shell
+
+        docker build -t idm-docker-staging.packages.idmod.org/laser/laser-polio:latest .
+
+5. **Push Docker Image**
+
+    Push the built image to your container registry so it's accessible from AKS.
+
+    .. code-block:: shell
+
+        docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
+
+6. **Submit and Run Calibration Job**
+
+    a. **Submit Job to AKS**:
+
+    Launch your Kubernetes job to run calibration using the new image.
+
+    .. code-block:: shell
+
+        python3 run_calib_workers.py
+
+    b. **Run Calibration Job**:
+
+    The cluster pulls the image and executes the calibration job according to the job spec.
+
+7. **Pull Results from AKS**
+
+   See above.
+
+Notes
+~~~~~
+
+- If port 8080 is already in use when launching the dashboard, use `port=8081` or another free port.
+- Make sure your port-forwarding process is active whenever running Optuna CLI or dashboard from your local machine.
+- Each iteration through this workflow can test new parameters, updated logic, or bug fixes — without affecting production deployments.
 
 Next Steps
 ----------
