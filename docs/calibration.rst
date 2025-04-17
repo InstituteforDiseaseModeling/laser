@@ -172,7 +172,7 @@ Cloud Calibration
 
 13. **View Final Results**
 
-    - Forward port to local machine. Note that is the first to rely on installing `kubectl`:
+    - Forward port to local machine. Note that is the first instruction to rely on installing `kubectl`. Open a bash shell if necessary.
 
       .. code-block:: shell
 
