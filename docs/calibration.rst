@@ -141,20 +141,28 @@ Cloud Calibration
 
 11. **Push Docker Image to Registry**
 
+    If you've built a new docker image, you'll want to push it so it's available to AKS.
+
     .. code-block:: shell
 
         docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
 
 12. **Cloud Deployment**
 
-    This step assumes you have secured access to an Azure Kubernetes Service cluster.
+    This step assumes you have secured access to an Azure Kubernetes Service (AKS) cluster. You may need to obtain or generate a new kube config file. Detailed instructions for that are not included here. This step assumes the cluster
+    corresponding to your config is up and accessible.
 
-    - Create the study from Python:
+    .. code-block:: shell
 
-      .. code-block:: shell
+       cd calib/cloud
 
-          cd calib
-          python3 create_study.py
+    - Edit config file. Edit `cloud_calib_config.py` to set the storage_url to:
+
+    .. code-block:: python
+
+        "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+
+    And set the study name and number of trials per your preference. Detailed documentation of the other parameters is not included here.
 
     - Launch multiple workers:
 
@@ -181,6 +189,19 @@ Cloud Calibration
           optuna best-trial \
             --study-name=test_polio_calib \
             --storage "mysql+pymysql://optuna:superSecretPassword@localhost:3306/optunaDatabase"
+
+    - Generate a report on disk about the study (can be run during study or at end).
+
+      .. code-block:: shell
+
+          python3 report_calib_aks.py
+
+    - Launch Optuna Dashboard
+
+      .. code-block:: shell
+
+          python -c "import optuna_dashboard; optuna_dashboard.run_server('mysql+pymysql://optuna:superSecretPassword@127.0.0.1:3306/optunaDatabase')"
+
 
 Expected Output
 ---------------
