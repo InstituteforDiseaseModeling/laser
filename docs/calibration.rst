@@ -215,6 +215,74 @@ Error Handling
 - Model crashes: Check Docker logs (`docker logs <container>`) or run interactively.
 - Database connection errors: Confirm Docker network and container health. Ensure MySQL is listening on the expected port.
 
+Iterative Development Cycle
+---------------------------
+
+.. image:: media/workflow.png
+   :alt: LASER Calibration Development Workflow
+   :align: center
+   :width: 800px
+
+Workflow Steps
+~~~~~~~~~~~~~~
+
+1. **Test & Run Locally**
+
+    Test your model and calibration code locally before committing or containerizing.
+
+    .. code-block:: shell
+
+        python3 calibrate.py --study-name=test_local --num-trials=3
+
+2. **Push to GitHub**
+
+    Push your changes to GitHub and submit a pull request for review. Once approved, merge to the default branch (e.g. `main` or `develop`).
+
+3. **GHA Build & Publish Wheel**
+
+    GitHub Actions (GHA) will automatically build a Python wheel and publish it to your private PyPI/Artifactory.
+
+4. **Docker Build (using wheel)**
+
+    On your local machine, build a Docker image using the freshly published wheel.
+
+    .. code-block:: shell
+
+        docker build -t idm-docker-staging.packages.idmod.org/laser/laser-polio:latest .
+
+5. **Push Docker Image**
+
+    Push the built image to your container registry so it's accessible from AKS.
+
+    .. code-block:: shell
+
+        docker push idm-docker-staging.packages.idmod.org/laser/laser-polio:latest
+
+6. **Submit and Run Calibration Job**
+
+    a. **Submit Job to AKS**:
+
+    Launch your Kubernetes job to run calibration using the new image.
+
+    .. code-block:: shell
+
+        python3 run_calib_workers.py
+
+    b. **Run Calibration Job**:
+
+    The cluster pulls the image and executes the calibration job according to the job spec.
+
+7. **Pull Results from AKS**
+
+   See above.
+
+Notes
+~~~~~
+
+- If port 8080 is already in use when launching the dashboard, use `port=8081` or another free port.
+- Make sure your port-forwarding process is active whenever running Optuna CLI or dashboard from your local machine.
+- Each iteration through this workflow can test new parameters, updated logic, or bug fixes — without affecting production deployments.
+
 Next Steps
 ----------
 Once you've completed calibration:
