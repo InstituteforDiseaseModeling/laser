@@ -104,13 +104,30 @@ class TestMigrationFunctions(unittest.TestCase):
 
         network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
         max_rowsum = 0.1
-        test_network = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
-        network = row_normalizer(network, max_rowsum)
-        for i in range(network.shape[0]):  # check 10 random values
-            for j in range(network.shape[1]):
-                assert np.isclose(
-                    network[i, j], test_network[i, j]
-                ), f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
+        expected = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
+        normalized = row_normalizer(network, max_rowsum)
+        assert np.all(np.isclose(normalized, expected)), (
+            "mismatch(es): \n\t"
+            + "\n\t".join(str((idx, normalized[idx], expected[idx])) for idx in zip(*np.where(~np.isclose(normalized, expected)))),
+        )
+
+        return
+
+    def test_row_normalizer_with_integer_values(self):
+        """Test that the row normalizer returns useful values when the input network is a integer data type and the max rowsum is fractional."""
+
+        network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
+        network *= 1000
+        network = network.astype(np.int32)
+        max_rowsum = 0.1
+        expected = np.array(
+            [[0.0, 1 / 60, 2 / 60, 3 / 60], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [1 / 60, 2 / 60, 3 / 60, 0.0]]
+        )
+        normalized = row_normalizer(network, max_rowsum)
+        assert np.all(np.isclose(normalized, expected)), (
+            "mismatch(es): \n\t"
+            + "\n\t".join(str((idx, normalized[idx], expected[idx])) for idx in zip(*np.where(~np.isclose(normalized, expected)))),
+        )
 
         return
 
