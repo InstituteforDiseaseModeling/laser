@@ -79,18 +79,6 @@ def build_fused_apply_function(predicate_fn, action_fn):
     pred_params = list(inspect.signature(predicate_fn).parameters.keys())
     act_params = list(inspect.signature(action_fn).parameters.keys())
 
-    # pred_args = [p for p in pred_params if p != "i"]
-    # act_args = [p for p in act_params if p != "i"]
-
-    # arrays = []
-    # constants = []
-    # for p in sorted(set(pred_args + act_args)):
-    #     if p in ["position", "velocity", "state"]:  # crude check; improve later
-    #         arrays.append(p)
-    #     else:
-    #         constants.append(p)
-
-    # all_args = arrays + constants
     all_args = [p for p in pred_params if p != "i"] + [p for p in act_params if p not in pred_params]
 
     fused_ast = build_fused_apply_fn_ast(predicate_fn, action_fn, all_args)
@@ -105,16 +93,6 @@ def build_fused_apply_function(predicate_fn, action_fn):
 def apply(predicate_fn, action_fn, count, **kwargs):
     apply_fn, all_arg_names = build_fused_apply_function(predicate_fn, action_fn)
 
-    # # Check that all required arguments are provided
-    # missing = [name for name in all_arg_names if name not in kwargs]
-    # if missing:
-    #     raise ValueError(f"Missing required arguments for apply_fn: {missing}")
-
-    # # Extract arguments in correct order
-    # ordered_args = [kwargs[name] for name in all_arg_names]
-
-    # Call the compiled function
-    # apply_fn(count, *ordered_args)
     apply_fn(count, *[kwargs[name] for name in all_arg_names])
 
 
@@ -122,16 +100,6 @@ def numbafy(predicate_fn, action_fn):
     apply_fn, all_arg_names = build_fused_apply_function(predicate_fn, action_fn)
 
     def numbafied(count, **kwargs):
-        # Check that all required arguments are provided
-        # missing = [name for name in all_arg_names if name not in kwargs]
-        # if missing:
-        #     raise ValueError(f"Missing required arguments: {missing}")
-
-        # # Extract arguments in correct order
-        # ordered_args = [kwargs[name] for name in all_arg_names]
-
-        # Call the compiled function
-        # apply_fn(count, *ordered_args)
         apply_fn(count, *[kwargs[name] for name in all_arg_names])
 
     return numbafied
