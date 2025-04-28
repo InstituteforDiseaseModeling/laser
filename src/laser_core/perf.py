@@ -45,7 +45,16 @@ def build_fused_apply_fn_ast(predicate_fn, action_fn, arrays_and_consts):
         name="apply_fn",
         args=ast.arguments(posonlyargs=[], args=args, vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]),
         body=[loop],
-        decorator_list=[ast.Name(id="njit", ctx=ast.Load())],
+        # decorator_list=[ast.Name(id="njit", ctx=ast.Load())],
+        decorator_list=[
+            ast.Call(
+                func=ast.Name(id='njit', ctx=ast.Load()),
+                args=[],
+                keywords=[
+                    ast.keyword(arg='parallel', value=ast.Constant(value=True))
+                ]
+            )
+        ],
         returns=None,
     )
 
