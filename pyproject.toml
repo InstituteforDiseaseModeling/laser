@@ -53,6 +53,7 @@ test = [
     "pytest>=6.0",
     "pytest-cov",
     "scipy",
+    "uv",
 ]
 
 [project.urls]
