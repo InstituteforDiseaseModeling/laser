@@ -737,5 +737,42 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
         return
 
 
+class TestsForOverflow(unittest.TestCase):
+    pops = np.array([99510, 595855, 263884], dtype=np.int32)
+    dist = np.array([[0, 4, 66], [4, 0, 827], [66, 827, 0]], dtype=np.int32)
+    k = 3000
+    a = 1
+    b = 1
+    c = 2.0
+
+    def test_gravity(self):
+        g = gravity(self.pops, self.dist, self.k, self.a, self.b, self.c)
+        assert np.all(g >= 0), "Gravity calculation should not overflow and/or return negative values."
+
+        return
+
+    def test_competing_destinations(self):
+        cd = competing_destinations(self.pops, self.dist, self.k, self.a, self.b, self.c, delta=1.1)
+        assert np.all(cd >= 0), "Competing destinations calculation should not overflow and/or return negative values."
+
+        return
+
+    def test_stouffer(self):
+        s = stouffer(self.pops, self.dist, self.k, self.a, self.b, include_home=False)
+        assert np.all(s >= 0), "Stouffer migration calculation (include_home=False) should not overflow and/or return negative values."
+        s = stouffer(self.pops, self.dist, self.k, self.a, self.b, include_home=True)
+        assert np.all(s >= 0), "Stouffer migration calculation (include_home=True) should not overflow and/or return negative values."
+
+        return
+
+    def test_radiation(self):
+        r = radiation(self.pops, self.dist, self.k, include_home=False)
+        assert np.all(r >= 0), "Radiation migration calculation (include_home=False) should not overflow and/or return negative values."
+        r = radiation(self.pops, self.dist, self.k, include_home=True)
+        assert np.all(r >= 0), "Radiation migration calculation (include_home=True) should not overflow and/or return negative values."
+
+        return
+
+
 if __name__ == "__main__":
     unittest.main()
