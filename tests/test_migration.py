@@ -114,7 +114,7 @@ class TestMigrationFunctions(unittest.TestCase):
         return
 
     def test_row_normalizer_with_integer_values(self):
-        """Test that the row normalizer returns useful values when the input network is a integer data type and the max rowsum is fractional."""
+        """Test that the row normalizer returns useful values when the input network is an integer data type and the max rowsum is fractional."""
 
         network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
         network *= 1000

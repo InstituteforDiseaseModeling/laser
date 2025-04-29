@@ -143,7 +143,7 @@ def row_normalizer(network, max_rowsum):
     _is_instance(max_rowsum, Number, f"max_rowsum must be a numeric value ({type(max_rowsum)=})")
     _has_values(0 <= max_rowsum <= 1, "max_rowsum must be in [0, 1]")
 
-    # Promote to network to floating point
+    # Promote network to floating point
     # If the incoming network is an integer type and max_rowsum is < 1.0, the result is all zeros.
     network = network.copy().astype(np.float32)
 
