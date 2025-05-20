@@ -23,9 +23,10 @@ Attributes:
     capacity (int): The maximum capacity of the frame.
 """
 
-import numpy as np
 import h5py
-#from laser_core import PropertySet
+import numpy as np
+
+# from laser_core import PropertySet
 
 
 class LaserFrame:
@@ -273,7 +274,8 @@ class LaserFrame:
             results_r: Optional 2D numpy array of recovered counts
             pars: Optional PropertySet or dict of parameters
         """
-        from laser_core.propertyset import PropertySet # to avoid circular import
+        from laser_core.propertyset import PropertySet  # to avoid circular import
+
         with h5py.File(path, "w") as f:
             self._save(f, "people")
 
@@ -335,19 +337,17 @@ class LaserFrame:
 
             if "pars" in f:
                 pars_group = f["pars"]
-                #pars = {key: pars_group[key][()] for key in pars_group}
+                # pars = {key: pars_group[key][()] for key in pars_group}
                 pars = {
                     key: (pars_group[key][()].decode() if isinstance(pars_group[key][()], bytes) else pars_group[key][()])
                     for key in pars_group
                 }
-                pars.update({
-                    key: (val.decode() if isinstance(val, bytes) else val)
-                    for key, val in pars_group.attrs.items()
-                })
+                pars.update({key: (val.decode() if isinstance(val, bytes) else val) for key, val in pars_group.attrs.items()})
             else:
                 pars = None
 
         return frame, results_r, pars
+
 
 # Sanity checks
 

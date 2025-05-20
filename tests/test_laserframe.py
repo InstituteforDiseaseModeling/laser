@@ -37,12 +37,11 @@ Usage:
 """
 
 import re
-import unittest
 import tempfile
-import os
+import unittest
+from pathlib import Path
 
 import numpy as np
-import h5py
 import pytest
 
 from laser_core import LaserFrame
@@ -247,7 +246,8 @@ class TestLaserFrame(unittest.TestCase):
             _ = LaserFrame(capacity=capacity, initial_count=initial_count)
 
     def test_save_and_load_snapshot(self):
-        path = tempfile.mktemp(suffix=".h5")
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp:
+            path = tmp.name
 
         try:
             # Create frame
@@ -280,16 +280,18 @@ class TestLaserFrame(unittest.TestCase):
             loaded, r_loaded, pars_loaded = frame.load_snapshot(path)
 
             assert loaded.count == frame.count
-            assert np.array_equal(loaded.age[:loaded.count], frame.age[:frame.count])
-            assert np.array_equal(loaded.status[:loaded.count], frame.status[:frame.count])
+            assert np.array_equal(loaded.age[: loaded.count], frame.age[: frame.count])
+            assert np.array_equal(loaded.status[: loaded.count], frame.status[: frame.count])
             assert np.array_equal(r_loaded, results_r)
             assert pars_loaded["r0"] == 2.5
-            print( f"pars_loaded={pars_loaded}" )
+            print(f"pars_loaded={pars_loaded}")
             assert pars_loaded["intervention"] == "vaccine"
 
             print("✅ test_save_and_load_snapshot passed.")
 
         finally:
-            os.remove(path)
+            Path(path).unlink()
+
+
 if __name__ == "__main__":
     unittest.main()
