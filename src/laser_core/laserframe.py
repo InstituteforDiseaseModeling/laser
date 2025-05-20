@@ -313,10 +313,10 @@ class LaserFrame:
     @classmethod
     def load_snapshot(cls, path):
         """
-        Load a LaserFrameIO and optional extras from an HDF5 snapshot file.
+        Load a LaserFrame and optional extras from an HDF5 snapshot file.
 
         Returns:
-            frame (LaserFrameIO)
+            frame (LaserFrame)
             results_r (np.ndarray or None)
             pars (dict or None)
         """
