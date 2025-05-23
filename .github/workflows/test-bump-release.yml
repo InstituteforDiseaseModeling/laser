@@ -1,5 +1,5 @@
-# .github/workflows/build-test-publish.yml
-name: Build, Test, and Publish
+# .github/workflows/test-bump-release.yml
+name: Test, Bump, Build, and Release (Publish)
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
         run: echo "Requesting approval for version bump"
 
   test:
-    name: Test on ${{ matrix.os }} / py${{ matrix.python-version }} / ${{ matrix.architecture }}\
+    name: Test on ${{ matrix.os }} / py${{ matrix.python-version }} / ${{ matrix.architecture }}
     needs: approve
     runs-on: ${{ matrix.os }}
     strategy:
@@ -99,7 +99,7 @@ jobs:
       - name: Install bump-my-version
         run: python -m pip install bump-my-version
 
-      - name: Bump patch version
+      - name: Bump version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
