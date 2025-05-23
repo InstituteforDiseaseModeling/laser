@@ -287,7 +287,7 @@ class TestLaserFrame(unittest.TestCase):
             print(f"pars_loaded={pars_loaded}")
             assert pars_loaded["intervention"] == "vaccine"
 
-            print("✓ test_save_and_load_snapshot passed.")
+            print("test_save_and_load_snapshot passed.")
 
         finally:
             Path(path).unlink()
