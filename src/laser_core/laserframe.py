@@ -298,7 +298,10 @@ class LaserFrame:
             if not key.startswith("_"):
                 value = getattr(self, key)
                 if isinstance(value, np.ndarray):
-                    group.create_dataset(key, data=value[: self._count])
+                    data = value[: self._count]
+                    group.create_dataset(key, data=data)
+
+
 
     def _save_dict(self, data, group):
         """
@@ -325,12 +328,11 @@ class LaserFrame:
             count = int(group.attrs["count"])
             capacity = int(group.attrs["capacity"])
 
-            frame = cls(capacity=capacity, initial_count=count)
+            frame = cls(capacity=count, initial_count=count)
             for key in group:
                 data = group[key][:]
                 dtype = data.dtype
                 frame.add_scalar_property(name=key, dtype=dtype, default=0)
-                setattr(frame, key, np.zeros(capacity, dtype=dtype))
                 getattr(frame, key)[:count] = data
 
             results_r = f["recovered"][()] if "recovered" in f else None
