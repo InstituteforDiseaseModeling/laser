@@ -1,0 +1,118 @@
+.. LASER documentation master file
+
+Welcome to LASER's documentation!
+==================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Introduction
+
+   introduction/what_is_laser
+   introduction/overview
+   introduction/documentation_and_development
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started
+
+   getting_started/installation
+   getting_started/usage
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architecture & Design
+
+   architecture/summary
+   architecture/principles
+   architecture/layout
+   architecture/application_layer
+   architecture/model_object
+   architecture/components
+   architecture/input_output
+   architecture/demographics
+   architecture/user_customizability
+   architecture/workflow
+   architecture/glossary
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Core Modules
+
+   core_modules/laser_core
+   core_modules/demographics/kmestimator
+   core_modules/demographics/pyramid
+   core_modules/demographics/spatialpops
+   core_modules/migration
+   core_modules/laserframe
+   core_modules/propertyset
+   core_modules/random
+   core_modules/sortedqueue
+   core_modules/utils
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Migration Models
+
+   migration/gravity
+   migration/capping
+   migration/competing_destinations
+   migration/stouffer
+   migration/radiation
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Demographic Modeling Examples
+
+   examples/population_pyramids
+   examples/kaplan_meier
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Epidemic Model Examples
+
+   examples/sir_single_node
+   examples/vital_dynamics
+   examples/spatial_sir_synthetic/1d
+   examples/spatial_sir_synthetic/2d
+   examples/spatial_sir_real/overview
+   examples/spatial_sir_real/infection_migration
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Calibration Workflow
+
+   calibration/local
+   calibration/docker
+   calibration/cloud
+   calibration/output
+   calibration/errors
+   calibration/workflow
+   calibration/next_steps
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Performance Optimization
+
+   optimization/bottlenecks
+   optimization/ai_vectorization
+   optimization/numpy_numba
+   optimization/compiled_c
+   optimization/simd
+   optimization/gpu
+   optimization/reporting
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Project Info
+
+   contributing/index
+   authors
+   changelog
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Indices & Tables
+
+   genindex
+   modindex
+   search
