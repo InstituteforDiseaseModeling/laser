@@ -102,6 +102,8 @@ jobs:
       - name: Bump version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
         run: |
           bump-my-version bump ${{ github.event.inputs.version_type }} --tag --commit
           git push origin HEAD
