@@ -96,6 +96,7 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.BOT_PAT }}@github.com/${{ github.repository }}.git
 
       - name: Install bump-my-version
         run: python -m pip install bump-my-version
