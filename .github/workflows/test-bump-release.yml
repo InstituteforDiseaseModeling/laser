@@ -105,7 +105,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          bump-my-version bump ${{ github.event.inputs.version_type }} --tag --commit
+          bump-my-version bump ${{ github.event.inputs.version_type }} --tag
           git push origin HEAD
           git push origin --tags
 
