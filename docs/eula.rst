@@ -2,17 +2,17 @@ Population Initialization, Squashing, and Snapshot Management in LASER
 =======================================================================
 
 
-As the number agents in your LASER population model grows (e.g., 1e8), it can become computationally 
-expensive and unnecessary to repeatedly run the same (sophisticated) initialization routine every sim. 
-In many cases -— particularly during model calibration -— it is far more efficient to initialize the 
+As the number agents in your LASER population model grows (e.g., 1e8), it can become computationally
+expensive and unnecessary to repeatedly run the same (sophisticated) initialization routine every sim.
+In many cases -— particularly during model calibration -— it is far more efficient to initialize the
 population once, save it, and then reload the initialized state for subsequent runs.
 
 
-This approach is especially useful when working with EULAs -- **E**pidemiologically **U**ninteresting 
-**L**ight **A**gents. For example it can be a very powerful optimization to compress all the agents who 
-are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In 
-such models, the majority of the initial population may be in the "Recovered" state, potentially 
-comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them 
+This approach is especially useful when working with EULAs -- **E**pidemiologically **U**ninteresting
+**L**ight **A**gents. For example it can be a very powerful optimization to compress all the agents who
+are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In
+such models, the majority of the initial population may be in the "Recovered" state, potentially
+comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them
 can result in punitive memory usage.
 
 
@@ -39,9 +39,9 @@ population is saved. Upon reloading:
 Important Detail
 ----------------
 
-Before squashing, you should **count and record** the number of recovered (or otherwise squashed) agents. 
-This count should be stored in a summary variable —- typically the ``R`` column of the results data frame. 
-This ensures your model retains a complete epidemiological record even though the agents themselves are 
+Before squashing, you should **count and record** the number of recovered (or otherwise squashed) agents.
+This count should be stored in a summary variable —- typically the ``R`` column of the results data frame.
+This ensures your model retains a complete epidemiological record even though the agents themselves are
 no longer instantiated.
 
 Implementation Deatils: How to Add Squashing, Saving, Loading, and Correct R Tracking to a LASER SIR Model
@@ -50,19 +50,19 @@ Implementation Deatils: How to Add Squashing, Saving, Loading, and Correct R Tra
 1. Add Squashing
 ----------------
 
-- **Add a `squash_recovered()` function**  
+- **Add a `squash_recovered()` function**
   This should call `LaserFrame.squash(...)` with a boolean mask that excludes recovered agents (`disease_state == 2`). You may choose a different criterion, such as age-based squashing.
 
-- **Count your “squashed away” agents first**  
+- **Count your “squashed away” agents first**
   You must compute and store all statistics related to agents being squashed *before* the `squash()` call. After squashing, only the left-hand portion of the arrays (up to `.count`) remains valid.
 
-- **Seed infections after squashing**  
+- **Seed infections after squashing**
   If your model seeds new infections (`disease_state == 1`), this must happen *after* squashing. Otherwise, infected agents may be inadvertently removed.
 
-- **Store the squashed-away totals by node**  
+- **Store the squashed-away totals by node**
   Before squashing, compute and record node-wise totals (e.g., recovered counts) in `results.R[0, :]` so this pre-squash information persists.
 
-- **Optionally simulate EULA effects once and save**  
+- **Optionally simulate EULA effects once and save**
   If modeling aging or death among squashed agents, simulate this up front and store the full `[time, node]` matrix (e.g., `results.R[:, :]`). This avoids recomputation at runtime.
 
 2. Save Function
@@ -72,7 +72,7 @@ Implement a ``save(path)`` method:
 
 - Use ``LaserFrame.save_snapshot(path, results_r=..., pars=...)``
 - Include:
-  
+
   - The squashed population (active agents only)
   - The ``results.R`` matrix containing both pre-squash and live simulation values
   - The full parameter set in a ``PropertySet``
@@ -83,7 +83,7 @@ Implement a ``save(path)`` method:
 Implement a ``load(path)`` class method:
 
 - Call ``LaserFrame.load_snapshot(path)`` to retrieve:
-  
+
   - Population frame
   - Results matrix
   - Parameters
@@ -94,12 +94,12 @@ Implement a ``load(path)`` class method:
 4. Preserve EULA’d Results
 --------------------------
 
-- **Use ``+=`` to track new recoveries alongside pre-squash R values**  
+- **Use ``+=`` to track new recoveries alongside pre-squash R values**
   In ``run()``, use additive updates so that pre-saved recovered agents are preserved:
 
   .. code-block:: python
 
-      self.results.R[t, nid] += ((self.population.node_id == nid) & 
+      self.results.R[t, nid] += ((self.population.node_id == nid) &
                                  (self.population.disease_state == 2)).sum()
 
 This ensures your output accounts for both squashed-away immunity and recoveries during the live simulation.

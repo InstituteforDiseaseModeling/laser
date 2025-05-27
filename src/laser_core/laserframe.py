@@ -26,8 +26,6 @@ Attributes:
 import h5py
 import numpy as np
 
-# from laser_core import PropertySet
-
 
 class LaserFrame:
     """
@@ -282,7 +280,7 @@ class LaserFrame:
             if results_r is not None:
                 f.create_dataset("recovered", data=results_r)
 
-            if pars is not None:
+            if pars is not None and isinstance(pars, (dict, PropertySet)):
                 data = pars.to_dict() if isinstance(pars, PropertySet) else pars
                 self._save_dict(data, f.create_group("pars"))
 
@@ -301,8 +299,6 @@ class LaserFrame:
                     data = value[: self._count]
                     group.create_dataset(key, data=data)
 
-
-
     def _save_dict(self, data, group):
         """
         Internal method to save a dict as datasets and attributes in a group.
@@ -314,7 +310,7 @@ class LaserFrame:
                 group.attrs[key] = str(value)
 
     @classmethod
-    def load_snapshot(cls, path):
+    def load_snapshot(cls, path, capacity_frac=None):
         """
         Load a LaserFrame and optional extras from an HDF5 snapshot file.
 
@@ -322,13 +318,18 @@ class LaserFrame:
             frame (LaserFrame)
             results_r (np.ndarray or None)
             pars (dict or None)
+            capacity_fracin (int or None)
         """
         with h5py.File(path, "r") as f:
             group = f["people"]
             count = int(group.attrs["count"])
-            capacity = int(group.attrs["capacity"])
+            # Don't reload the saved capacity from int(group.attrs["capacity"])
+            if capacity_frac:
+                capacity = int(capacity_frac * count)
+            else:
+                capacity = count
 
-            frame = cls(capacity=count, initial_count=count)
+            frame = cls(capacity=capacity, initial_count=count)
             for key in group:
                 data = group[key][:]
                 dtype = data.dtype
