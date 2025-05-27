@@ -8,8 +8,8 @@ In many cases -— particularly during model calibration -— it is far more eff
 population once, save it, and then reload the initialized state for subsequent runs.
 
 
-This approach is especially useful when working with EULAs -- *E*pidemiologically *U*ninteresting 
-*L*ight *A*gents. For example it can be a very powerful optimization to compress all the agents who 
+This approach is especially useful when working with EULAs -- **E**pidemiologically **U**ninteresting 
+**L**ight **A**gents. For example it can be a very powerful optimization to compress all the agents who 
 are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In 
 such models, the majority of the initial population may be in the "Recovered" state, potentially 
 comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them 
