@@ -42,12 +42,10 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: dist/*.whl
 
-  publish:
-    name: Publish to PyPI and GitHub Release
+  release:
+    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -78,18 +76,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: restricted
+      url: https://pypi.org/p/laser-core
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all built wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Flatten dist directory
+        run: |
+          mkdir final_dist
+          find dist -name '*.whl' -exec mv {} final_dist/ \;
+
+      - name: Extract version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version =' pyproject.toml | sed -E "s/.*= *[\"'](.*)[\"']/\1/")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }}
-          attestations: false
           skip_existing: false
           packages_dir: final_dist
           verbose: true
-          sub: repo:InstituteforDiseaseModeling/laser:ref:refs/heads/main
-          repository: InstituteforDiseaseModeling/laser
-          repository_owner: InstituteforDiseaseModeling
-          repository_owner_id: 8324647
-          workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
-          job_workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
-          ref: refs/heads/main
+          print-hash: true
+
+          # sub: repo:InstituteforDiseaseModeling/laser:ref:refs/heads/main
+          # repository: InstituteforDiseaseModeling/laser
+          # repository_owner: InstituteforDiseaseModeling
+          # repository_owner_id: 8324647
+          # workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
+          # job_workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
+          # ref: refs/heads/main
