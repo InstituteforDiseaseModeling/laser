@@ -110,8 +110,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: false
-          packages_dir: final_dist
+          skip-existing: false
+          packages-dir: final_dist
           verbose: true
           print-hash: true
 
