@@ -103,10 +103,10 @@ jobs:
       - name: Bump version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          run: |
-            bump-my-version bump ${{ github.event.inputs.version_type }} --tag --commit
-            git push origin HEAD
-            git push origin --tags
+        run: |
+          bump-my-version bump ${{ github.event.inputs.version_type }} --tag --commit
+          git push origin HEAD
+          git push origin --tags
 
   build:
     name: Build on (${{ matrix.os }})
