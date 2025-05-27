@@ -84,3 +84,10 @@ jobs:
           skip_existing: false
           packages_dir: final_dist
           verbose: true
+          sub: repo:InstituteforDiseaseModeling/laser:ref:refs/heads/main
+          repository: InstituteforDiseaseModeling/laser
+          repository_owner: InstituteforDiseaseModeling
+          repository_owner_id: 8324647
+          workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
+          job_workflow_ref: InstituteforDiseaseModeling/laser/.github/workflows/release-publish.yml@refs/heads/main
+          ref: refs/heads/main
