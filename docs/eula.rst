@@ -2,26 +2,28 @@ Population Initialization, Squashing, and Snapshot Management in LASER
 =======================================================================
 
 
-As population models in LASER grow to very large sizes, it becomes computationally expensive
-to repeatedly run sophisticated initialization routines. In many cases—particularly during
-model calibration—it is far more efficient to initialize the population once, save it, and
-then reload the initialized state for subsequent runs.
+As the number agents in your LASER population model grows (e.g., 1e8), it can become computationally 
+expensive and unnecessary to repeatedly run the same (sophisticated) initialization routine every sim. 
+In many cases -— particularly during model calibration -— it is far more efficient to initialize the 
+population once, save it, and then reload the initialized state for subsequent runs.
 
 
-This approach is especially useful when working with *lightweight agents* that are
-epidemiologically uninteresting—for example, agents who are already recovered or immune
-in a measles or polio model. In such models, the majority of the initial population may be
-in the "Recovered" state, potentially comprising 90% or more of all agents. If you are
-simulating 100 million agents, storing all of them can result in excessive memory usage.
+This approach is especially useful when working with EULAs -- *E*pidemiologically *U*ninteresting 
+*L*ight *A*gents. For example it can be a very powerful optimization to compress all the agents who 
+are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In 
+such models, the majority of the initial population may be in the "Recovered" state, potentially 
+comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them 
+can result in punitive memory usage.
 
 
 To address this, LASER supports a **squashing** process. Squashing involves
 *defragmenting the data frame* such that all epidemiologically active or "interesting" agents
 (e.g., Susceptible or Infectious) are moved to the beginning of the array or table, and
-less relevant agents (e.g., Recovered) are moved to the end.
+less relevant agents (e.g., Recovered) are moved to the end. Though please note that you should
+never assume that the squashed agents are preserved.
 
 
-Following squashing:
+Some notes about squashing:
 
 - The population count is adjusted so that all `for` loops and step functions iterate
   **only over the active population**.
@@ -37,10 +39,10 @@ population is saved. Upon reloading:
 Important Detail
 ----------------
 
-Before squashing, LASER allows you to **count and record** the number of recovered
-(or otherwise squashed) agents. This count should be stored in a summary variable—
-typically the ``R`` column of the results data frame. This ensures your model retains a
-complete epidemiological record even though the agents themselves are no longer instantiated.
+Before squashing, you should **count and record** the number of recovered (or otherwise squashed) agents. 
+This count should be stored in a summary variable —- typically the ``R`` column of the results data frame. 
+This ensures your model retains a complete epidemiological record even though the agents themselves are 
+no longer instantiated.
 
 Implementation Deatils: How to Add Squashing, Saving, Loading, and Correct R Tracking to a LASER SIR Model
 ==========================================================================================================
