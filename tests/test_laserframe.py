@@ -39,6 +39,7 @@ Usage:
 import re
 import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -245,9 +246,10 @@ class TestLaserFrame(unittest.TestCase):
             _ = LaserFrame(capacity=capacity, initial_count=initial_count)
 
     def test_save_and_load_snapshot(self):
-        with tempfile.NamedTemporaryFile(suffix=".h5", delete=True) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp:
             path = tmp.name
 
+        try:
             # Create frame
             count = 10000
             frame = LaserFrame(capacity=100000, initial_count=count)
@@ -286,6 +288,8 @@ class TestLaserFrame(unittest.TestCase):
             assert pars_loaded["intervention"] == "vaccine"
 
             print("test_save_and_load_snapshot passed.")
+        finally:
+            Path(path).unlink()
 
 
 if __name__ == "__main__":
