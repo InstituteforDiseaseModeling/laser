@@ -104,13 +104,30 @@ class TestMigrationFunctions(unittest.TestCase):
 
         network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
         max_rowsum = 0.1
-        test_network = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
-        network = row_normalizer(network, max_rowsum)
-        for i in range(network.shape[0]):  # check 10 random values
-            for j in range(network.shape[1]):
-                assert np.isclose(
-                    network[i, j], test_network[i, j]
-                ), f"network[{i}, {j}] = {network[i, j]}, expected test_network[{i}, {j}]={test_network[i, j]}"
+        expected = np.array([[0.0, 0.01, 0.02, 0.03], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [0.001, 0.002, 0.003, 0.0]])
+        normalized = row_normalizer(network, max_rowsum)
+        assert np.all(np.isclose(normalized, expected)), (
+            "mismatch(es): \n\t"
+            + "\n\t".join(str((idx, normalized[idx], expected[idx])) for idx in zip(*np.where(~np.isclose(normalized, expected)))),
+        )
+
+        return
+
+    def test_row_normalizer_with_integer_values(self):
+        """Test that the row normalizer returns useful values when the input network is an integer data type and the max rowsum is fractional."""
+
+        network = np.array([[0.0, 0.01, 0.02, 0.03], [0.05, 0.0, 0.05, 0.1], [0.2, 0.2, 0.0, 0.6], [0.001, 0.002, 0.003, 0.0]])
+        network *= 1000
+        network = network.astype(np.int32)
+        max_rowsum = 0.1
+        expected = np.array(
+            [[0.0, 1 / 60, 2 / 60, 3 / 60], [0.025, 0.0, 0.025, 0.05], [0.02, 0.02, 0.0, 0.06], [1 / 60, 2 / 60, 3 / 60, 0.0]]
+        )
+        normalized = row_normalizer(network, max_rowsum)
+        assert np.all(np.isclose(normalized, expected)), (
+            "mismatch(es): \n\t"
+            + "\n\t".join(str((idx, normalized[idx], expected[idx])) for idx in zip(*np.where(~np.isclose(normalized, expected)))),
+        )
 
         return
 
@@ -733,6 +750,43 @@ class TestMigrationFunctionSanityChecks(unittest.TestCase):
         # Test that lon2 is a valid longitude
         with pytest.raises(ValueError, match=re.escape("lon2 must be in the range [-180, 180]")):
             distance(0, 0, 0, 181)
+
+        return
+
+
+class TestsForOverflow(unittest.TestCase):
+    pops = np.array([99510, 595855, 263884], dtype=np.int32)
+    dist = np.array([[0, 4, 66], [4, 0, 827], [66, 827, 0]], dtype=np.int32)
+    k = 3000
+    a = 1
+    b = 1
+    c = 2.0
+
+    def test_gravity(self):
+        g = gravity(self.pops, self.dist, self.k, self.a, self.b, self.c)
+        assert np.all(g >= 0), "Gravity calculation should not overflow and/or return negative values."
+
+        return
+
+    def test_competing_destinations(self):
+        cd = competing_destinations(self.pops, self.dist, self.k, self.a, self.b, self.c, delta=1.1)
+        assert np.all(cd >= 0), "Competing destinations calculation should not overflow and/or return negative values."
+
+        return
+
+    def test_stouffer(self):
+        s = stouffer(self.pops, self.dist, self.k, self.a, self.b, include_home=False)
+        assert np.all(s >= 0), "Stouffer migration calculation (include_home=False) should not overflow and/or return negative values."
+        s = stouffer(self.pops, self.dist, self.k, self.a, self.b, include_home=True)
+        assert np.all(s >= 0), "Stouffer migration calculation (include_home=True) should not overflow and/or return negative values."
+
+        return
+
+    def test_radiation(self):
+        r = radiation(self.pops, self.dist, self.k, include_home=False)
+        assert np.all(r >= 0), "Radiation migration calculation (include_home=False) should not overflow and/or return negative values."
+        r = radiation(self.pops, self.dist, self.k, include_home=True)
+        assert np.all(r >= 0), "Radiation migration calculation (include_home=True) should not overflow and/or return negative values."
 
         return
 

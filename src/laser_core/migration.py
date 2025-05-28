@@ -106,8 +106,11 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
     # Ensure pops and distances are valid
     _sanity_checks(pops, distances, a=a, b=b, c=c, k=k)
 
+    # Promote pops to a robust datatype (e.g., int32 is likely to overflow)
+    pops = pops.astype(np.float64)
+
     # Prevent division by zero by setting diagonal to 1
-    distances1 = distances.copy()
+    distances1 = distances.copy().astype(np.float64)
     np.fill_diagonal(distances1, 1)
 
     # Compute the gravity model network
@@ -142,6 +145,10 @@ def row_normalizer(network, max_rowsum):
 
     _is_instance(max_rowsum, Number, f"max_rowsum must be a numeric value ({type(max_rowsum)=})")
     _has_values(0 <= max_rowsum <= 1, "max_rowsum must be in [0, 1]")
+
+    # Promote network to floating point
+    # If the incoming network is an integer type and max_rowsum is < 1.0, the result is all zeros.
+    network = network.copy().astype(np.float32)
 
     rowsums = network.sum(axis=1)
     rows_to_renorm = rowsums > max_rowsum
@@ -195,9 +202,12 @@ def competing_destinations(pops, distances, k, a, b, c, delta, **params):
     # Sanity checks
     _sanity_checks(pops, distances, a=a, k=k, b=b, c=c, delta=delta)
 
+    # Promote pops to a robust datatype (e.g., int32 is likely to overflow)
+    pops = pops.astype(np.float64)
+
     network = gravity(pops, distances, k=k, a=a, b=b, c=c, **params)
     # Construct the p_j^b / d_jk^c matrix, inside the sum
-    distances1 = distances.copy()
+    distances1 = distances.copy().astype(np.float64)
     np.fill_diagonal(distances1, 1)  # Prevent division by zero in `distances ** (-1 * c)`
     competition_matrix = pops**b * distances1 ** (-1 * c)
 
@@ -294,6 +304,10 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
     # Sanity checks
     _sanity_checks(pops, distances, a=a, b=b, k=k, include_home=include_home)
 
+    # Promote pops and distances to a robust datatype (e.g., int32 is likely to overflow)
+    pops = pops.astype(np.float64)
+    distances = distances.astype(np.float64)
+
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 
     network = np.zeros_like(distances)
@@ -361,6 +375,10 @@ def radiation(pops, distances, k, include_home, **params):
 
     # Sanity checks
     _sanity_checks(pops, distances, k=k, include_home=include_home)
+
+    # Promote pops and distances to a robust datatype (e.g., int32 is likely to overflow)
+    pops = pops.astype(np.float64)
+    distances = distances.astype(np.float64)
 
     # We will just use the "truthiness" of include_home (could be boolean, could be 0/1)
 

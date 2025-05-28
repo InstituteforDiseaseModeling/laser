@@ -1,6 +1,6 @@
 [project]
 name = "laser-core"
-version = "0.4.0"
+version = "0.4.1"
 authors = [
   { name="Christopher Lorton", email="christopher.lorton@gatesfoundation.org" },
   { name="Jonathan Bloedow", email="jonathan.bloedow@gatesfoundation.org" },
@@ -18,7 +18,6 @@ requires-python = ">=3.9,<3.13"
 keywords = ["spatial modeling", "disease eradication", "agent-based modeling"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -54,6 +53,7 @@ test = [
     "pytest>=6.0",
     "pytest-cov",
     "scipy",
+    "uv",
 ]
 
 [project.urls]
@@ -63,7 +63,7 @@ Documentation = "https://docs.idmod.org/projects/laser/en/latest/"
 Changelog = "https://docs.idmod.org/projects/laser/en/latest/changelog.html"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=76.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.ruff.per-file-ignores]
@@ -130,7 +130,7 @@ ext-modules = [
 "tests" = ["data/*.csv"]
 
 [tool.bumpversion]
-current_version = "0.4.0"
+current_version = "0.4.1"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
