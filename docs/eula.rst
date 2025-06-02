@@ -8,12 +8,7 @@ In many cases -— particularly during model calibration -— it is far more eff
 population once, save it, and then reload the initialized state for subsequent runs.
 
 
-This approach is especially useful when working with EULAs -- **E**pidemiologically **U**ninteresting
-**L**ight **A**gents. For example it can be a very powerful optimization to compress all the agents who
-are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In
-such models, the majority of the initial population may be in the "Recovered" state, potentially
-comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them
-can result in punitive memory usage.
+This approach is especially useful when working with EULAs -- **E**pidemiologically **U**ninteresting **L**ight **A**gents. For example it can be a very powerful optimization to compress all the agents who are already (permanently) recovered or immune in a measles or polio model into a number/bucket. In such models, the majority of the initial population may be in the "Recovered" state, potentially comprising 90% or more of all agents. If you are simulating 100 million agents, storing all of them can result in punitive memory usage.
 
 
 To address this, LASER supports a **squashing** process. Squashing involves
@@ -31,8 +26,7 @@ Some notes about squashing:
 
 Some caveats about using saved populations:
 - You will want to be confident that the saved population is sufficiently randomized and representative;
-- If you are calibrating parameters used to create the initial population in the first place, you'll need
-  to recreate those parts of the population after loading, diminishing the benefit of the save/load approach.
+- If you are calibrating parameters used to create the initial population in the first place, you'll need to recreate those parts of the population after loading, diminishing the benefit of the save/load approach.
 
 
 When saving a **Snapshot**, note that only the active (unsquashed) portion of the
