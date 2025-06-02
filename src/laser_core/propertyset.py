@@ -42,10 +42,20 @@ class PropertySet:
         >>> print(ps['status'])          # Outputs: 'susceptible'
         >>> print(len(ps))               # Outputs: 4
 
-    In-Place Addition:
-        >>> ps += {'new_timer': 10, 'infectivity': 0.8}
+    In-Place Addition (added keys must *not* exist in the destination PropertySet):
+        >>> ps += {'new_timer': 10, 'susceptibility': 0.75}
         >>> print(ps.to_dict())
-        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 5, 'new_timer': 10, 'infectivity': 0.8}
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 5, 'new_timer': 10, 'susceptibility': 0.75}
+
+    In-Place Update (keys *must* already exist in the destination PropertySet):
+        >>> ps <<= {'exposure_timer': 10, 'infectivity': 0.8}
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 10, 'infectivity': 0.8}
+
+    In-Place Addition or Update (no restriction on incoming keys):
+        >>> ps |= {'new_timer': 10, 'exposure_timer': 8}
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 8, 'new_timer': 10}
     """
 
     def __init__(self, *bags):
@@ -167,10 +177,106 @@ class PropertySet:
         Raises:
 
             AssertionError: If `other` is neither an instance of the same class nor a dictionary.
+            ValueError: If `other` contains keys already present in the PropertySet.
         """
 
         assert isinstance(other, (type(self), dict))
         for key, value in (other.__dict__ if isinstance(other, type(self)) else other).items():
+            if hasattr(self, key):
+                raise ValueError(f"Cannot override existing value for '{key}'.")
+            setattr(self, key, value)
+        return self
+
+    def __lshift__(self, other):
+        """
+        Implements the ``<<`` operator on PropertySet to override existing values with new values.
+
+        Parameters:
+
+            other (Union[type(self), dict]): The object or dictionary with overriding values.
+
+        Returns:
+
+            A new PropertySet with all the values of the first PropertySet with overrides from the second PropertySet.
+
+        Raises:
+
+            AssertionError: If `other` is neither an instance of the same class nor a dictionary.
+            ValueError: If `other` contains keys not present in the PropertySet.
+        """
+
+        result = PropertySet(self)
+        result <<= other
+
+        return result
+
+    def __ilshift__(self, other):
+        """
+        Implements the ``<<=`` operator on PropertySet to override existing values with new values.
+
+        Parameters:
+
+            other (Union[type(self), dict]): The object or dictionary with overriding values.
+
+        Returns:
+
+            self: The updated instance with the overrides from other.
+
+        Raises:
+
+            AssertionError: If `other` is neither an instance of the same class nor a dictionary.
+            ValueError: If `other` contains keys not present in the PropertySet.
+        """
+
+        assert isinstance(other, (type(self), dict))
+        for key, value in (other.__dict__ if isinstance(other, type(self)) else other).items():
+            if not hasattr(self, key):
+                raise ValueError(f"Cannot override missing key '{key}'.")
+            setattr(self, key, value)
+        return self
+
+    def __or__(self, other):
+        """
+        Implements the ``|`` operator on PropertySet to add new or override existing values with new values.
+
+        Parameters:
+
+            other (Union[type(self), dict]): The object or dictionary with overriding values.
+
+        Returns:
+
+            A new PropertySet with all the values of the first PropertySet with new or overriding values from the second PropertySet.
+
+        Raises:
+
+            AssertionError: If `other` is neither an instance of the same class nor a dictionary.
+        """
+
+        result = PropertySet(self)
+        result |= other
+
+        return result
+
+    def __ior__(self, other):
+        """
+        Implements the ``|=`` operator on PropertySet to override existing values with new values.
+
+        Parameters:
+
+            other (Union[type(self), dict]): The object or dictionary with overriding values.
+
+        Returns:
+
+            self: The updated instance with all the values of self with new or overriding values from other.
+
+        Raises:
+
+            AssertionError: If `other` is neither an instance of the same class nor a dictionary.
+        """
+
+        assert isinstance(other, (type(self), dict))
+        for key, value in (other.__dict__ if isinstance(other, type(self)) else other).items():
+            # no check on existence in self, all keys added or updated
             setattr(self, key, value)
         return self
 
