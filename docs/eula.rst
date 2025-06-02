@@ -20,8 +20,7 @@ To address this, LASER supports a **squashing** process. Squashing involves
 *defragmenting the data frame* such that all epidemiologically active or "interesting" agents
 (e.g., Susceptible or Infectious) are moved to the beginning of the array or table, and
 less relevant agents (e.g., Recovered) are moved to the end. Though please note that you should
-never assume that the squashed agents are preserved.
-
+assume that squashed agent data is overwritten.
 
 Some notes about squashing:
 
@@ -30,7 +29,13 @@ Some notes about squashing:
 - This not only reduces memory usage but also improves performance by avoiding unnecessary
   computation over inactive agents.
 
-Furthermore, when saving a **Snapshot**, only the active (unsquashed) portion of the
+Some caveats about using saved populations:
+- You will want to be confident that the saved population is sufficiently randomized and representative;
+- If you are calibrating parameters used to create the initial population in the first place, you'll need
+  to recreate those parts of the population after loading, diminishing the benefit of the save/load approach.
+
+
+When saving a **Snapshot**, note that only the active (unsquashed) portion of the
 population is saved. Upon reloading:
 
 - Only this subset is allocated in memory.
@@ -51,7 +56,7 @@ Implementation Deatils: How to Add Squashing, Saving, Loading, and Correct R Tra
 ----------------
 
 - **Add a `squash_recovered()` function**
-  This should call `LaserFrame.squash(...)` with a boolean mask that excludes recovered agents (`disease_state == 2`). You may choose a different criterion, such as age-based squashing.
+  This should call `LaserFrame.squash(...)` with a boolean mask that includes non-recovered agents (`disease_state != 2`). You may choose a different criterion, such as age-based squashing.
 
 - **Count your “squashed away” agents first**
   You must compute and store all statistics related to agents being squashed *before* the `squash()` call. After squashing, only the left-hand portion of the arrays (up to `.count`) remains valid.
@@ -133,17 +138,17 @@ This example demonstrates a complete SIR model using LASER, featuring:
             self.pars = pars
 
         def step(self):
-            susceptible = self.population.disease_state == 0
-            infected = self.population.disease_state == 1
-            inf_node_ids = self.population.node_id[infected]
-            node_counts = np.bincount(inf_node_ids, minlength=self.population.node_id.max() + 1)
+        """
+        For each node in the population, calculate the number of new infections as a function of:
+        - the number of infected individuals,
+        - the number of susceptibles,
+        - adjustments for migration and seasonality,
+        - and individual-level heterogeneity.
 
-            for nid in range(len(node_counts)):
-                if node_counts[nid] > 0:
-                    sus_idx = (self.population.node_id == nid) & susceptible
-                    new_inf = np.random.rand(sus_idx.sum()) < self.pars.transmission_prob
-                    indices = np.where(sus_idx)[0][new_inf]
-                    self.population.disease_state[indices] = 1
+        Then, select new infections at random from among the susceptible individuals in each node,
+        and initiate infection in those individuals.
+        """
+        pass  # Implementation omitted for documentation purposes
 
         @classmethod
         def init_from_file(cls, population, pars):
@@ -158,9 +163,11 @@ This example demonstrates a complete SIR model using LASER, featuring:
             self.pars = pars
 
         def step(self):
-            infected = self.population.disease_state == 1
-            recoveries = np.random.rand(infected.sum()) < (1 / self.pars.recovery_days)
-            self.population.disease_state[np.where(infected)[0][recoveries]] = 2
+        """
+        At each time step, update the disease state of infected individuals based on the model's
+        progression logic. This may be driven by probabilities, timers, or other intrahost dynamics.
+        """
+        pass  # Implementation omitted for documentation
 
         @classmethod
         def init_from_file(cls, population, pars):
@@ -194,6 +201,7 @@ This example demonstrates a complete SIR model using LASER, featuring:
             self.components = [
                 Transmission(self.population, self.pars),
                 Progression(self.population, self.pars)
+                # could add other components like vaccination
             ]
 
         def initialize(self):
@@ -265,23 +273,7 @@ This example demonstrates a complete SIR model using LASER, featuring:
             """
             Plot the time series of total S, I, and R across all nodes.
             """
-            plt.figure(figsize=(10, 6))
-            s_total = self.results.S.sum(axis=1)
-            i_total = self.results.I.sum(axis=1)
-            r_total = self.results.R.sum(axis=1)
-            plt.plot(s_total, label="Susceptible")
-            plt.plot(i_total, label="Infected")
-            plt.plot(r_total, label="Recovered")
-
-            plt.xlabel("Time")
-            plt.ylabel("Population count")
-            plt.title("SIR Model Over Time")
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-            plt.savefig("sir_plot.png")
-            plt.show()
-            print("Plot saved as sir_plot.png")
+            # details omitted
 
     @click.command()
     @click.option("--init-pop-file", type=click.Path(), default=None, help="Path to snapshot to resume from.")
