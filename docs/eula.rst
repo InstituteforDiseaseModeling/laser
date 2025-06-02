@@ -93,8 +93,19 @@ Implement a ``load(path)`` class method:
   - Results matrix
   - Parameters
 
-- Set ``.capacity = .count`` to drop excess memory allocation
+- Set ``.capacity = .count`` if not doing births, else set capacity based on projected population growth from count.
 - Reconstruct all components using ``init_from_file()``
+
+.. warning::
+
+   **Vital Dynamics Considerations**
+
+   When modeling vital dynamics—especially births—there is an additional step to ensure consistency after loading:
+
+   - **Property initialization for unborn individuals** must be repeated if your model pre-assigns properties up to ``.capacity``. For example, if timers or demographic attributes (like ``date_of_birth``) are pre-initialized at ``t=0``, you must ensure this initialization is re-applied after loading, because only the ``.count`` population is reloaded, not the future ``.capacity``.
+
+   Failing to do so may result in improperly initialized agents being birthed after the snapshot load, which can lead to subtle or catastrophic model errors.
+
 
 4. Preserve EULA’d Results
 --------------------------
