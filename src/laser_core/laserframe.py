@@ -320,6 +320,7 @@ class LaserFrame:
             pars (dict or None)
         """
         import numpy as np
+
         from laser_core.utils import calc_capacity  # ensure this import is valid
 
         with h5py.File(path, "r") as f:
@@ -333,10 +334,7 @@ class LaserFrame:
                     key: (pars_group[key][()].decode() if isinstance(pars_group[key][()], bytes) else pars_group[key][()])
                     for key in pars_group
                 }
-                pars.update({
-                    key: (val.decode() if isinstance(val, bytes) else val)
-                    for key, val in pars_group.attrs.items()
-                })
+                pars.update({key: (val.decode() if isinstance(val, bytes) else val) for key, val in pars_group.attrs.items()})
             else:
                 pars = {}
 
@@ -366,6 +364,7 @@ class LaserFrame:
             results_r = f["recovered"][()] if "recovered" in f else None
 
         return frame, results_r, pars
+
 
 # Sanity checks
 
