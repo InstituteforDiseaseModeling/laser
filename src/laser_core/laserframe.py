@@ -26,6 +26,8 @@ Attributes:
 import h5py
 import numpy as np
 
+from laser_core.utils import calc_capacity
+
 
 class LaserFrame:
     """
@@ -319,9 +321,6 @@ class LaserFrame:
             results_r (np.ndarray or None)
             pars (dict or None)
         """
-        import numpy as np
-
-        from laser_core.utils import calc_capacity  # ensure this import is valid
 
         with h5py.File(path, "r") as f:
             group = f["people"]
