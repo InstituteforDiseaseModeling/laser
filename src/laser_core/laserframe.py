@@ -26,6 +26,8 @@ Attributes:
 import h5py
 import numpy as np
 
+from laser_core.utils import calc_capacity
+
 
 class LaserFrame:
     """
@@ -310,7 +312,7 @@ class LaserFrame:
                 group.attrs[key] = str(value)
 
     @classmethod
-    def load_snapshot(cls, path, capacity_frac=None):
+    def load_snapshot(cls, path):
         """
         Load a LaserFrame and optional extras from an HDF5 snapshot file.
 
@@ -318,17 +320,39 @@ class LaserFrame:
             frame (LaserFrame)
             results_r (np.ndarray or None)
             pars (dict or None)
-            capacity_fracin (int or None)
         """
+
         with h5py.File(path, "r") as f:
             group = f["people"]
             count = int(group.attrs["count"])
-            # Don't reload the saved capacity from int(group.attrs["capacity"])
-            if capacity_frac:
-                capacity = int(capacity_frac * count)
+
+            # Load parameters first
+            if "pars" in f:
+                pars_group = f["pars"]
+                pars = {
+                    key: (pars_group[key][()].decode() if isinstance(pars_group[key][()], bytes) else pars_group[key][()])
+                    for key in pars_group
+                }
+                pars.update({key: (val.decode() if isinstance(val, bytes) else val) for key, val in pars_group.attrs.items()})
+            else:
+                pars = {}
+
+            # Compute capacity
+            if "cbr" in pars and "n_ppl" in pars and "nt" in pars:
+                cbr = pars["cbr"]
+                n_ppl = np.sum(pars["n_ppl"])
+                nt = pars["nt"]
+                if isinstance(cbr, (list, np.ndarray)) and len(cbr) > 1:
+                    cbr_value = np.mean(cbr)
+                else:
+                    cbr_value = cbr[0] if isinstance(cbr, (list, np.ndarray)) else cbr
+                capacity = int(1.1 * calc_capacity(n_ppl, nt, cbr_value))
+            elif "n_ppl" in pars:
+                capacity = int(np.sum(pars["n_ppl"]))
             else:
                 capacity = count
 
+            # Now construct frame
             frame = cls(capacity=capacity, initial_count=count)
             for key in group:
                 data = group[key][:]
@@ -337,17 +361,6 @@ class LaserFrame:
                 getattr(frame, key)[:count] = data
 
             results_r = f["recovered"][()] if "recovered" in f else None
-
-            if "pars" in f:
-                pars_group = f["pars"]
-                # pars = {key: pars_group[key][()] for key in pars_group}
-                pars = {
-                    key: (pars_group[key][()].decode() if isinstance(pars_group[key][()], bytes) else pars_group[key][()])
-                    for key in pars_group
-                }
-                pars.update({key: (val.decode() if isinstance(val, bytes) else val) for key, val in pars_group.attrs.items()})
-            else:
-                pars = None
 
         return frame, results_r, pars
 
