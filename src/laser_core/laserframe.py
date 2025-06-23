@@ -23,7 +23,10 @@ Attributes:
     capacity (int): The maximum capacity of the frame.
 """
 
+import h5py
 import numpy as np
+
+from laser_core.utils import calc_capacity
 
 
 class LaserFrame:
@@ -261,6 +264,105 @@ class LaserFrame:
         self._count = selected_count
 
         return
+
+    def save_snapshot(self, path, results_r=None, pars=None):
+        """
+        Save this LaserFrame and optional extras to an HDF5 snapshot file.
+
+        Parameters:
+            path: Destination file path
+            results_r: Optional 2D numpy array of recovered counts
+            pars: Optional PropertySet or dict of parameters
+        """
+        from laser_core.propertyset import PropertySet  # to avoid circular import
+
+        with h5py.File(path, "w") as f:
+            self._save(f, "people")
+
+            if results_r is not None:
+                f.create_dataset("recovered", data=results_r)
+
+            if pars is not None and isinstance(pars, (dict, PropertySet)):
+                data = pars.to_dict() if isinstance(pars, PropertySet) else pars
+                self._save_dict(data, f.create_group("pars"))
+
+    def _save(self, parent_group, name):
+        """
+        Internal method to save this LaserFrame under the given group name.
+        """
+        group = parent_group.create_group(name)
+        group.attrs["count"] = self._count
+        group.attrs["capacity"] = self._capacity
+
+        for key in dir(self):
+            if not key.startswith("_"):
+                value = getattr(self, key)
+                if isinstance(value, np.ndarray):
+                    data = value[: self._count]
+                    group.create_dataset(key, data=data)
+
+    def _save_dict(self, data, group):
+        """
+        Internal method to save a dict as datasets and attributes in a group.
+        """
+        for key, value in data.items():
+            try:
+                group.create_dataset(key, data=value)
+            except TypeError:
+                group.attrs[key] = str(value)
+
+    @classmethod
+    def load_snapshot(cls, path):
+        """
+        Load a LaserFrame and optional extras from an HDF5 snapshot file.
+
+        Returns:
+            frame (LaserFrame)
+            results_r (np.ndarray or None)
+            pars (dict or None)
+        """
+
+        with h5py.File(path, "r") as f:
+            group = f["people"]
+            count = int(group.attrs["count"])
+
+            # Load parameters first
+            if "pars" in f:
+                pars_group = f["pars"]
+                pars = {
+                    key: (pars_group[key][()].decode() if isinstance(pars_group[key][()], bytes) else pars_group[key][()])
+                    for key in pars_group
+                }
+                pars.update({key: (val.decode() if isinstance(val, bytes) else val) for key, val in pars_group.attrs.items()})
+            else:
+                pars = {}
+
+            # Compute capacity
+            if "cbr" in pars and "n_ppl" in pars and "nt" in pars:
+                cbr = pars["cbr"]
+                n_ppl = np.sum(pars["n_ppl"])
+                nt = pars["nt"]
+                if isinstance(cbr, (list, np.ndarray)) and len(cbr) > 1:
+                    cbr_value = np.mean(cbr)
+                else:
+                    cbr_value = cbr[0] if isinstance(cbr, (list, np.ndarray)) else cbr
+                capacity = int(1.1 * calc_capacity(n_ppl, nt, cbr_value))
+            elif "n_ppl" in pars:
+                capacity = int(np.sum(pars["n_ppl"]))
+            else:
+                capacity = count
+
+            # Now construct frame
+            frame = cls(capacity=capacity, initial_count=count)
+            for key in group:
+                data = group[key][:]
+                dtype = data.dtype
+                frame.add_scalar_property(name=key, dtype=dtype, default=0)
+                getattr(frame, key)[:count] = data
+
+            results_r = f["recovered"][()] if "recovered" in f else None
+
+        return frame, results_r, pars
 
 
 # Sanity checks

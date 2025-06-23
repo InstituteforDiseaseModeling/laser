@@ -42,10 +42,20 @@ class PropertySet:
         >>> print(ps['status'])          # Outputs: 'susceptible'
         >>> print(len(ps))               # Outputs: 4
 
-    In-Place Addition:
-        >>> ps += {'new_timer': 10, 'infectivity': 0.8}
+    In-Place Addition (added keys must *not* exist in the destination PropertySet):
+        >>> ps += {'new_timer': 10, 'susceptibility': 0.75}
         >>> print(ps.to_dict())
-        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 5, 'new_timer': 10, 'infectivity': 0.8}
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 5, 'new_timer': 10, 'susceptibility': 0.75}
+
+    In-Place Update (keys *must* already exist in the destination PropertySet):
+        >>> ps <<= {'exposure_timer': 10, 'infectivity': 0.8}
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 10, 'infectivity': 0.8}
+
+    In-Place Addition or Update (no restriction on incoming keys):
+        >>> ps |= {'new_timer': 10, 'exposure_timer': 8}
+        >>> print(ps.to_dict())
+        {'mything': 0.4, 'that_other_thing': 42, 'status': 'susceptible', 'exposure_timer': 8, 'new_timer': 10}
     """
 
     def __init__(self, *bags):

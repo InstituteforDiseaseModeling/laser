@@ -15,6 +15,7 @@ Contents
    example
    vdexample
    spatialexample
+   eula
    performance
    calibration
    source/modules

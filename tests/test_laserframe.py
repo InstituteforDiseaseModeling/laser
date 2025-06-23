@@ -37,12 +37,15 @@ Usage:
 """
 
 import re
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from laser_core import LaserFrame
+from laser_core import PropertySet
 
 
 class TestLaserFrame(unittest.TestCase):
@@ -241,6 +244,52 @@ class TestLaserFrame(unittest.TestCase):
         initial_count = 1_000_000
         with pytest.raises(ValueError, match=re.escape(f"Initial count ({initial_count}) cannot exceed capacity ({capacity}).")):
             _ = LaserFrame(capacity=capacity, initial_count=initial_count)
+
+    def test_save_and_load_snapshot(self):
+        with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp:
+            path = tmp.name
+
+        try:
+            # Create frame
+            count = 10000
+            frame = LaserFrame(capacity=100000, initial_count=count)
+            frame.add_scalar_property("age", dtype=np.int32)
+            frame.add_scalar_property("status", dtype=np.int8)
+
+            # Assign values
+            np.random.seed(42)
+            frame.age[:count] = np.random.randint(0, 100, size=count)
+            frame.status[:count] = np.random.choice([0, 1], size=count)  # 1 = recovered
+
+            # Squash agents who are recovered or age > 70
+            mask = (frame.status == 1) | (frame.age > 70)
+            mask = mask[:count]
+            removed = mask.sum()
+            frame.squash(~mask)
+
+            # Create a 1x10 time series of declining recovered counts
+            results_r = np.linspace(removed, 0, 10, dtype=np.float32).reshape(1, -1)
+
+            # Parameters
+            pars = PropertySet({"r0": 2.5, "intervention": "vaccine"})
+
+            # Save
+            frame.save_snapshot(path, results_r=results_r, pars=pars)
+
+            # Load
+            loaded, r_loaded, pars_loaded = frame.load_snapshot(path)
+
+            assert loaded.count == frame.count
+            assert np.array_equal(loaded.age[: loaded.count], frame.age[: frame.count])
+            assert np.array_equal(loaded.status[: loaded.count], frame.status[: frame.count])
+            assert np.array_equal(r_loaded, results_r)
+            assert pars_loaded["r0"] == 2.5
+            print(f"pars_loaded={pars_loaded}")
+            assert pars_loaded["intervention"] == "vaccine"
+
+            print("test_save_and_load_snapshot passed.")
+        finally:
+            Path(path).unlink()
 
 
 if __name__ == "__main__":
