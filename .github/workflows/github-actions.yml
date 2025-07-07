@@ -147,6 +147,22 @@ jobs:
             cibw_arch: 'arm64'
             cibw_build: false
             os: 'macos-latest'
+          - name: 'py311 (linux/aarch64)'
+            python: '3.11'
+            toxpython: 'python3.11'
+            python_arch: 'x64'  # host is x64, we cross-compile for arm64
+            tox_env: 'py311'
+            cibw_arch: 'aarch64'
+            cibw_build: 'cp311-manylinux_aarch64'
+            os: 'ubuntu-latest'
+          - name: 'py311 (linux/aarch64)'
+            python: '3.11'
+            toxpython: 'python3.11'
+            python_arch: 'x64'  # host is x64, we cross-compile for arm64
+            tox_env: 'py311'
+            cibw_arch: 'aarch64'
+            cibw_build: 'cp311-manylinux_aarch64'
+            os: 'ubuntu-latest'
     steps:
     - uses: docker/setup-qemu-action@v3
       if: matrix.cibw_arch == 'aarch64'
