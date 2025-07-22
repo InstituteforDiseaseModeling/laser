@@ -23,6 +23,9 @@ Attributes:
     capacity (int): The maximum capacity of the frame.
 """
 
+from functools import reduce
+from operator import mul
+
 import h5py
 import numpy as np
 
@@ -376,6 +379,245 @@ class LaserFrame:
             results_r = f["recovered"][()] if "recovered" in f else None
 
         return frame, results_r, pars
+
+    def describe(self, target=None) -> None:
+        """
+        Print a report of the laserframe object, including its attributes and their values.
+
+        Args:
+            laserframe: The laserframe object to report on.
+            target: Optional string to specify the target of the report.
+        """
+        description = []
+
+        description.append("")
+        if target:
+            description.append(f"Laserframe Report for `{target}`:")
+        description.append(f"Capacity: {self.capacity:>13,}")
+        description.append(f"Count:    {self.count:>13,}")
+        description.append("")
+
+        scalars = []
+        vectors = []
+        others = []
+        # Look through all attributes of the laserframe object and collect information about numpy arrays
+        # to print a report of their sizes and types. This includes scalars, vectors, and other arrays.
+        # Scalars are 1-D arrays with shape (capacity,)
+        # Vectors are 2-D arrays with shape (length, capacity),
+        # Others are arrays with different shapes.
+        for attr_name in sorted(dir(self)):
+            attr = getattr(self, attr_name)
+            if isinstance(attr, np.ndarray):
+                if attr.shape == (self.capacity,):
+                    # name, dtype, individual size, allocated size, in-use size
+                    scalars.append((attr_name, attr.dtype.name, attr.dtype.itemsize, attr.nbytes, attr.dtype.itemsize * self.count))
+                elif attr.shape == (attr.shape[0], self.capacity):
+                    # name, dtype, count, individual size, allocated size, in-use size
+                    i = attr.dtype.itemsize * attr.shape[0]
+                    u = i * self.count
+                    vectors.append((attr_name, attr.dtype.name, attr.shape[0], i, attr.nbytes, u))
+                else:
+                    # name, dtype, individual size, shape, num_elements, allocated size
+                    others.append((attr_name, attr.dtype.name, attr.dtype.itemsize, attr.shape, reduce(mul, attr.shape, 1), attr.nbytes))
+
+        def sep(width, char="-"):
+            string = char * width
+
+            return string
+
+        def header(name, width):
+            string = "\n".join([sep(width, "="), f"{name:^{width}}", sep(width, "=")])
+
+            return string
+
+        def row(info):
+            string = " | ".join(
+                f"{data:{align}{width},}" if not isinstance(data, str) else f"{data:{align}{width}}" for data, align, width in info
+            )
+
+            return string
+
+        if scalars:
+            # Determine the width for the name column based on the longest name
+            nwidth = max(len(name) for name, *_ in scalars)
+
+            # Datatype, individual size, allocated size, in-use size, and total column widths
+            dwidth = 9
+            iwidth = 23
+            awidth = 22
+            uwidth = 20
+            twidth = nwidth + 3 + dwidth + 3 + iwidth + 3 + awidth + 3 + uwidth
+
+            description.append(header("Scalars", twidth))
+            description.append(
+                row(
+                    [
+                        ("Name", "<", nwidth),
+                        ("Datatype", "^", dwidth),
+                        ("Individual Size (bytes)", "^", iwidth),
+                        ("Allocated Size (bytes)", ">", awidth),
+                        ("In Use Size (bytes)", ">", uwidth),
+                    ]
+                )
+            )
+            description.append(sep(twidth))
+
+            # For each scalar, accumulate the individual size, allocated size, and in-use size
+            individual = 0
+            allocated = 0
+            in_use = 0
+            for name, data_type, individual_size, allocated_size, in_use_size in scalars:
+                individual += individual_size
+                allocated += allocated_size
+                in_use += in_use_size
+                description.append(
+                    row(
+                        [
+                            (name, "<", nwidth),
+                            (data_type, "^", dwidth),
+                            (individual_size, "^", iwidth),
+                            (allocated_size, ">", awidth),
+                            (in_use_size, ">", uwidth),
+                        ]
+                    )
+                )
+
+            description.append(sep(twidth))
+            description.append(
+                row([("Total", "<", nwidth), ("", "^", dwidth), (individual, "^", iwidth), (allocated, ">", awidth), (in_use, ">", uwidth)])
+            )
+            description.append(sep(twidth))
+            description.append("")
+
+        if vectors:
+            # Determine the width for the name column based on the longest name
+            nwidth = max(len(name) for name, *_ in vectors)
+
+            # Datatype, count, individual size, allocated size, in-use size, and total column widths
+            dwidth = 9
+            cwidth = 6
+            iwidth = 23
+            awidth = 22
+            uwidth = 20
+            twidth = nwidth + 3 + dwidth + 3 + cwidth + 3 + iwidth + 3 + awidth + 3 + uwidth
+
+            description.append(header("Vectors", twidth))
+            description.append(
+                row(
+                    [
+                        ("Name", "<", nwidth),
+                        ("Datatype", "^", dwidth),
+                        ("Count", "^", cwidth),
+                        ("Individual Size (bytes)", "^", iwidth),
+                        ("Allocated Size (bytes)", ">", awidth),
+                        ("In Use Size (bytes)", ">", uwidth),
+                    ]
+                )
+            )
+            description.append(sep(twidth))
+
+            # For each vector, accumulate the individual size, allocated size, and in-use size
+            individual = 0
+            allocated = 0
+            in_use = 0
+            for name, data_type, count, individual_size, allocated_size, in_use_size in vectors:
+                individual += individual_size
+                allocated += allocated_size
+                in_use += in_use_size
+                description.append(
+                    row(
+                        [
+                            (name, "<", nwidth),
+                            (data_type, "^", dwidth),
+                            (count, "^", cwidth),
+                            (individual_size, "^", iwidth),
+                            (allocated_size, ">", awidth),
+                            (in_use_size, ">", uwidth),
+                        ]
+                    )
+                )
+
+            description.append(sep(twidth))
+            description.append(
+                row(
+                    [
+                        ("Total", "<", nwidth),
+                        ("", "^", dwidth),
+                        ("", "^", cwidth),
+                        (individual, "^", iwidth),
+                        (allocated, ">", awidth),
+                        (in_use, ">", uwidth),
+                    ]
+                )
+            )
+            description.append(sep(twidth))
+            description.append("")
+
+        if others:
+            # Determine the width for the name column based on the longest name
+            nwidth = max(len(name) for name, *_ in others)
+
+            # Datatype, individual size, shape, num_elements, allocated size, and total column widths
+            dwidth = 8
+            iwidth = 23
+            swidth = 15
+            cwidth = 12
+            awidth = 22
+            twidth = nwidth + 3 + dwidth + 3 + iwidth + 3 + swidth + 3 + cwidth + 3 + awidth
+
+            description.append(header("Others", twidth))
+            description.append(
+                row(
+                    [
+                        ("Name", "<", nwidth),
+                        ("Datatype", "^", dwidth),
+                        ("Individual Size (bytes)", "^", iwidth),
+                        ("Shape", "^", swidth),
+                        ("Num Elements", "^", cwidth),
+                        ("Allocated Size (bytes)", ">", awidth),
+                    ]
+                )
+            )
+            description.append(sep(twidth))
+
+            # For each other attribute, accumulate the individual size, allocated size, and in-use size
+            individual = 0
+            allocated = 0
+            for name, data_type, individual_size, shape, num_elements, allocated_size in others:
+                individual += individual_size
+                allocated += allocated_size
+                description.append(
+                    row(
+                        [
+                            (name, "<", nwidth),
+                            (data_type, "^", dwidth),
+                            (individual_size, "^", iwidth),
+                            (str(shape), "^", swidth),
+                            (num_elements, "^", cwidth),
+                            (allocated_size, ">", awidth),
+                        ]
+                    )
+                )
+
+            description.append(sep(twidth))
+            description.append(
+                row(
+                    [
+                        ("Total", "<", nwidth),
+                        ("", "^", dwidth),
+                        (individual, "^", iwidth),
+                        ("", "^", swidth),
+                        ("", "^", cwidth),
+                        (allocated, ">", awidth),
+                    ]
+                )
+            )
+            description.append(sep(twidth))
+            description.append("")
+
+        description = "\n".join(description)
+
+        return description
 
 
 # Sanity checks
