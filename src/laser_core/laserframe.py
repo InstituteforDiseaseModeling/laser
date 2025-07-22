@@ -380,13 +380,16 @@ class LaserFrame:
 
         return frame, results_r, pars
 
-    def describe(self, target=None) -> None:
+    def describe(self, target=None) -> str:
         """
-        Print a report of the laserframe object, including its attributes and their values.
+        Return a formatted string description of the laserframe object, including its attributes and their values.
 
         Args:
-            laserframe: The laserframe object to report on.
             target: Optional string to specify the target of the report.
+
+        Returns:
+            str: A formatted string describing the laserframe object, including its capacity, count, and
+                 details of its scalar, vector, and other properties.
         """
         description = []
 
