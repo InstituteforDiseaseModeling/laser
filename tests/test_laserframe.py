@@ -277,7 +277,7 @@ class TestLaserFrame(unittest.TestCase):
             frame.save_snapshot(path, results_r=results_r, pars=pars)
 
             # Load
-            #loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=pars["n_ppl"], cbr=pars["cbr"], nt=pars["dur"])
+            # loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=pars["n_ppl"], cbr=pars["cbr"], nt=pars["dur"])
             loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=None, cbr=None, nt=None)
 
             assert loaded.count == frame.count
