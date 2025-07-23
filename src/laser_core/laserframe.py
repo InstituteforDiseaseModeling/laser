@@ -318,9 +318,9 @@ class LaserFrame:
 
         Args:
             path (str): Path to the HDF5 snapshot file.
-            n_ppl (float, optional): Original total population used to estimate births.
-            cbr (float, optional): Crude birth rate (per 1000/year).
-            nt (int, optional): Simulation duration (number of ticks).
+            n_ppl (float or array-like): Original total population (or per-node array) used to estimate births.
+            cbr (float or array-like): Crude birth rate (per 1000/year).
+            nt (int): Simulation duration (number of ticks).
 
         Returns:
             frame (LaserFrame)
