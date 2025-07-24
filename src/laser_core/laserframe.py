@@ -312,9 +312,15 @@ class LaserFrame:
                 group.attrs[key] = str(value)
 
     @classmethod
-    def load_snapshot(cls, path):
+    def load_snapshot(cls, path, n_ppl, cbr, nt):
         """
         Load a LaserFrame and optional extras from an HDF5 snapshot file.
+
+        Args:
+            path (str): Path to the HDF5 snapshot file.
+            n_ppl (float or array-like): Original total population (or per-node array) used to estimate births.
+            cbr (float or array-like): Crude birth rate (per 1000/year).
+            nt (int): Simulation duration (number of ticks).
 
         Returns:
             frame (LaserFrame)
@@ -337,20 +343,27 @@ class LaserFrame:
             else:
                 pars = {}
 
-            # Compute capacity
-            if "cbr" in pars and "n_ppl" in pars and "nt" in pars:
-                cbr = pars["cbr"]
-                n_ppl = np.sum(pars["n_ppl"])
-                nt = pars["nt"]
+            # Compute capacity if values are provided
+            if n_ppl is not None and cbr is not None and nt is not None:
                 if isinstance(cbr, (list, np.ndarray)) and len(cbr) > 1:
-                    cbr_value = np.mean(cbr)
+                    cbr_value = np.sum(cbr * n_ppl) / np.sum(n_ppl)
                 else:
                     cbr_value = cbr[0] if isinstance(cbr, (list, np.ndarray)) else cbr
-                capacity = int(1.1 * calc_capacity(n_ppl, nt, cbr_value))
-            elif "n_ppl" in pars:
-                capacity = int(np.sum(pars["n_ppl"]))
+                ppl = np.sum(n_ppl)
+                expected_births = calc_capacity(ppl, nt, cbr_value) - ppl
+                # Fudge factor: We multiply the expected number of births by a small safety margin
+                # to ensure our estimate is higher than any likely realized (stochastic) outcome.
+                # This accounts for randomness in actual births drawn from a Poisson (or similar) process.
+                # The chosen multiplier (e.g., 1.025) is based on empirical trials and reflects the
+                # low but non-zero probability of occasional spikes in simulated births.
+                # Too large a fudge factor wastes memory; too small risks overflow. 1.025 is a balance.
+                fudge_factor = 1 + 4 / np.sqrt(expected_births)
+                capacity = int(fudge_factor * (count + expected_births))
             else:
                 capacity = count
+
+            if capacity < count:
+                raise ValueError(f"There is no way capacity ({capacity}) should ever be less than count ({count}).")
 
             # Now construct frame
             frame = cls(capacity=capacity, initial_count=count)

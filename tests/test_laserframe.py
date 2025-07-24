@@ -46,6 +46,7 @@ import pytest
 
 from laser_core import LaserFrame
 from laser_core import PropertySet
+from laser_core.utils import calc_capacity
 
 
 class TestLaserFrame(unittest.TestCase):
@@ -277,7 +278,8 @@ class TestLaserFrame(unittest.TestCase):
             frame.save_snapshot(path, results_r=results_r, pars=pars)
 
             # Load
-            loaded, r_loaded, pars_loaded = frame.load_snapshot(path)
+            # loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=pars["n_ppl"], cbr=pars["cbr"], nt=pars["dur"])
+            loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=None, cbr=None, nt=None)
 
             assert loaded.count == frame.count
             assert np.array_equal(loaded.age[: loaded.count], frame.age[: frame.count])
@@ -290,6 +292,58 @@ class TestLaserFrame(unittest.TestCase):
             print("test_save_and_load_snapshot passed.")
         finally:
             Path(path).unlink()
+
+    def test_capacity_reasonable_for_various_populations(self):
+        for pop_size in [10_000, 100_000, 1_000_000, 10_000_000]:
+            with self.subTest(population=pop_size):
+                with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp:
+                    path = tmp.name
+
+                try:
+                    n_ppl = np.array([pop_size])
+                    cbr = 35.0
+                    nt = 365 * 3  # 3 years
+
+                    # Simulated frame
+                    frame = LaserFrame(capacity=int(pop_size * 1.2), initial_count=pop_size)
+                    frame.add_scalar_property("age", dtype=np.int32)
+                    frame.add_scalar_property("status", dtype=np.int8)
+
+                    np.random.seed(42)
+                    frame.age[:pop_size] = np.random.randint(0, 90, size=pop_size)
+                    frame.status[:pop_size] = np.random.choice([0, 1], size=pop_size)
+
+                    # Remove some agents for realism
+                    mask = (frame.status == 1) | (frame.age > 75)
+                    mask = mask[:pop_size]
+                    frame.squash(~mask)
+
+                    results_r = np.linspace(0, 100, 10, dtype=np.float32).reshape(1, -1)
+                    frame.save_snapshot(path, results_r=results_r, pars={})
+
+                    # Expected births
+                    total_pop = np.sum(n_ppl)
+                    expected_final = calc_capacity(total_pop, nt, cbr)
+                    expected_births = expected_final - total_pop
+                    expected_capacity = frame.count + expected_births
+
+                    # Load
+                    loaded, _, _ = LaserFrame.load_snapshot(path, n_ppl=n_ppl, cbr=cbr, nt=nt)
+
+                    # Absolute memory bound
+                    bytes_per_agent = 8
+                    max_overhead = 10 * 1024 * 1024  # 10 MB
+                    excess_agents = loaded.capacity - expected_capacity
+                    excess_bytes = excess_agents * bytes_per_agent
+
+                    assert excess_bytes <= max_overhead, (
+                        f"Excess memory for pop={pop_size}: "
+                        f"{excess_bytes / (1024*1024):.2f} MB "
+                        f"(capacity={loaded.capacity}, expected={expected_capacity})"
+                    )
+
+                finally:
+                    Path(path).unlink()
 
 
 if __name__ == "__main__":
