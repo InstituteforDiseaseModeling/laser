@@ -348,8 +348,9 @@ class TestLaserFrame(unittest.TestCase):
     def test_numpy_ints_for_capacity(self):
         for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64]:
             capacity = t(min(np.iinfo(t).max // 2, 1 << 10))  # Ensure capacity is reasonable
-            _ = LaserFrame(capacity)  # just use default initial count
-        assert True
+            lf = LaserFrame(capacity)  # just use default initial count
+            assert lf.capacity == int(capacity), f"Expected capacity {int(capacity)}, got {lf.capacity}"
+            assert lf.count == int(capacity), f"Expected count {int(capacity)}, got {lf.count}"
 
         return
 
@@ -357,8 +358,9 @@ class TestLaserFrame(unittest.TestCase):
         for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64]:
             capacity = int(min(np.iinfo(t).max, 1 << 10))  # Ensure capacity is reasonable
             count = t(capacity // 2)
-            _ = LaserFrame(2048, initial_count=count)
-        assert True
+            lf = LaserFrame(capacity, initial_count=count)
+            assert lf.capacity == int(capacity), f"Expected capacity {int(capacity)}, got {lf.capacity}"
+            assert lf.count == int(count), f"Expected count {int(count)}, got {lf.count}"
 
         return
 
