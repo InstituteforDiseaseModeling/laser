@@ -53,13 +53,13 @@ class LaserFrame:
         Returns:
             None
         """
-        if not isinstance(capacity, int) or capacity <= 0:
+        if not isinstance(capacity, (int, np.integer)) or capacity <= 0:
             raise ValueError(f"Capacity must be a positive integer, got {capacity}.")
 
         if initial_count == -1:
             initial_count = capacity
 
-        if not isinstance(initial_count, int) or initial_count < 0:
+        if not isinstance(initial_count, (int, np.integer)) or initial_count < 0:
             raise ValueError(f"Initial count must be a non-negative integer, got {initial_count}.")
 
         if initial_count > capacity:

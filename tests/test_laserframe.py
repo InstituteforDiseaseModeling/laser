@@ -286,10 +286,10 @@ class TestLaserFrame(unittest.TestCase):
             assert np.array_equal(loaded.status[: loaded.count], frame.status[: frame.count])
             assert np.array_equal(r_loaded, results_r)
             assert pars_loaded["r0"] == 2.5
-            print(f"pars_loaded={pars_loaded}")
+            # print(f"pars_loaded={pars_loaded}")
             assert pars_loaded["intervention"] == "vaccine"
 
-            print("test_save_and_load_snapshot passed.")
+            # print("test_save_and_load_snapshot passed.")
         finally:
             Path(path).unlink()
 
@@ -338,12 +338,29 @@ class TestLaserFrame(unittest.TestCase):
 
                     assert excess_bytes <= max_overhead, (
                         f"Excess memory for pop={pop_size}: "
-                        f"{excess_bytes / (1024*1024):.2f} MB "
+                        f"{excess_bytes / (1024 * 1024):.2f} MB "
                         f"(capacity={loaded.capacity}, expected={expected_capacity})"
                     )
 
                 finally:
                     Path(path).unlink()
+
+    def test_numpy_ints_for_capacity(self):
+        for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64]:
+            capacity = t(min(np.iinfo(t).max // 2, 1 << 10))  # Ensure capacity is reasonable
+            _ = LaserFrame(capacity)  # just use default initial count
+        assert True
+
+        return
+
+    def test_numpy_ints_for_initial_count(self):
+        for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64]:
+            capacity = int(min(np.iinfo(t).max, 1 << 10))  # Ensure capacity is reasonable
+            count = t(capacity // 2)
+            _ = LaserFrame(2048, initial_count=count)
+        assert True
+
+        return
 
 
 if __name__ == "__main__":
