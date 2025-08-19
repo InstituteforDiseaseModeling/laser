@@ -385,7 +385,7 @@ class LaserFrame:
         Return a formatted string description of the laserframe object, including its attributes and their values.
 
         Args:
-            target: Optional string to specify the target of the report.
+            target: Optional string for the report header (generally the name of the LaserFrame variable, e.g., "People". Unlike functions, we can't get the name of a variable automatically).
 
         Returns:
             str: A formatted string describing the laserframe object, including its capacity, count, and
@@ -408,7 +408,8 @@ class LaserFrame:
         # Scalars are 1-D arrays with shape (capacity,)
         # Vectors are 2-D arrays with shape (length, capacity),
         # Others are arrays with different shapes.
-        for attr_name in sorted(dir(self)):
+        # for attr_name in sorted(dir(self)):
+        for attr_name in sorted(self.__dict__.keys()):
             attr = getattr(self, attr_name)
             if isinstance(attr, np.ndarray):
                 if attr.shape == (self.capacity,):
