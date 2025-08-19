@@ -89,8 +89,8 @@ The `IntrahostProgression` class manages recovery dynamics by updating infected 
             self.population = model.population
 
             # Seed the infection
-            num_initial_infected = int(0.01 * params.population_size)  # e.g., 1% initially infected
-            infected_indices = np.random.choice(params.population_size, size=num_initial_infected, replace=False)
+            num_initial_infected = int(0.01 * model.params.population_size)  # e.g., 1% initially infected
+            infected_indices = np.random.choice(model.params.population_size, size=num_initial_infected, replace=False)
             self.population.disease_state[infected_indices] = 1
 
             # Initialize recovery timer for initially infected individuals
