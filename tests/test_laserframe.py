@@ -56,17 +56,23 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.count == 0
         assert len(pop) == pop.count
 
+        return
+
     def test_init_with_count(self):
         pop = LaserFrame(1024, initial_count=128)
         assert pop.capacity == 1024
         assert pop.count == 128
         assert len(pop) == pop.count
 
+        return
+
     def test_init_with_count_minus_one(self):
         pop = LaserFrame(1024, initial_count=-1)
         assert pop.capacity == 1024
         assert pop.count == 1024
         assert len(pop) == pop.count
+
+        return
 
     def test_init_with_properties(self):
         pop = LaserFrame(1024, initial_count=0, start_year=1944, source="https://ourworldindata.org/grapher/life-expectancy?country=~USA")
@@ -76,11 +82,15 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.start_year == 1944
         assert pop.source == "https://ourworldindata.org/grapher/life-expectancy?country=~USA"
 
+        return
+
     def test_add_scalar_property(self):
         pop = LaserFrame(1024)
         pop.add_scalar_property("age", default=0)
         assert np.all(pop.age == 0)
         assert pop.age.shape == (1024,)
+
+        return
 
     def test_add_scalar_property_with_value(self):
         pop = LaserFrame(1024)
@@ -88,11 +98,15 @@ class TestLaserFrame(unittest.TestCase):
         assert np.all(pop.age == 10)
         assert pop.age.shape == (1024,)
 
+        return
+
     def test_add_vector_property(self):
         pop = LaserFrame(1024)
         pop.add_vector_property("events", 365)
         assert np.all(pop.events == 0)
         assert pop.events.shape == (365, 1024)
+
+        return
 
     def test_add_vectory_property_with_value(self):
         pop = LaserFrame(1024)
@@ -100,17 +114,23 @@ class TestLaserFrame(unittest.TestCase):
         assert np.all(pop.events == 1)
         assert pop.events.shape == (365, 1024)
 
+        return
+
     def test_add_array_property(self):
         pop = LaserFrame(1024)
         pop.add_array_property("events", (365, 1024))
         assert np.all(pop.events == 0)
         assert pop.events.shape == (365, 1024)
 
+        return
+
     def test_add_array_property_with_value(self):
         pop = LaserFrame(1024)
         pop.add_array_property("events", (365, 1024), default=42)
         assert np.all(pop.events == 42)
         assert pop.events.shape == (365, 1024)
+
+        return
 
     def test_add_array_property_with_dtype(self):
         pop = LaserFrame(1024)
@@ -119,6 +139,8 @@ class TestLaserFrame(unittest.TestCase):
         assert np.all(pop.events == default)
         assert pop.events.shape == (365, 1024)
         assert pop.events.dtype == np.float32
+
+        return
 
     def test_add_agents(self):
         pop = LaserFrame(1024, 100)
@@ -130,6 +152,8 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.count == 300
         assert len(pop) == pop.count
 
+        return
+
     def test_add_agents_again(self):
         pop = LaserFrame(1024, 100)
         istart, iend = pop.add(200)
@@ -138,6 +162,8 @@ class TestLaserFrame(unittest.TestCase):
         assert iend == 800
         assert pop.count == 800
         assert len(pop) == pop.count
+
+        return
 
     def test_add_too_many_agents(self):
         pop = LaserFrame(1024, 1000)
@@ -148,6 +174,8 @@ class TestLaserFrame(unittest.TestCase):
             ValueError, match=re.escape("frame.add() exceeds capacity (self._count=1000 + count=100 > self._capacity=1024)")
         ):
             pop.add(100)
+
+        return
 
     def test_sort(self):
         pop = LaserFrame(1024, initial_count=100)
@@ -163,6 +191,8 @@ class TestLaserFrame(unittest.TestCase):
         pop.sort(indices, verbose=False)
         assert np.all(pop.age[: pop.count] == np.sort(original_age))
         assert np.all(pop.height[: pop.count] == original_height[indices])
+
+        return
 
     def test_sort_sanity_check(self):
         pop = LaserFrame(1024, initial_count=100)
@@ -184,6 +214,8 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape("Indices must be an integer array (got float32)")):
             pop.sort(indices.astype(np.float32), verbose=1)
 
+        return
+
     def test_squash(self):
         pop = LaserFrame(1024, initial_count=100)
         pop.add_scalar_property("age", default=0)
@@ -199,6 +231,8 @@ class TestLaserFrame(unittest.TestCase):
         assert pop.count == keep.sum()
         assert np.all(pop.age[: pop.count] == original_age[keep])
         assert np.all(pop.height[: pop.count] == original_height[keep])
+
+        return
 
     def test_squash_sanity_checks(self):
         pop = LaserFrame(1024, initial_count=100)
@@ -220,31 +254,43 @@ class TestLaserFrame(unittest.TestCase):
         with pytest.raises(TypeError, match=re.escape("Indices must be a boolean array (got float32)")):
             pop.squash(keep.astype(np.float32), verbose=1)
 
+        return
+
     def test_init_bad_capacity1(self):
         capacity = "5150"
         with pytest.raises(ValueError, match=re.escape(f"Capacity must be a positive integer, got {capacity}.")):
             _ = LaserFrame(capacity=capacity)
+
+        return
 
     def test_init_bad_capacity2(self):
         capacity = -5150
         with pytest.raises(ValueError, match=re.escape(f"Capacity must be a positive integer, got {capacity}.")):
             _ = LaserFrame(capacity=capacity)
 
+        return
+
     def test_init_bad_initial_count1(self):
         initial_count = "5150"
         with pytest.raises(ValueError, match=re.escape(f"Initial count must be a non-negative integer, got {initial_count}.")):
             _ = LaserFrame(capacity=65536, initial_count=initial_count)
+
+        return
 
     def test_init_bad_initial_count2(self):
         initial_count = -5150
         with pytest.raises(ValueError, match=re.escape(f"Initial count must be a non-negative integer, got {initial_count}.")):
             _ = LaserFrame(capacity=65536, initial_count=initial_count)
 
+        return
+
     def test_init_bad_initial_count3(self):
         capacity = 65536
         initial_count = 1_000_000
         with pytest.raises(ValueError, match=re.escape(f"Initial count ({initial_count}) cannot exceed capacity ({capacity}).")):
             _ = LaserFrame(capacity=capacity, initial_count=initial_count)
+
+        return
 
     def test_save_and_load_snapshot(self):
         with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp:
@@ -292,6 +338,8 @@ class TestLaserFrame(unittest.TestCase):
             # print("test_save_and_load_snapshot passed.")
         finally:
             Path(path).unlink()
+
+        return
 
     def test_capacity_reasonable_for_various_populations(self):
         for pop_size in [10_000, 100_000, 1_000_000, 10_000_000]:
@@ -345,6 +393,8 @@ class TestLaserFrame(unittest.TestCase):
                 finally:
                     Path(path).unlink()
 
+        return
+
     def test_numpy_ints_for_capacity(self):
         for t in [np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64]:
             capacity = t(min(np.iinfo(t).max // 2, 1 << 10))  # Ensure capacity is reasonable
@@ -361,6 +411,57 @@ class TestLaserFrame(unittest.TestCase):
             lf = LaserFrame(capacity, initial_count=count)
             assert lf.capacity == int(capacity), f"Expected capacity {int(capacity)}, got {lf.capacity}"
             assert lf.count == int(count), f"Expected count {int(count)}, got {lf.count}"
+
+        return
+
+    def test_describe(self):
+        # We use this rather than a triple-quoted string to avoid issues with
+        # leading/trailing whitespace and newlines in the expected output.
+        expected = "\n".join(
+            [
+                "",
+                "Laserframe Report for `TestFrame`:",
+                "Capacity:         1,024",
+                "Count:              768",
+                "",
+                "=================================================================================================",
+                "                                             Scalars                                             ",
+                "=================================================================================================",
+                "Name        | Datatype  | Individual Size (bytes) | Allocated Size (bytes) |  In Use Size (bytes)",
+                "-------------------------------------------------------------------------------------------------",
+                "temperature |  float32  |            4            |                  4,096 |                3,072",
+                "-------------------------------------------------------------------------------------------------",
+                "Total       |           |            4            |                  4,096 |                3,072",
+                "-------------------------------------------------------------------------------------------------",
+                "",
+                "=========================================================================================================",
+                "                                                 Vectors                                                 ",
+                "=========================================================================================================",
+                "Name       | Datatype  | Count  | Individual Size (bytes) | Allocated Size (bytes) |  In Use Size (bytes)",
+                "---------------------------------------------------------------------------------------------------------",
+                "velocities |  float32  |   3    |           12            |                 12,288 |                9,216",
+                "---------------------------------------------------------------------------------------------------------",
+                "Total      |           |        |           12            |                 12,288 |                9,216",
+                "---------------------------------------------------------------------------------------------------------",
+                "",
+                "==========================================================================================================",
+                "                                                  Others                                                  ",
+                "==========================================================================================================",
+                "Name        | Datatype | Individual Size (bytes) |      Shape      | Num Elements | Allocated Size (bytes)",
+                "----------------------------------------------------------------------------------------------------------",
+                "sensor_data | float64  |            8            |    (10, 10)     |     100      |                    800",
+                "----------------------------------------------------------------------------------------------------------",
+                "Total       |          |            8            |                 |              |                    800",
+                "----------------------------------------------------------------------------------------------------------",
+                "",
+            ]
+        )
+        lf = LaserFrame(capacity=1024, initial_count=768)
+        lf.add_scalar_property("temperature", dtype=np.float32)
+        lf.add_vector_property("velocities", 3, dtype=np.float32)
+        lf.add_array_property("sensor_data", shape=(10, 10), dtype=np.float64)
+
+        assert lf.describe("TestFrame") == expected
 
         return
 
