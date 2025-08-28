@@ -5,11 +5,10 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   readme
+   overview
+   gettingstarted
    installation
-   usage
    architecture
-   source/modules
    migration
    pyramids
    kmestimator
@@ -19,6 +18,7 @@ Contents
    eula
    performance
    calibration
+   source/modules
    contributing
    authors
    changelog
