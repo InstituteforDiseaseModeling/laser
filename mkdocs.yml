@@ -1,0 +1,116 @@
+site_name: LASER
+site_url: https://institutefordiseasemodeling.github.io/laser/
+repo_name: InstituteforDiseaseModeling/laser
+repo_url: https://github.com/InstituteforDiseaseModeling/laser
+theme:
+  name: material
+  custom_dir: customization/overrides
+  font: 
+    text: Roboto
+    code: Roboto Mono
+  logo: images/idm-logo-transparent.png
+  favicon: images/favicon.ico
+  features:
+    - navigation.footer
+    - content.code.copy
+
+  palette:
+    # Light Mode
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Light mode
+      primary: white
+      accent: light blue
+
+    # Dark Mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Dark mode
+      primary: white
+      accent: light blue
+
+nav:
+  - Home: index.md
+  - Installation:
+    - installation/index.md
+  - Software Overview:
+    - software-overview/index.md
+  - Get Started Modeling:
+    - get-started/index.md
+  - Parameters:
+    - parameters/index.md
+  - Glossary: glossary.md
+  - Development:
+    - development/index.md
+
+watch:
+  - customization/includes # for the abbreviations file
+
+# icons, semantic markup, emojis 
+markdown_extensions:
+  - toc:
+      toc_depth: 3
+  - abbr
+  - attr_list # enables HTMl and CSS classes to inline elements
+  - md_in_html # enables grids
+  - admonition # warnings, etc.
+  - def_list
+  - footnotes
+  - pymdownx.emoji: # emojis and icons
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.arithmatex: # Latex processing
+      generic: true
+  - pymdownx.snippets: # glossary and snippet reuse
+     # auto_append: customization/includes/glossary.md #hitting permissionerror
+  - pymdownx.blocks.details: # allows nesting of collapsible code
+
+# markdown formatting
+  - pymdownx.highlight: # syntax highlighting for code blocks
+      linenums: true
+      default_lang: 'python'
+  - pymdownx.inlinehilite # syntax highlighting for inline code
+  - pymdownx.superfences # enables code, diagram fences to be nested in lists, etc.
+  - pymdownx.details # collapsible elements
+  - pymdownx.tabbed: # tabbed content that can be toggled
+      alternate_style: true
+  - pymdownx.blocks.caption # captions for images, tables, etc.
+
+# javascript customization
+extra_javascript:
+  - customization/javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  
+plugins:
+  - search
+  - autorefs # automatically create linkable references
+  - include-markdown: # include other files, such as READMEs
+  - mkdocs-jupyter:
+      execute: true
+      allow_errors: true
+  - section-index # enables nested sections
+
+copyright: Copyright &copy; 2025 Gates Foundation. All rights reserved.
+
+extra:
+  generator: false
+  footer_links:
+    - text: "Privacy and Cookies Notice"
+    - href: "https://www.gatesfoundation.org/Privacy-and-Cookies-Notice"
+    - text: "Terms of Use"
+    - href: "https://www.gatesfoundation.org/Terms-of-Use"
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/InstituteforDiseaseModeling/modeling-hub
+    - icon: fontawesome/regular/envelope
+      link: mailto:idm@gatesfoundation.org
+    - icon: octicons/globe-24
+      link: https://idmod.org
+    - icon: simple/youtube
+      link: http://www.youtube.com/@institutefordiseasemodelin1987
+    - icon: fontawesome/brands/linkedin
+      link: https://linkedin.com/company/institute-disease-modeling
+
+  
