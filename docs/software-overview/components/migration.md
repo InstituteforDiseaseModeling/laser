@@ -1,1 +1,3 @@
 # Migration
+
+All migration information goes here. NOTE: ONLY include migration model types that can be implemented in laser. If there's additional migration information that should be shared broadly, we can add those sections to the ModelingHub. For example, the current migration section contains 5 or 6 types of methods to model migration, but it looks like (from other places in the docs) that only 2 types are available in laser? Descriptions of the migraiton model implementation types should just be what laser does.
