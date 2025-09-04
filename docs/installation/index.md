@@ -3,9 +3,11 @@
 Environment requirements
 
 Pip install laser-generic
+
 Pip install laser-core (?)
 
 Other versions?
+
 Other notes?
 
 Info on Jenner, or other AI set-up instructions
