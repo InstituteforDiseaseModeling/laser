@@ -9,6 +9,8 @@ Potential list of topics (edit based on how you actually do this! This may end u
 
 ## Assembling components/building a model
 
+make sure to include the base requirements: what components are needed to run a model? How do you create the base model?
+
 ### Manually
 
 ### Setting up Jenner (or your own AI interface)
@@ -32,3 +34,5 @@ Potential list of topics (edit based on how you actually do this! This may end u
 ## Optimizing the model
 
 ## Tutorials and examples
+
+Note that many of the above sections should have example code included in them; this section should be examples of an end-to-end process, or a compilation of all of the above tasks (eg how to put all the pieces together)

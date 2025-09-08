@@ -42,6 +42,7 @@ nav:
       - software-overview/components/index.md
       - software-overview/components/demographics.md
       - software-overview/components/migration.md
+      - software-overview/components/spatial.md
     - software-overview/files.md
   - Get Started Modeling:
     - get-started/index.md
