@@ -15,24 +15,10 @@ make sure to include the base requirements: what components are needed to run a 
 
 ### Setting up Jenner (or your own AI interface)
 
-## Loading data...
-
-## Initializing populations
-
-## Squashing, saving, loading ..?
-
-## Other pre-run tasks :-)
 
 ## Running simulations
 
-## Calibrating the model
 
-### Calibration to debug
 
-### Calibration to fit data
+Note: pulled out the sections loading data, initializing populations, squashing/saving/loading, and put them on a separate topic page. BUT if they should all be done prior to running sims, then should integrate them into this page, with "running simulations" as the last step. (I don't fully understand how to actually build a model yet, so this section of the TOC is still squishy).
 
-## Optimizing the model
-
-## Tutorials and examples
-
-Note that many of the above sections should have example code included in them; this section should be examples of an end-to-end process, or a compilation of all of the above tasks (eg how to put all the pieces together)
