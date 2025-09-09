@@ -47,12 +47,14 @@ nav:
   - Get Started Modeling:
     - get-started/index.md
     - get-started/prebuilt.md
-    - Custom:
+    - Creating Custom Models:
       - get-started/custom/index.md
       - get-started/custom/initialization.md
       - get-started/custom/calibration.md
       - get-started/custom/optimization.md
-      - get-started/custom/tutorials.md
+  - Tutorials:
+    - tutorials/index.md
+    - tutorials/sir.md
   - Parameters:
     - parameters/index.md
   - Glossary: glossary.md

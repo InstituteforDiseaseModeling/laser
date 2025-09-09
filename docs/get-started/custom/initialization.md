@@ -9,4 +9,6 @@ On the fence about making this a separate page, or including in the main page wi
 
 ## Squashing, saving, loading ..?
 
+Note that the code example fr
+
 ## Other pre-run tasks :-)
