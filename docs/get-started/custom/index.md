@@ -1,0 +1,24 @@
+# Creating Custom Models
+
+How to model using LASER-core components
+
+Installation should be already done, those instructions were on the installation page (link to it)
+
+
+Potential list of topics (edit based on how you actually do this! This may end up being a landing page, and each topic has its own page)
+
+## Assembling components/building a model
+
+make sure to include the base requirements: what components are needed to run a model? How do you create the base model?
+
+### Manually
+
+### Setting up Jenner (or your own AI interface)
+
+
+## Running simulations
+
+
+
+Note: pulled out the sections loading data, initializing populations, squashing/saving/loading, and put them on a separate topic page. BUT if they should all be done prior to running sims, then should integrate them into this page, with "running simulations" as the last step. (I don't fully understand how to actually build a model yet, so this section of the TOC is still squishy).
+
