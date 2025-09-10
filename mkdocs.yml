@@ -1,7 +1,7 @@
 site_name: LASER
 site_url: https://mizzo-idm.github.io/laser/
-repo_name: InstituteforDiseaseModeling/laser
-repo_url: https://github.com/InstituteforDiseaseModeling/laser
+repo_name: MIzzo-IDM/laser
+repo_url: https://github.com/MIzzo-IDM/laser
 theme:
   name: material
   custom_dir: customization/overrides
