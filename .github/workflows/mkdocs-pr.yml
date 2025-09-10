@@ -1,0 +1,26 @@
+name: MkDocs Build on PR
+
+on:
+  pull_request:
+    branches: [ master, main, docs ]  # Replace with your desired branches
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install MkDocs and dependencies
+      run: |
+        pip install mkdocs mkdocs-material # Or your specific theme and plugins
+        pip install -r docs/requirements.txt  # If you have a requirements.txt file
+
+    - name: Build MkDocs site
+      run: mkdocs build
