@@ -1,7 +1,8 @@
-name: ci
+name: MkDocs Deploy
 on:
   push:
     branches:
+      - master
       - main
       - docs
 permissions:
@@ -22,8 +23,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           key: mkdocs-material-${{ env.cache_id }}
-          path: ~/.cache
+          path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material
+      - run: |
+          pip install mkdocs mkdocs-material # Or your specific theme and plugins
+          pip install -r docs/requirements.txt  # If you have a requirements.txt file
       - run: mkdocs gh-deploy --force
