@@ -41,7 +41,7 @@ nav:
       - software-overview/components/index.md
       - software-overview/components/demographics.md
       - software-overview/components/migration.md
-      - software-overview/components/spatial.md
+      - software-overview/components/database.md
     - software-overview/modules.md
     - software-overview/files.md
   - Get Started Modeling:
@@ -50,6 +50,7 @@ nav:
     - Creating Custom Models:
       - get-started/custom/index.md
       - get-started/custom/initialization.md
+      - get-started/custom/complexity.md
       - get-started/custom/calibration.md
       - get-started/custom/optimization.md
   - Tutorials:
