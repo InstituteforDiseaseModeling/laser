@@ -9,7 +9,7 @@ Potential list of topics (edit based on how you actually do this! This may end u
 
 ## Assembling components/building a model
 
-make sure to include the base requirements: what components are needed to run a model? How do you create the base model?
+make sure to include the base requirements: what components are needed to run a model? How do you create the base model? (define parameters, add components, run sim, visualize output?)
 
 ### Manually
 
@@ -17,6 +17,8 @@ make sure to include the base requirements: what components are needed to run a 
 
 
 ## Running simulations
+
+## Visualize output
 
 
 
