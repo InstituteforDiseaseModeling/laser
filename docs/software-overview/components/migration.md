@@ -1,12 +1,6 @@
 # Migration
 
-All migration information goes here. NOTE: ONLY include migration model types that can be implemented in laser. If there's additional migration information that should be shared broadly, we can add those sections to the ModelingHub.
-
-Don't include the top section of "notes" for migration implementation; if there are things that are super necessary, those should go in the dev section for folks that are creating their own migration implementations.
-
-Also, are these "components" or "modules" that can be added, or is migration something the user needs to write code to add? If not a component, it should not be a subsection in the components topic.
-
-
+ADD INTRO (yes, all types are included as options in the migration module)
 
 
 ## Gravity model

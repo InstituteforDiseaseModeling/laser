@@ -98,3 +98,8 @@ In this example, values returned from predict_year_of_death() would need to be m
 ```
 
 `predict_age_at_death()` takes an array of current ages (in days) and returns an array of predicted ages (in days) at death. The implementation assumes that the cumulative deaths input array to the estimator represents one year age bins. If you are using non-constant width age bins, you should manually convert bin indices returned from `predict_year_of_death()` to ages.
+
+
+## Spatial distributions of populations
+
+[Added here since it's part of the demographics subpackage, but it might make more sense with the migration information]
