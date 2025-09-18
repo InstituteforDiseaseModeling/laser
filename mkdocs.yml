@@ -42,16 +42,13 @@ nav:
       - software-overview/components/migration.md
       - software-overview/components/database.md
     - software-overview/modules.md
-    - software-overview/files.md
   - Get Started Modeling:
     - get-started/index.md
-    - get-started/prebuilt.md
-    - Creating Custom Models:
-      - get-started/custom/index.md
-      - get-started/custom/initialization.md
-      - get-started/custom/complexity.md
-      - get-started/custom/calibration.md
-      - get-started/custom/optimization.md
+    - get-started/custom.md
+    - get-started/initialization.md
+    - get-started/complexity.md
+    - get-started/calibration.md
+    - get-started/optimization.md
   - Tutorials:
     - tutorials/index.md
     - tutorials/sir.md

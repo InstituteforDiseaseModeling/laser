@@ -1,6 +1,6 @@
 # Software Overview
 
-LASER is a modeling framework that includes a variety of ways for users to implement the code to model infectious diseases. At the root of the framework is LASER-core, a suite of components that can be assembled or customized to fit specific modeling needs. The LASER development team is also in the process of producing pre-built disease models crafted from LASER-core components, which are tailored to address specific public health modeling questions. You can learn more about [creating custom models](../get-started/custom/index.md) using LASER-core or running models using [pre-built disease models](../get-started/prebuilt.md) in the [Get Started Modeling](../get-started/index.md) section.
+LASER is a modeling framework that includes a variety of ways for users to implement the code to model infectious diseases. At the root of the framework is LASER-core, a suite of components that can be assembled or customized to fit specific modeling needs. The LASER development team is also in the process of producing pre-built disease models crafted from LASER-core components, which are tailored to address specific public health modeling questions. You can learn more about [creating custom models](../get-started/custom.md) using LASER-core or running models using pre-built disease models in the [Get Started Modeling](../get-started/index.md) section.
 
 
 ## Design principles
@@ -14,11 +14,8 @@ The philosophy driving the development of LASER was to create a framework that w
 Framework of how laser works:
 
 
-### Software Components
+## Input and output files
 
+All info on the input files and output files. If there are built-in reports, include those. Any type of data requirements should also be included here.
 
-Components are modular units of functionality within the simulation, responsible for performing specific updates or computations on the agent population or node-level data. Each component is implemented as a class with an initialization function to set up any required state and a step function to execute the component’s logic during each timestep.
-
-[Deep dive into components and how they work, how they comprise laser functionality. Each "type" of component will have a topic section as needed]
-
-Make it clear that this is not a comprehensive list, but a call-out for the various functions the user can play with (link to API docs for full listing of laser functions)
+Even if there are no "required" files, there still needs to be guidelines on formats, basic information needs, example files, etc. Better to provide some guidelines and let users know they're flexible than to say "anything goes" with out any starting point
