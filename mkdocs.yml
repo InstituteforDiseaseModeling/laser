@@ -33,8 +33,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation:
-    - installation/index.md
+  - Installation: installation.md
   - Software Overview:
     - software-overview/index.md
     - Components:
@@ -56,11 +55,9 @@ nav:
   - Tutorials:
     - tutorials/index.md
     - tutorials/sir.md
-  - Parameters:
-    - parameters/index.md
+  - Parameters: parameters.md # place holder for API docs
   - Glossary: glossary.md
-  - Development:
-    - development/index.md
+  - Development: development.md
 
 watch:
   - customization/includes # for the abbreviations file

@@ -1,0 +1,8 @@
+mkdocs-material # for docs
+mkdocs-include-markdown-plugin # for including files outside /docs
+mkdocs-jupyter # jupyter notebooks
+mkdocs-autorefs # automatic linkable references
+mkdocs-section-index # ability to create parent topics in TOC
+python-markdown-math # integrate LaTeX math
+pymdown-extensions # various extensions for markdown
+optuna # calibration notebooks
