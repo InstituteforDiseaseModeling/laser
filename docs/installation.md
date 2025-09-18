@@ -6,17 +6,17 @@ LASER was developed to fulfill a variety of modeling needs. `Laser-core` can be 
 pip install laser-core
 ```
 
-Install `laser-core` if you are interested in using the components to develop your own, customized model. More information on modeling with `laser-core` can be found in [../get-started/custom.md].
+Install `laser-core` if you are interested in using the components to develop your own, customized model. More information on modeling with `laser-core` can be found in [Creating Custom Models](get-started/custom.md).
 
 
 ## LASER disease models
 
-If you are interested in exploring model dynamics with `laser-generic` or other disease-specific models, you may find installation and user instructions in [Get Started Modeling](./get-started/prebuilt.md).
+If you are interested in exploring model dynamics with `laser-generic` or other disease-specific models, you may find installation and user instructions in [Laser Disease Models](get-started/index.md).
 
 
 ## LASER development
 
-If you are interested in contributing to code, instructions on how to install for development can be found in [Development](../development/index.md).
+If you are interested in contributing to code, instructions on how to install for development can be found in [Development](development.md).
 
 
 ## Setting up an AI interface

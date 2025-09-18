@@ -15,6 +15,8 @@ make sure to include the base requirements: what components are needed to run a 
 
 ### Setting up Jenner (or your own AI interface)
 
+how to use an AI interface, suggested prompts, etc
+
 
 ## Running simulations
 
