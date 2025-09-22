@@ -1,6 +1,6 @@
 # Migration
 
-ADD INTRO (yes, all types are included as options in the migration module)
+ADD INTRO. Explain how LASER has the variout types of migration models, that the user can select how to implement migration using the following types.
 
 
 ## Gravity model

@@ -11,7 +11,7 @@ Install `laser-core` if you are interested in using the components to develop yo
 
 ## LASER disease models
 
-If you are interested in exploring model dynamics with `laser-generic` or other disease-specific models, you may find installation and user instructions in [Laser Disease Models](get-started/index.md).
+If you are interested in exploring model dynamics with `laser-generic` or other disease-specific models, you can find installation and user instructions in [Laser Disease Models](get-started/index.md).
 
 
 ## LASER development

@@ -27,3 +27,8 @@ how to use an AI interface, suggested prompts, etc
 Note: pulled out the sections loading data, initializing populations, squashing/saving/loading, and put them on a separate topic page. BUT if they should all be done prior to running sims, then should integrate them into this page, with "running simulations" as the last step. (I don't fully understand how to actually build a model yet, so this section of the TOC is still squishy).
 
 This page should focus on the basics of what to do, all of the "additional" tasks are subpages.
+
+
+
+
+Make sure to capture all relevant steps that are currently in tutorials. Users should be able to look here for basic instructions.
