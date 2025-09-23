@@ -105,6 +105,7 @@ plugins:
       execute: false
       allow_errors: true
   - section-index # enables nested sections
+  - table-reader
 
 copyright: Copyright &copy; 2025 Gates Foundation. All rights reserved.
 

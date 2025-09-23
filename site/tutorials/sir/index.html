@@ -14,7 +14,7 @@
         <link rel="prev" href="../">
       
       
-        <link rel="next" href="../../parameters/">
+        <link rel="next" href="../age_pyramid/">
       
       
       <link rel="icon" href="../../images/favicon.ico">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Building an SIR Model - LASER</title>
+        <title>Building SIR Models - LASER</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#building-an-sir-model" class="md-skip">
+        <a href="#building-sir-models" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Building an SIR Model
+              Building SIR Models
             
           </span>
         </div>
@@ -492,7 +492,7 @@
   
   
   <span class="md-ellipsis">
-    Modules (or Models?)
+    Modules (or Models? Classes?)
     
   </span>
   
@@ -745,7 +745,7 @@
   
   
   <span class="md-ellipsis">
-    Building an SIR Model
+    Building SIR Models
     
   </span>
   
@@ -758,7 +758,7 @@
   
   
   <span class="md-ellipsis">
-    Building an SIR Model
+    Building SIR Models
     
   </span>
   
@@ -787,6 +787,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Simple SIR">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model components
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -800,9 +815,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-synthetic-data" class="md-nav__link">
+  <a href="#model-components_1" class="md-nav__link">
     <span class="md-ellipsis">
-      Using synthetic data
+      Model components
     </span>
   </a>
   
@@ -826,6 +841,52 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../age_pyramid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Age Pyramid Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kmestimator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Example Date of Non-disease Death Estimation with KaplanMeierEstimator
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -937,6 +998,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Simple SIR">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model components
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -950,9 +1026,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-synthetic-data" class="md-nav__link">
+  <a href="#model-components_1" class="md-nav__link">
     <span class="md-ellipsis">
-      Using synthetic data
+      Model components
     </span>
   </a>
   
@@ -991,13 +1067,1125 @@
   
 
 
-<h1 id="building-an-sir-model">Building an SIR Model</h1>
-<p>So there are multiple SIR model examples currently in the doc; I think it would make sense to have a single SIR tutorial, where you add complexity to the framework (unless there's something very different?). Basically, start with simple SIR, add spatial dynamics, add real data, add other functions, etc (start in the most basic way and then build up each new feature). It seems easier to keep the topic as one instead of multiple SIR topics floating around.</p>
-<p>Make sure the instructions/introduction clearly states that this is using laser-core (in case there are other sir models using generic, etc)</p>
+<h1 id="building-sir-models">Building SIR Models</h1>
+<p>One of the simplest and most commonly used models to describe the progression of an outbreak or epidemic is the SIR (Susceptible - Infected - Recovered) model. We can use the SIR model to explore how to use the LASER framework, staring with a basic SIR model and adding complexity.</p>
+<p>This tutorial will:</p>
+<ul>
+<li>Demonstrate how the <code>LASERframe</code> and <code>PropertySet</code> libraries are used</li>
+<li>Structure a basic disease transmission framework</li>
+<li>Track and visualize results</li>
+</ul>
+<p>As you progress through the sections, you will learn how to add spatial dynamics and migration into the disease model, using both synthetic and real-world data.</p>
+<!-- would be nice to make this a notebook! -->
+
 <h2 id="simple-sir">Simple SIR</h2>
+<p>The SIR model presented here simulates disease dynamics within a closed population in a single node using the <code>LASERFrame</code> framework. The population starts with a defined number of susceptible and infected individuals, progresses over time with recovery and transmission components, and tracks results for visualization. This example serves as a practical guide for modeling simple epidemic dynamics. This simple example does not include vital dynamics, age-structured populations, vaccination, or other complex interactions.</p>
+<h3 id="model-components">Model components</h3>
+<p>The <code>SIRModel</code> class is the core of the implementation. It initializes a population using <code>LaserFrame</code>, sets up disease state and recovery timer properties, and tracks results across timesteps.</p>
+<details>
+<summary>Code example: Implementing <code>SIRModel</code></summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">laser_core</span><span class="w"> </span><span class="kn">import</span> <span class="n">LaserFrame</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">laser_core</span><span class="w"> </span><span class="kn">import</span> <span class="n">PropertySet</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SIRModel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="c1"># Model Parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+
+        <span class="c1"># Initialize the population LaserFrame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="n">LaserFrame</span><span class="p">(</span><span class="n">capacity</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span><span class="n">initial_count</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">population_size</span><span class="p">)</span>
+
+        <span class="c1"># Add disease state property (0 = Susceptible, 1 = Infected, 2 = Recovered)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;disease_state&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Add a recovery timer property (for intrahost progression, optional for timing)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;recovery_timer&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Results tracking</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">LaserFrame</span><span class="p">(</span> <span class="n">capacity</span> <span class="o">=</span> <span class="mi">1</span> <span class="p">)</span> <span class="c1"># number of nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">add_vector_property</span><span class="p">(</span> <span class="s2">&quot;S&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">add_vector_property</span><span class="p">(</span> <span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">add_vector_property</span><span class="p">(</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="p">)</span>
+
+        <span class="c1"># Components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">track_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tick</span><span class="p">):</span>
+        <span class="n">susceptible</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">infected</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">recovered</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="n">tick</span><span class="p">]</span> <span class="o">=</span> <span class="n">susceptible</span> <span class="o">/</span> <span class="n">total</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">I</span><span class="p">[</span><span class="n">tick</span><span class="p">]</span> <span class="o">=</span> <span class="n">infected</span> <span class="o">/</span> <span class="n">total</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">R</span><span class="p">[</span><span class="n">tick</span><span class="p">]</span> <span class="o">=</span> <span class="n">recovered</span> <span class="o">/</span> <span class="n">total</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">timesteps</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+                <span class="n">component</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">track_results</span><span class="p">(</span><span class="n">tick</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">S</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Susceptible (S)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Infected (I)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">R</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Recovered (R)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;SIR Model Dynamics with LASER Components&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Time (Timesteps)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Fraction of Population&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;gpt_sir.png&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>The <code>IntrahostProgression</code> class manages recovery dynamics by updating infected individuals based on a given recovery rate.</p>
+<details>
+<summary>Code example: Implementing <code>IntrahostProgression</code></summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">IntrahostProgression</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">population</span>
+
+        <span class="c1"># Seed the infection</span>
+        <span class="n">num_initial_infected</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.01</span> <span class="o">*</span> <span class="n">params</span><span class="o">.</span><span class="n">population_size</span><span class="p">)</span>  <span class="c1"># e.g., 1% initially infected</span>
+        <span class="n">infected_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">num_initial_infected</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">infected_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Initialize recovery timer for initially infected individuals</span>
+        <span class="n">initially_infected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span><span class="p">[</span><span class="n">initially_infected</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">initially_infected</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">infected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="c1"># Decrement recovery timer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span><span class="p">[</span><span class="n">infected</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="c1"># Recover individuals whose recovery_timer has reached 0</span>
+        <span class="n">recoveries</span> <span class="o">=</span> <span class="n">infected</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">recoveries</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>The <code>Transmission</code> class manages disease spread by modeling interactions between susceptible and infected individuals.</p>
+<details>
+<summary>Code example: Implementing <code>Transmission</code></summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Transmission</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">population</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infection_rate</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">infection_rate</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">susceptible</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="n">infected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="n">num_susceptible</span> <span class="o">=</span> <span class="n">susceptible</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">num_infected</span> <span class="o">=</span> <span class="n">infected</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">population_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">)</span>
+
+        <span class="c1"># Fraction of infected and susceptible individuals</span>
+        <span class="n">fraction_infected</span> <span class="o">=</span> <span class="n">num_infected</span> <span class="o">/</span> <span class="n">population_size</span>
+
+        <span class="c1"># Transmission logic: Probability of infection per susceptible individual</span>
+        <span class="n">infection_probability</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">infection_rate</span> <span class="o">*</span> <span class="n">fraction_infected</span>
+
+        <span class="c1"># Apply infection probability to all susceptible individuals</span>
+        <span class="n">new_infections</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">num_susceptible</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">infection_probability</span>
+
+        <span class="c1"># Set new infections and initialize their recovery_timer</span>
+        <span class="n">susceptible_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">susceptible</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">newly_infected_indices</span> <span class="o">=</span> <span class="n">susceptible_indices</span><span class="p">[</span><span class="n">new_infections</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">newly_infected_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span><span class="p">[</span><span class="n">newly_infected_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">newly_infected_indices</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>  <span class="c1"># Random recovery time</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>The simulation parameters are defined using the <code>PropertySet</code> class.</p>
+<details>
+<summary>Code example: Defining simulation parameters using <code>PropertySet</code></summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">params</span> <span class="o">=</span> <span class="n">PropertySet</span><span class="p">({</span>
+    <span class="s2">&quot;population_size&quot;</span><span class="p">:</span> <span class="mi">100_000</span><span class="p">,</span>
+    <span class="s2">&quot;infection_rate&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+    <span class="s2">&quot;timesteps&quot;</span><span class="p">:</span> <span class="mi">160</span>
+<span class="p">})</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>The model is initialized with the defined parameters, components are added, and the simulation is run for the specified timesteps. Results are then visualized.</p>
+<details>
+<summary>Code example: Intiailize, run the simulation, and plot the results</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Initialize the model</span>
+<span class="n">sir_model</span> <span class="o">=</span> <span class="n">SIRModel</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="c1"># Initialize and add components</span>
+<span class="n">sir_model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">IntrahostProgression</span><span class="p">(</span><span class="n">sir_model</span><span class="p">))</span>
+<span class="n">sir_model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">Transmission</span><span class="p">(</span><span class="n">sir_model</span><span class="p">))</span>
+
+<span class="c1"># Run the simulation</span>
+<span class="n">sir_model</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">sir_model</span><span class="o">.</span><span class="n">plot_results</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+</details>
 <h2 id="spatial-sir">Spatial SIR</h2>
-<h3 id="using-synthetic-data">Using synthetic data</h3>
+<p>Building upon the simple SIR  model created above, we can add spatial complexity to the framework. Here the simple SIR model will spread the population across 20 nodes. The nodes are arranged in a one-dimensional chain and infection spreads spatially from node 0 as agents migrate; migration is based on a migration matrix.</p>
+<p>Two <a href="../../software-overview/components/migration/">migration options</a> are available:</p>
+<ol>
+<li>Sequential migration matrix: Agents can only move to the next node in the chain.</li>
+<li>Gravity model migration matrix: Agents can move in a two-dimensional spatial dynamic, where migration probabilities depend on node distances and population sizes.</li>
+</ol>
+<p>In this example, the population is distributed across nodes using a rural-urban skew, and migration timers are assigned to control agent migration frequency.</p>
+<h3 id="model-components_1">Model components</h3>
+<p>As above, the model will require the use of <code>LaserFrame</code>, but will now also include spatial components.</p>
+<details>
+<summary>Code example: Initial model importations</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">laser_core.laserframe</span><span class="w"> </span><span class="kn">import</span> <span class="n">LaserFrame</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">laser_core.demographics.spatialpops</span><span class="w"> </span><span class="kn">import</span> <span class="n">distribute_population_skewed</span> <span class="k">as</span> <span class="n">dps</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">laser_core.migration</span><span class="w"> </span><span class="kn">import</span> <span class="n">gravity</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>Instead of using the <code>SIRModel</code>, we will use the <code>MultiNodeSIRModel</code>.</p>
+<details>
+<summary>Code example: Creating a model using <code>MultiNodeSIRModel</code></summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  1</span>
+<span class="normal">  2</span>
+<span class="normal">  3</span>
+<span class="normal">  4</span>
+<span class="normal">  5</span>
+<span class="normal">  6</span>
+<span class="normal">  7</span>
+<span class="normal">  8</span>
+<span class="normal">  9</span>
+<span class="normal"> 10</span>
+<span class="normal"> 11</span>
+<span class="normal"> 12</span>
+<span class="normal"> 13</span>
+<span class="normal"> 14</span>
+<span class="normal"> 15</span>
+<span class="normal"> 16</span>
+<span class="normal"> 17</span>
+<span class="normal"> 18</span>
+<span class="normal"> 19</span>
+<span class="normal"> 20</span>
+<span class="normal"> 21</span>
+<span class="normal"> 22</span>
+<span class="normal"> 23</span>
+<span class="normal"> 24</span>
+<span class="normal"> 25</span>
+<span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Define the model</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MultiNodeSIRModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multi-node SIR (Susceptible-Infected-Recovered) disease transmission model.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        params (dict): Configuration parameters for the model.</span>
+<span class="sd">        nodes (int): Number of nodes in the simulation.</span>
+<span class="sd">        population (LaserFrame): Represents the population with agent-level properties.</span>
+<span class="sd">        results (np.ndarray): Stores simulation results for S, I, and R per node.</span>
+<span class="sd">        components (list): List of components (e.g., Migration, Transmission) added to the model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the SIR model with the given parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params (dict): Dictionary containing parameters such as population size,</span>
+<span class="sd">                           number of nodes, timesteps, and rates for transmission/migration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="n">LaserFrame</span><span class="p">(</span><span class="n">capacity</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">],</span> <span class="n">initial_count</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Define properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;disease_state&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 0=S, 1=I, 2=R</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;recovery_timer&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">add_scalar_property</span><span class="p">(</span><span class="s2">&quot;migration_timer&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Initialize population distribution</span>
+        <span class="n">node_pops</span> <span class="o">=</span> <span class="n">dps</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="n">frac_rural</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+        <span class="n">node_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_pops</span><span class="p">)])</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">node_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span><span class="p">[:</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">node_ids</span>
+
+        <span class="c1"># Reporting structure: Use LaserFrame for reporting</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">LaserFrame</span><span class="p">(</span> <span class="n">capacity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="p">)</span> <span class="c1"># not timesteps for capacity</span>
+        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;S&quot;</span><span class="p">,</span> <span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">add_vector_property</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="c1"># Record results: reporting could actually be a component if we wanted. Or it can be</span>
+        <span class="c1"># done in a log/report function in the relevant component (e.g., Transmission)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">I</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">R</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds a component (e.g., Migration, Transmission, Recovery) to the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            component: An instance of a component to be added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Advances the simulation by one timestep, updating all components and recording results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="n">component</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="c1"># Record results</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">):</span>
+            <span class="n">in_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">in_node</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">in_node</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">in_node</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs the simulation for the configured number of timesteps.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+        <span class="k">for</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_timestep</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">])):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Saves the simulation results to a CSV file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): Path to the output file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;Timestep&quot;</span><span class="p">,</span> <span class="s2">&quot;Node&quot;</span><span class="p">,</span> <span class="s2">&quot;Susceptible&quot;</span><span class="p">,</span> <span class="s2">&quot;Infected&quot;</span><span class="p">,</span> <span class="s2">&quot;Recovered&quot;</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;timesteps&quot;</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">):</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">t</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">node</span><span class="p">]])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the prevalence of infected agents over time for all nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">):</span>
+            <span class="n">prevalence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">I</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">S</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">I</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">R</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">prevalence</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Node </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Prevalence Across All Nodes&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Timesteps&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Prevalence of Infected Agents&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>To add migration between nodes, we will need to select the type of migration model to use and import the component. Here, we will use the sequential migration matrix to move agents sequentially between nodes. The 0th node is the 'urban' node which contains the largest population and where we seed the infection. The infection will travel sequentially from node to node, but the below example breaks the connection at node 13 for demonstrative purposes.</p>
+<details>
+<summary>Code example: Adding migration using the sequential migration matrix</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MigrationComponent</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles migration behavior of agents between nodes in the model.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        migration_matrix (ndarray): A matrix representing migration probabilities between nodes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the MigrationComponent.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+        <span class="c1"># Set initial migration timers</span>
+        <span class="n">max_timer</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;migration_rate&quot;</span><span class="p">])</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_timer</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">migration_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sequential_migration_matrix</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+
+        <span class="c1"># Example customization: Disable migration from node 13 to 14</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">break_matrix_node</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">from_node</span><span class="p">,</span> <span class="n">to_node</span><span class="p">):</span>
+            <span class="n">matrix</span><span class="p">[</span><span class="n">from_node</span><span class="p">][</span><span class="n">to_node</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">break_matrix_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">migration_matrix</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_sequential_migration_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a migration matrix where agents can only migrate to the next sequential node.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            nodes (int): Number of nodes in the simulation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ndarray: A migration matrix where migration is allowed only to the next node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">migration_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nodes</span><span class="p">,</span> <span class="n">nodes</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nodes</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">migration_matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">migration_matrix</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the migration state of the population by determining which agents migrate</span>
+<span class="sd">        and their destinations based on the migration matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span>
+
+        <span class="c1"># Decrement migration timers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="c1"># Identify agents ready to migrate</span>
+        <span class="n">migrating_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">migrating_indices</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Shuffle migrants and assign destinations based on migration matrix</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">migrating_indices</span><span class="p">)</span>
+        <span class="n">destinations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">migrating_indices</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">origin</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">nodes</span><span class="p">):</span>
+            <span class="n">origin_mask</span> <span class="o">=</span> <span class="n">node_ids</span><span class="p">[</span><span class="n">migrating_indices</span><span class="p">]</span> <span class="o">==</span> <span class="n">origin</span>
+            <span class="n">num_origin_migrants</span> <span class="o">=</span> <span class="n">origin_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">num_origin_migrants</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># Assign destinations proportionally to migration matrix</span>
+                <span class="n">destination_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">migration_matrix</span><span class="p">[</span><span class="n">origin</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_origin_migrants</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">destination_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">destination_counts</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># Clip negative values</span>
+                <span class="k">if</span> <span class="n">destination_counts</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># No valid destinations</span>
+                    <span class="n">destinations</span><span class="p">[</span><span class="n">origin_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">origin</span>  <span class="c1"># Stay in the same node</span>
+                    <span class="k">continue</span>
+                <span class="n">destination_counts</span><span class="p">[</span><span class="n">origin</span><span class="p">]</span> <span class="o">+=</span> <span class="n">num_origin_migrants</span> <span class="o">-</span> <span class="n">destination_counts</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>  <span class="c1"># Adjust rounding errors</span>
+
+                <span class="c1"># Create ordered destination assignments</span>
+                <span class="n">destination_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">nodes</span><span class="p">),</span> <span class="n">destination_counts</span><span class="p">)</span>
+                <span class="n">destinations</span><span class="p">[</span><span class="n">origin_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">destination_indices</span><span class="p">[:</span><span class="n">num_origin_migrants</span><span class="p">]</span>
+
+        <span class="c1"># Update node IDs of migrants</span>
+        <span class="n">node_ids</span><span class="p">[</span><span class="n">migrating_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">destinations</span>
+
+        <span class="c1"># Reset migration timers for migrated agents</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span><span class="p">[</span><span class="n">migrating_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;migration_rate&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">migrating_indices</span><span class="o">.</span><span class="n">size</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>To create more complicated and more realistic migration dynamics, instead of using sequential migration we can use the gravity model to implement 2-D migration. Migration rates are proportional to population sizes, but the example still uses synthetic distances for ease of demonstration.</p>
+<details>
+<summary>Code example: Adding migration using the gravity model of migration</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MigrationComponent2D</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles migration behavior of agents between nodes in the model.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        migration_matrix (ndarray): A matrix representing migration probabilities between nodes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the MigrationComponent.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+        <span class="c1"># Set initial migration timers</span>
+        <span class="n">max_timer</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;migration_rate&quot;</span><span class="p">])</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_timer</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;population_size&quot;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">migration_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_gravity_migration_matrix</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_gravity_migration_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a gravity-based migration matrix based on population and distances between nodes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            nodes (int): Number of nodes in the simulation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ndarray: A migration matrix where each row represents probabilities of migration to other nodes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pops</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nodes</span><span class="p">)])</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nodes</span><span class="p">,</span> <span class="n">nodes</span><span class="p">))</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="n">migration_matrix</span> <span class="o">=</span> <span class="n">gravity</span><span class="p">(</span><span class="n">pops</span><span class="p">,</span> <span class="n">distances</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">migration_matrix</span> <span class="o">=</span> <span class="n">migration_matrix</span> <span class="o">/</span> <span class="n">migration_matrix</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">migration_matrix</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Executes the migration step for the agent-based model.</span>
+
+<span class="sd">        This function selects a fraction of agents to migrate based on expired migration timers.</span>
+<span class="sd">        It then changes their node_id according to the migration matrix, ensuring that movements</span>
+<span class="sd">        follow the prescribed probability distributions.</span>
+
+<span class="sd">        Steps:</span>
+<span class="sd">        - Selects a subset of the population for migration.</span>
+<span class="sd">        - Determines the origin nodes of migrating agents.</span>
+<span class="sd">        - Uses a multinomial draw to assign new destinations based on the migration matrix.</span>
+<span class="sd">        - Updates the agents&#39; node assignments accordingly.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Decrement migration timers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="c1"># Identify agents ready to migrate</span>
+        <span class="n">migrating_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">migrating_indices</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">migrating_indices</span><span class="p">)</span>
+
+        <span class="n">origins</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span><span class="p">[</span><span class="n">migrating_indices</span><span class="p">]</span>
+        <span class="n">origin_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">origins</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">])</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">origin</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]):</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">origin_counts</span><span class="p">[</span><span class="n">origin</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">origin_slice</span> <span class="o">=</span> <span class="n">migrating_indices</span><span class="p">[</span><span class="n">offset</span> <span class="p">:</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">count</span><span class="p">]</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">count</span>
+
+            <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">migration_matrix</span><span class="p">[</span><span class="n">origin</span><span class="p">]</span>
+            <span class="n">row_sum</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">row_sum</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">fraction_row</span> <span class="o">=</span> <span class="n">row</span> <span class="o">/</span> <span class="n">row_sum</span>
+            <span class="n">destination_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">fraction_row</span><span class="p">)</span>
+            <span class="n">destinations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]),</span> <span class="n">destination_counts</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span><span class="p">[</span><span class="n">origin_slice</span><span class="p">]</span> <span class="o">=</span> <span class="n">destinations</span><span class="p">[:</span><span class="n">count</span><span class="p">]</span>
+
+        <span class="c1"># Reset migration timers for migrated agents</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">migration_timer</span><span class="p">[</span><span class="n">migrating_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;migration_rate&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">migrating_indices</span><span class="o">.</span><span class="n">size</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>After selecting your desired migration patterns, you will need to add in a transmission component to create disease dynamics.</p>
+<details>
+<summary>Code example: Adding in disease transmission</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TransmissionComponent</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles the disease transmission dynamics within the population.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the TransmissionComponent and infects initial agents.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simulates disease transmission for each node in the current timestep.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">nodes</span><span class="p">):</span>
+            <span class="n">in_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">node_id</span> <span class="o">==</span> <span class="n">i</span>
+            <span class="n">susceptible</span> <span class="o">=</span> <span class="n">in_node</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">infected</span> <span class="o">=</span> <span class="n">in_node</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">num_susceptible</span> <span class="o">=</span> <span class="n">susceptible</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">num_infected</span> <span class="o">=</span> <span class="n">infected</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">total_in_node</span> <span class="o">=</span> <span class="n">in_node</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">total_in_node</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">num_infected</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">num_susceptible</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">infectious_fraction</span> <span class="o">=</span> <span class="n">num_infected</span> <span class="o">/</span> <span class="n">total_in_node</span>
+                <span class="n">susceptible_fraction</span> <span class="o">=</span> <span class="n">num_susceptible</span> <span class="o">/</span> <span class="n">total_in_node</span>
+
+                <span class="n">new_infections</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;transmission_rate&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">infectious_fraction</span> <span class="o">*</span> <span class="n">susceptible_fraction</span> <span class="o">*</span> <span class="n">total_in_node</span>
+                <span class="p">)</span>
+
+                <span class="n">susceptible_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">susceptible</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">newly_infected_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">susceptible_indices</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">new_infections</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[</span><span class="n">newly_infected_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span><span class="p">[</span><span class="n">newly_infected_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">new_infections</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>Finally, we need to add recovery dynamics to the model to move agents through the disease progression.</p>
+<details>
+<summary>Code example: Adding in recovery dynamics</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">RecoveryComponent</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handles the recovery dynamics of infected individuals in the population.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the RecoveryComponent.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model (MultiNodeSIRModel): The simulation model instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the recovery state of infected individuals, moving them to the recovered state</span>
+<span class="sd">        if their recovery timer has elapsed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">infected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span><span class="p">[</span><span class="n">infected</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">disease_state</span><span class="p">[(</span><span class="n">infected</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">recovery_timer</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">2</span>
+</code></pre></div></td></tr></table></div>
+</details>
+<p>To run the created model and visualize your output, we will need to set our model parameters and run the simulation.</p>
+<details>
+<summary>Code example: Running your spatial SIR model</summary>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Parameters</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;population_size&quot;</span><span class="p">:</span> <span class="mi">1_000_000</span><span class="p">,</span>
+    <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;timesteps&quot;</span><span class="p">:</span> <span class="mi">600</span><span class="p">,</span>
+    <span class="s2">&quot;initial_infected_fraction&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="s2">&quot;transmission_rate&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="s2">&quot;migration_rate&quot;</span><span class="p">:</span> <span class="mf">0.001</span>
+<span class="p">}</span>
+
+<span class="c1"># Run simulation</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MultiNodeSIRModel</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">MigrationComponent</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">TransmissionComponent</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">add_component</span><span class="p">(</span><span class="n">RecoveryComponent</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_results</span><span class="p">(</span><span class="s2">&quot;simulation_results.csv&quot;</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">plot_results</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+</details>
 <h3 id="using-real-data">Using real data</h3>
+<p>To utilize SIR models to understand real-world transmission dynamics, you will need to use real data. Model structure will be similar to what was presented above, but instead of using a synthetic population we will initialize the model using real population data. In this example, we will use data from Rwanda. You will want your data saved in a .csv file, with the following format:</p>
+<p><code>region_id,population,centroid_lat,centroid_long,birth_rate
+Ryansoro,46482.66796875,-3.707268618580818,29.79879895068512,11.65647
+Ndava,72979.296875,-3.391556716979041,29.753430749757815,15.881549
+Buyengero,76468.8125,-3.8487418774123014,29.53299692786253,12.503805
+Bugarama,44571.8515625,-3.6904789341549504,29.400408879716224,11.025566
+Rumonge,300248.03125,-3.9622108122897663,29.45711276535364,19.567726
+Burambi,63219.703125,-3.798641437985548,29.452423323952797,9.199019
+Kanyosha1,115017.984375,-3.4309688424403473,29.41531324224386,37.951366
+Kabezi,71913.8359375,-3.5311012728218527,29.369968675926785,31.831919
+Muhuta,88141.7109375,-3.623512958448508,29.415218642943234,21.598902</code></p>
 
 
 
@@ -1044,13 +2232,13 @@
         
         
           
-          <a href="../../parameters/" class="md-footer__link md-footer__link--next" aria-label="Next: Parameters">
+          <a href="../age_pyramid/" class="md-footer__link md-footer__link--next" aria-label="Next: Age Pyramid Examples">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Parameters
+                Age Pyramid Examples
               </div>
             </div>
             <div class="md-footer__button md-icon">

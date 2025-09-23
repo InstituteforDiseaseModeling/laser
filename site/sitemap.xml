@@ -2,82 +2,90 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://mizzo-idm.github.io/laser/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/development/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/glossary/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/installation/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/parameters/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/whatsnew/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/calibration/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/complexity/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/custom/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/initialization/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/get-started/optimization/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/modules/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/components/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/components/database/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/components/demographics/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/software-overview/components/migration/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/tutorials/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://mizzo-idm.github.io/laser/tutorials/age_pyramid/</loc>
+         <lastmod>2025-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://mizzo-idm.github.io/laser/tutorials/kmestimator/</loc>
+         <lastmod>2025-09-23</lastmod>
     </url>
     <url>
          <loc>https://mizzo-idm.github.io/laser/tutorials/sir/</loc>
-         <lastmod>2025-09-22</lastmod>
+         <lastmod>2025-09-23</lastmod>
     </url>
 </urlset>
