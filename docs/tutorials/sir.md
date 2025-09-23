@@ -185,12 +185,12 @@ sir_model.plot_results()
 
 ## Spatial SIR
 
-Building upon the simple SIR  model created above, we can add spatial complexity to the framework. Here the simple SIR model will spread the population across 20 nodes. The nodes are arranged in a one-dimensional chain and infection spreads spatially from node 0 as agents migrate; migration is based on a migration matrix.
+Building upon the simple SIR  model created above, we can add spatial complexity to the framework. Here the simple SIR model will spread the population across 20 nodes. The nodes are arranged in a 1-dimensional chain and infection spreads spatially from node 0 as agents migrate; migration is based on a migration matrix.
 
 Two [migration options](../software-overview/components/migration.md) are available:
 
 1. Sequential migration matrix: Agents can only move to the next node in the chain.
-2. Gravity model migration matrix: Agents can move in a two-dimensional spatial dynamic, where migration probabilities depend on node distances and population sizes.
+2. Gravity model migration matrix: Agents can move in a 2-dimensional spatial dynamic, where migration probabilities depend on node distances and population sizes.
 
 In this example, the population is distributed across nodes using a rural-urban skew, and migration timers are assigned to control agent migration frequency.
 
