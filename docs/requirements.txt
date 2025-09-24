@@ -16,4 +16,4 @@ pandas
 matplotlib
 scipy
 numpy
-laser-core
+
