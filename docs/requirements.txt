@@ -1,4 +1,3 @@
---index-url https://packages.idmod.org/artifactory/api/pypi/pypi-production/simple
 mkdocs-material # for docs
 mkdocs-include-markdown-plugin # for including files outside /docs
 mkdocs-jupyter # jupyter notebooks
