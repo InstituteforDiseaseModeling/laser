@@ -102,7 +102,7 @@ plugins:
   - autorefs # automatically create linkable references
   - include-markdown: # include other files, such as READMEs
   - mkdocs-jupyter:
-      execute: true
+      execute: false
       allow_errors: true
   - section-index # enables nested sections
   - table-reader
