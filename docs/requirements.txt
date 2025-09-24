@@ -8,7 +8,7 @@ python-markdown-math # integrate LaTeX math
 pymdown-extensions # various extensions for markdown
 mkdocstrings # generate API reference from docstrings
 mkdocstrings-python # python handler for mkdocstrings
-mkdocs-table-reader # directly insert csv and other formats as tables
+mkdocs-table-reader-plugin # directly insert csv and other formats as tables
 
 # include all packages needed for running Jupyter notebooks
 optuna # calibration notebooks
