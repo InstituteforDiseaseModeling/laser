@@ -6,3 +6,6 @@ Components are modular units of functionality within the simulation, responsible
 [Deep dive into components and how they work, how they comprise laser functionality. Each "type" of component will have a topic section as needed]
 
 Make it clear that this is not a comprehensive list, but a call-out for the various functions the user can play with (link to API docs for full listing of laser functions)
+
+
+Need to make sure we explain all of the relevant/important parts! Eg, the classes used in the SIR tutorial should be all explained.

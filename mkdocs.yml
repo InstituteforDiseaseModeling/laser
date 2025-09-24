@@ -33,6 +33,7 @@ theme:
 
 nav:
   - Home: index.md
+  - What's New: whatsnew.md
   - Installation: installation.md
   - Software Overview:
     - software-overview/index.md
@@ -52,6 +53,8 @@ nav:
   - Tutorials:
     - tutorials/index.md
     - tutorials/sir.md
+    - tutorials/age_pyramid.ipynb
+    - tutorials/kmestimator.ipynb
   - Parameters: parameters.md # place holder for API docs
   - Glossary: glossary.md
   - Development: development.md
@@ -99,9 +102,10 @@ plugins:
   - autorefs # automatically create linkable references
   - include-markdown: # include other files, such as READMEs
   - mkdocs-jupyter:
-      execute: true
+      execute: false
       allow_errors: true
   - section-index # enables nested sections
+  - table-reader
 
 copyright: Copyright &copy; 2025 Gates Foundation. All rights reserved.
 

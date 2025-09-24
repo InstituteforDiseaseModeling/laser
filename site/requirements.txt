@@ -2,7 +2,17 @@ mkdocs-material # for docs
 mkdocs-include-markdown-plugin # for including files outside /docs
 mkdocs-jupyter # jupyter notebooks
 mkdocs-autorefs # automatic linkable references
+mkdocs-autoapi # automatically generate module md files
 mkdocs-section-index # ability to create parent topics in TOC
 python-markdown-math # integrate LaTeX math
 pymdown-extensions # various extensions for markdown
+mkdocstrings # generate API reference from docstrings
+mkdocstrings-python # python handler for mkdocstrings
+mkdocs-table-reader # directly insert csv and other formats as tables
+
+# include all packages needed for running Jupyter notebooks
 optuna # calibration notebooks
+pandas
+matplotlib
+scipy
+numpy

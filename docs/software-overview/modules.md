@@ -1,4 +1,4 @@
-# Modules (or Models?)
+# Modules (or Models? Classes?)
 
 Looks like there are "model classes" that manage components?? (Looking at the Vital Dynamics Model page)
 
