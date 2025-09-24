@@ -13,7 +13,7 @@ The ability to add spatial dynamics to LASER models is one of the features that 
 
 ## Gravity model
 
-The gravity model [link to a good source on GM] can be used to compute the migration of people between nodes located at specific distances, with migration rates proportional to population size and the distance between nodes. This type of migration is useful when you would like to add 2-dimensional movement of agents to nodes.
+The [gravity model](https://en.wikipedia.org/wiki/Gravity_model_of_migration) can be used to compute the migration of people between nodes located at specific distances, with migration rates proportional to population size and the distance between nodes. This type of migration is useful when you would like to add 2-dimensional movement of agents to nodes.
 
 Functional form:
 
@@ -93,7 +93,7 @@ For example, in a “synergistic” version, perhaps migratory flow from Boston 
 Functional form:
 
 $$
-M_{ij} = k \frac{P_i^{a} P_j^{b}}{d_{ij}^{c}} \left(\sum_{k \neq i,j} \frac{P_k^{b}}{d_{jk}^{c}}\right)^{\delta}
+M_{i,j} = k \frac{P_i^{a} P_j^{b}}{d_{ij}^{c}} \left(\sum_{k \neq i,j} \frac{P_k^{b}}{d_{jk}^{c}}\right)^{\delta}
 $$
 
 
@@ -102,5 +102,40 @@ $$
 
 [Stouffer](https://doi.org/10.2307/2084520) argued that human mobility patterns do not respond to absolute distance directly, but only indirectly through the accumulation of intervening opportunities for destinations. Stouffer thus proposed a model with no distance-dependence at all, rather only a term that accounts for all potential destinations closer than destination $j$; thus, longer-distance travel depends on the density of attractive destinations at shorter distances.
 
+Mathematical formulation:
+
+Define $\Omega (i,j)$ to be the set of all locations $k$ such that $D_{i,k} \leq D_{i,j}$
+
+$$
+M_{i,j} = kp_i^a \sum_j \left(\frac{p_j}{\sum_{k \in D(i,j)} p_k}\right)^b
+$$
+
+This presents us with the choice of whether or not the origin population $i$ is included in $\Omega$ - i.e., does the same "gravity" that brings others to visit a community reduce the propensity of that community's members to travel to other communities?
+
+The Stouffer model **does not** include the impact from the local community:
+
+$$
+\Omega(i,j) = \left(k:0 < D_{i,k} \leq D_{i,j}\right).
+$$
+
+The Stouffer variant model **does** include the impact of the local community:
+
+$$
+\Omega(i,j) = \left(k:0 \leq D_{i,k} \leq D_{i,j}\right).
+$$
+
+To simplify the code, `laser-core`'s implementation of the Stouffer model includes a parameter `include_home`.
+
+
 
 ## Radiation model
+
+The [radiation model](https://www.nature.com/articles/nature10856) is a parameter-free model (up to an overall scaling constant for total migration flux), derived from arguments around job-related commuting. The radiation model overcomes limitations of the gravity model (which is limited to flow at two specific points and is proportional to the populations at source and destination) by only requiring data on population densities. It can describe situations in which outbound migration flux from origin to destination is enhanced by destination population and absorbed by the density of nearer destinations.
+
+Mathematical formulation, whith $\Omega$ defined as above in the Stouffer model:
+
+$$
+M_{i,j} = k \frac{p_i p_j}{\left(p_i + \sum_{k \in \theta(i,j)} p_k\right) \left(p_i + p_j + \sum_{k \in \theta(i,j)} p_k\right)}
+$$
+
+We again use the parameter `include_home` to determine whether or not location $i$ is to be included in $\Omega(i,j)$.

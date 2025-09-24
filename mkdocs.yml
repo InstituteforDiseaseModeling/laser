@@ -33,7 +33,6 @@ theme:
 
 nav:
   - Home: index.md
-  - What's New: whatsnew.md
   - Installation: installation.md
   - Software Overview:
     - software-overview/index.md
@@ -53,6 +52,7 @@ nav:
   - Tutorials:
     - tutorials/index.md
     - tutorials/sir.md
+    - tutorials/squashing-sir.md
     - tutorials/age_pyramid.ipynb
     - tutorials/kmestimator.ipynb
   - Parameters: parameters.md # place holder for API docs
