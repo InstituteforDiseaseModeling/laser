@@ -11,11 +11,11 @@ The philosophy driving the development of LASER was to create a framework that w
 
 ## Software architecture
 
-Framework of how laser works:
+<!-- Framework of how laser works: insert diagram! -->
 
 
 ## Input and output files
 
-All info on the input files and output files. If there are built-in reports, include those. Any type of data requirements should also be included here.
+<!-- All info on the input files and output files. If there are built-in reports, include those. Any type of data requirements should also be included here.
 
-Even if there are no "required" files, there still needs to be guidelines on formats, basic information needs, example files, etc. Better to provide some guidelines and let users know they're flexible than to say "anything goes" with out any starting point
+Even if there are no "required" files, there still needs to be guidelines on formats, basic information needs, example files, etc. Better to provide some guidelines and let users know they're flexible than to say "anything goes" with out any starting point -->

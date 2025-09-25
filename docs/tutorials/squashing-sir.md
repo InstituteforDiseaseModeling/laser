@@ -1,8 +1,8 @@
-# Adding squashing and snapshot support to SIR models
+# Adding Squashing and Snapshot Support to SIR Models
 
 The previous example demonstrated how to build SIR models, with and without spatial structure. As your models become more complex, utilizing methods to improve performance becomes important. Here, we will demonstrate how to implement squashing and snpshot support in your model.
 
-Specifically, this example demonstrates:
+This tutorial will demonstrate:
 
 - Agent squashing based on recovery state
 - Pre-squash result capture

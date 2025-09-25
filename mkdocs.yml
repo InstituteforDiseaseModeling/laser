@@ -33,6 +33,7 @@ theme:
 
 nav:
   - Home: index.md
+  - What's new: whatsnew.md
   - Installation: installation.md
   - Software Overview:
     - software-overview/index.md
@@ -104,6 +105,7 @@ plugins:
   - mkdocs-jupyter:
       execute: false
       allow_errors: true
+      include-source: true
   - section-index # enables nested sections
   - table-reader
 
