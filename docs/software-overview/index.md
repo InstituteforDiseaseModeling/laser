@@ -11,7 +11,7 @@ The philosophy driving the development of LASER was to create a framework that w
 
 ## Software architecture
 
-Framework of how laser works:
+<!-- Framework of how laser works: insert diagram! -->
 
 
 ## Input and output files

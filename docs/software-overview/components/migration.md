@@ -8,8 +8,8 @@ The ability to add spatial dynamics to LASER models is one of the features that 
 
 ## Sequential migration matrix
 
-<!-- This is used in the SIR example, so we need to include a section on it here. -->
-[Agents move sequentially from node to node in a chain]
+<!-- This is used in the SIR example, so we need to include a section on it here.
+[Agents move sequentially from node to node in a chain]-->
 
 ## Gravity model
 

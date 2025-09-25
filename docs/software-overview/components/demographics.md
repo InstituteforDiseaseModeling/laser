@@ -54,9 +54,11 @@ In LASER, we strive to leave the contiguous arrays of agent data in place, witho
 
  1. check that their age is greater than their lifespan (or that the current timestep is greater than their ‘sim day of death’) in each component that cares, or
 
- 2. Set an active flag to false or a dead flag to true.
+ 2. Set an active flag to "false" or a dead flag to "true."
 
- The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, `laser_core.demographics.kmestimator` is provided to support these calculations.
+ The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents.
+
+ Finally, while you can set lifespans using any algorithm you want, `laser_core.demographics.kmestimator` is provided to support these calculations.
 
 
 ## Population pyramids
@@ -65,7 +67,7 @@ The `AliasedDistribution` class provides a way to sample from a set of options w
 
 The input to the `AliasedDistribution` constructor is an array of counts by bin as we would naturally get from a population pyramid (# of people in each age bin).
 
-AliasedDistribution.sample() returns bin indices so it is up to the user to convert the values returned from sample() to actual ages.
+`AliasedDistribution.sample()` returns bin indices so it is up to the user to convert the values returned from `sample()` to actual ages.
 
 Expected format of the population pyramid CSV file for `load_pyramid_csv()`:
 
