@@ -24,7 +24,13 @@ The LASER framework is designed to be flexible. The basis of the framework, `las
 
     [:octicons-arrow-right-24: API reference](parameters.md)
 
+-   :material-new-box:{ .lg .middle } __What's new__
+
     ---
+
+    See what's in the latest releases.
+
+    [:octicons-arrow-right-24: What's new](whatsnew.md)
 
 -   :octicons-book-16:{ .lg .middle } __Glossary__
 
@@ -52,13 +58,9 @@ As a reminder, the following tasks were listed in the original intro:
 
 SO: the docs are going to need to have instructions and help on how to do all of these. I've added notes on where the info should go. As mentioned, don't split these up into persona buckets, just make sure the tasks are explained in order of start - finish (building up complexity).
 
-May want to change what the buttons link to; removed the "what's new and put the changelog at the bottom...can revert back to a "what's new" button. Didn't add a 4th button, wasn't sure what would be best. -->
+We can change what the buttons link to, these are sort of placeholders right now.-->
 
 
 {%
     include-markdown "../AUTHORS.md"
-%}
-
-{%
-    include-markdown "../CHANGELOG.md"
 %}

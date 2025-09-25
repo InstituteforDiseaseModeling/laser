@@ -21,4 +21,4 @@ If you are interested in contributing to code, instructions on how to install fo
 
 ## Setting up an AI interface
 
-Info on Jenner, or other AI set-up instructions
+<!-- Info on Jenner, or other AI set-up instructions -->

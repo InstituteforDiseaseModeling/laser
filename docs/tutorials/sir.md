@@ -187,12 +187,12 @@ sir_model.plot_results()
 
 Building upon the simple SIR  model created above, we can add spatial complexity to the framework. Here the simple SIR model will spread the population across 20 nodes. The nodes are arranged in a 1-dimensional chain and infection spreads spatially from node 0 as agents migrate; migration is based on a migration matrix.
 
-Two [migration options](../software-overview/components/migration.md) are available:
+In this example, two [migration options](../software-overview/components/migration.md) are available:
 
 1. Sequential migration matrix: Agents can only move to the next node in the chain.
 2. Gravity model migration matrix: Agents can move in a 2-dimensional spatial dynamic, where migration probabilities depend on node distances and population sizes.
 
-In this example, the population is distributed across nodes using a rural-urban skew, and migration timers are assigned to control agent migration frequency.
+For this example, the population is distributed across nodes using a rural-urban skew, and migration timers are assigned to control agent migration frequency.
 
 ### Model components
 
@@ -824,10 +824,5 @@ class TransmissionComponent:
                 # Assign recovery timers to newly infected individuals
                 self.model.population.recovery_timer[new_infected_indices] = np.random.randint(5, 15, size=num_new_infections)
 
-        # TODO: Potential Performance Improvement: Consider using a sparse representation for `network`
-        # if many connections have very low probability. This would speed up matrix multiplications significantly.
-
-        # TODO: Investigate parallelization of contagion computation for large-scale simulations
-        # using Numba or JIT compilation to optimize the loop structure.
 ```
 ///

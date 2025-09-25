@@ -1,10 +1,10 @@
 # Development and Contributing to Code
 
-Here's where all the relevant info for submitting tickets for bugs or feature requests, how to contribute to code, etc should go. No need to include persona information, users will navigate the docs based on what tasks they want to do. [If needed, this topic can be broken up with subtopic pages].
+<!-- Here's where all the relevant info for submitting tickets for bugs or feature requests, how to contribute to code, etc should go. No need to include persona information, users will navigate the docs based on what tasks they want to do. [If needed, this topic can be broken up with subtopic pages]. -->
 
 ## Bugs and improvements
 
-LASER is an open-source model, and we welcome code contributions, feature requests, documentation improvement requests, and identification of bugs. If you need to file a ticket (or submit a pull request), please submit your issue at https://github.com/InstituteforDiseaseModeling/laser/issues.
+LASER is an open-source model, and we welcome code contributions, feature requests, documentation improvement requests, and identification of bugs. If you need to file a ticket (or submit a pull request), please submit your issue at <https://github.com/InstituteforDiseaseModeling/laser/issues>.
 
 When reporting a bug, please include:
 - Your operating system name and version.
@@ -49,25 +49,33 @@ Code contributions are welcome! If you develop new features for LASER-core, fix 
 6. Submit a pull request through [GitHub](https://github.com/InstituteforDiseaseModeling/laser/pulls), following our pull request guidelines:
     - Include passing tests (run `tox`)
     - Update the documentation for new API, functionality, etc
-    - Add a note to `CHANGELOG.MD` about the changes
-    - Add yourself to `AUTHORS.MD`
+    - Add a note to `CHANGELOG.md` about the changes
+    - Add yourself to `AUTHORS.md`
 
 
 
 ### GitHub best practices
 
-how to engage with IDM on GH, what's required for PRs etc (not bug tickets but how to fork & submit PRs)
+<!-- how to engage with IDM on GH, what's required for PRs etc (not bug tickets but how to fork & submit PRs) -->
 
 ### Development best practices
 
-other help that's not related to unit tests or code optimization, relevant info from the "iterative development cycle" can go here (only if it's actual workflow steps; don't include if that's just a generalized workflow)
+<!-- other help that's not related to unit tests or code optimization, relevant info from the "iterative development cycle" can go here (only if it's actual workflow steps; don't include if that's just a generalized workflow) -->
 
-### Running tests/unit tests
+### Running unit tests
 
-all relevant sections on unit tests and code testing [currently on optimization page, if needed we can move here]
+<!-- needs more information -->
+
+To run a subset of tests:
+
+`tox -e envname -- pytest -k test_myfeature`
+
+To run all the test environments in parallel:
+
+`tox -p auto`
 
 ### Optimizing code
 
-Current optimization info is in the "getting started, optimization" section; if we decide it's more relevant here, it should move; also should add higher-level (eg dev-focused) optimization here, so may be worth moving the Numba, NumPy, C and OpenMP sections here.
+<!-- Current optimization info is in the "getting started, optimization" section; if we decide it's more relevant here, it should move; also should add higher-level (eg dev-focused) optimization here, so may be worth moving the Numba, NumPy, C and OpenMP sections here. -->
 
 

@@ -1,9 +1,9 @@
 # Loading Data and Initializing Populations
 
-Need to add an introduction here.
+<!-- Need to add an introduction here.-->
 
 
-## Loading data (?)
+## Loading data
 
 ## Initializing populations
 
@@ -77,5 +77,6 @@ Procedure:
 
 A complete example of adding squashing, saving, and loading to SIR models is available in the [tutorials](../tutorials/squashing-sir.md).
 
-
-## Other pre-run tasks :-)
+<!--
+## Other pre-run tasks
+-->
