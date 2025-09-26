@@ -33,7 +33,7 @@ This often reveals the top 1 to 3 performance bottlenecks. Focus first on the bi
 
 ## Leveraging AI
 
-Once you’ve identified the slowest component, the easiest way to improve performance is by using ChatGPT. Try prompting with:
+Once you have identified the slowest component, the easiest way to improve performance is by using ChatGPT. Try prompting with:
 
 `"This code is much too slow. (My arrays are all about 1e6 or 1e7 in size.)"`
 

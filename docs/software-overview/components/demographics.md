@@ -44,7 +44,7 @@ Active Flag Only (if not modeling age structure):
 
 #### Calculating age from birthday
 
-If calculating age isn’t frequent or essential, you can avoid explicitly tracking an age property. Instead, compute age dynamically as the difference between the current timestep (now) and date_of_birth. For models that depend on age-specific dynamics (e.g., fertility rates by age group), consider adding a dedicated age property that updates at each timestep.
+If calculating age isn’t frequent or essential, you can avoid explicitly tracking an age property. Instead, compute age dynamically as the difference between the current timestep (now) and `date_of_birth`. For models that depend on age-specific dynamics (e.g., fertility rates by age group), consider adding a dedicated age property that updates at each timestep.
 
 ### Deaths
 
@@ -147,7 +147,7 @@ To explore working with age pyramids, see the [Age Pyramid Examples](../../tutor
 
 ## Kaplan-Meier estimators
 
-The KaplanMeierEstimator is used to predict age or year of death. It takes an array of cumulative deaths and returns an object that will sample from the Kaplan-Meier distribution.
+The `KaplanMeierEstimator` is used to predict age or year of death. It takes an array of cumulative deaths and returns an object that will sample from the Kaplan-Meier distribution.
 
 A sample input array of cumulative deaths might look like this:
 
@@ -162,7 +162,7 @@ cd[100] = 100_000  # 100,000 deaths by end of year
 `predict_year_of_death()` takes an array of current ages (in years) and returns an array of predicted years of death based on the cumulative deaths input array.
 
 !!! note
-    ` predict_year_of_death()` can use non-constant width age bins and will return predictions by age bin. In this case, it is up to the user to convert the returned bin indices to actual years.
+    `predict_year_of_death()` can use non-constant width age bins and will return predictions by age bin. In this case, it is up to the user to convert the returned bin indices to actual years.
 
 A sample non-constant width age bin input array might look like this:
 

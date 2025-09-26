@@ -14,12 +14,19 @@ Potential list of topics (edit based on how you actually do this! This may end u
 
 ### Manually
 
-### Setting up Jenner (or your own AI interface)
+### Setting up an AI interface
+
+The modular structure of LASER was designed to ultimately be use with AI.
+
+For internal IDM users, you can use a pre-built AI interface, [JENNER-GPT](https://chatgpt.com/g/g-674f5fd33aec8191bcdc1a2736fb7c8d-laser-gpt-jenner?model=gpt-4o) to create your simulations.
+
+For external users, while we cannot currently grant you access to internal tools, we can help you create your own AI interface.
 
 <!--how to use an AI interface, suggested prompts, etc -->
 
 
 ## Running simulations
+
 
 ## Visualize output
 

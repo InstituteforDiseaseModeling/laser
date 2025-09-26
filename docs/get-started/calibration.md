@@ -48,7 +48,7 @@ LASER can be calibrated using [Optuna](https://optuna.org/). Calibration is a pr
     print(f"Test score: {score}")
     ```
 
-    Expected Result: A numeric score. If it crashes, check CSV paths and data types.
+    Expected result: A numeric score. If it crashes, check CSV paths and data types.
 
 1. Run simple calibration (SQLite, no Docker). Use the calib/worker.py helper to run a local test study with a small number of trials.
 

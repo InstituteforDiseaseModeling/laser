@@ -36,7 +36,7 @@ Some notes about using saved populations:
 Procedure:
 
 1. Add squashing:
-    - Add a `squash_recovered()` function. This should call `LaserFrame.squash(…)`` with a boolean mask that includes non-recovered agents (disease_state != 2). You may choose a different criterion, such as age-based squashing.
+    - Add a `squash_recovered()` function. This should call `LaserFrame.squash(…)` with a boolean mask that includes non-recovered agents (disease_state != 2). You may choose a different criterion, such as age-based squashing.
     - Count your “squashed away” agents first. You must compute and store all statistics related to agents being squashed before the `squash()` call. After squashing, only the left-hand portion of the arrays (up to .count) remains valid.
     - Seed infections after squashing. If your model seeds new infections (disease_state == 1), this must happen after squashing. Otherwise, infected agents may be inadvertently removed.
     - Store the squashed-away totals by node. Before squashing, compute and record node-wise totals (e.g., recovered counts) in `results.R[0, :]` so this pre-squash information persists.
