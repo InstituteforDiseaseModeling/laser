@@ -12,6 +12,7 @@ The philosophy driving the development of LASER was to create a framework that w
 ## Software architecture
 
 <!-- Framework of how laser works: insert diagram! -->
+<!-- should also include explanations of what core is vs generic or other disease models -->
 
 
 ## Input and output files
