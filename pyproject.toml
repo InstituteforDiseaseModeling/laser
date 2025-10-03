@@ -124,11 +124,9 @@ exclude_also = [
 
 [tool.setuptools]
 packages = ["laser_core"]
-ext-modules = [
-  {name = "_extension", sources = ["src/laser_core/_extension.c"]}
-]
 
 [tool.setuptools.package-data]
+laser_core = ["*.c"]
 "tests" = ["data/*.csv"]
 
 [tool.bumpversion]
