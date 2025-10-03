@@ -70,6 +70,7 @@ class LaserFrame:
 
         self._count = initial_count
         self._capacity = capacity
+        self._properties = {}
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -97,7 +98,12 @@ class LaserFrame:
         """
 
         # initialize the property to a NumPy array with of size self._capacity, dtype, and default value
-        setattr(self, name, np.full(self._capacity, default, dtype=dtype))
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
+
+        setattr(self, f"_{name}", np.full(self._capacity, default, dtype=dtype))
+        self._properties[name] = getattr(self, f"_{name}")
+
         return
 
     def add_vector_property(self, name: str, length: int, dtype=np.uint32, default=0) -> None:
@@ -123,8 +129,20 @@ class LaserFrame:
         """
 
         # initialize the property to a NumPy array with of size (length, self._capacity), dtype, and default value
-        setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
+
+        setattr(self, f"_{name}", np.full((length, self._capacity), default, dtype=dtype))
+        self._properties[name] = getattr(self, f"_{name}")
+
         return
+
+    def __getattr__(self, name: str):
+        if name in self._properties:
+            backing = self._properties[name]
+            # Handle scalar and vector properties
+            return backing[0 : self.count] if len(backing.shape) == 1 else backing[:, 0 : self.count]
+        raise AttributeError(f"'LaserFrame' object has no attribute '{name}'")
 
     def add_array_property(self, name: str, shape: tuple, dtype=np.uint32, default=0) -> None:
         """
@@ -225,13 +243,16 @@ class LaserFrame:
         _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.integer, f"Indices must be an integer array (got {indices.dtype})")
 
-        for key, value in self.__dict__.items():
-            if isinstance(value, np.ndarray) and len(value.shape) == 1 and value.shape[0] == self._capacity:
+        for name, data in self._properties.items():
+            # Only sorting scalar properties at the moment.
+            # TODO support sorting vector properties.
+            if data.shape == (self._capacity,):
                 if verbose:
-                    print(f"Sorting {self._count:,} elements of {key}")
-                sort = np.zeros_like(value)
-                sort[: self._count] = value[indices]
-                self.__dict__[key] = sort
+                    print(f"Sorting {self._count:,} elements of {name} ... ", end="")
+                temp = data.copy()
+                data[0 : self._count] = temp[indices]
+                if verbose:
+                    print("done.")
 
         return
 
@@ -297,12 +318,12 @@ class LaserFrame:
         group.attrs["count"] = self._count
         group.attrs["capacity"] = self._capacity
 
-        for key in dir(self):
-            if not key.startswith("_"):
-                value = getattr(self, key)
-                if isinstance(value, np.ndarray):
-                    data = value[: self._count]
-                    group.create_dataset(key, data=data)
+        for name, data in self._properties.items():
+            # Currently only saving scalar properties (implied by loading logic)
+            if data.shape == (self._capacity,):
+                group.create_dataset(name, data=data[0 : self._count])
+
+        return
 
     def _save_dict(self, data, group):
         """
@@ -412,6 +433,7 @@ class LaserFrame:
         for attr_name in sorted(self.__dict__.keys()):
             attr = getattr(self, attr_name)
             if isinstance(attr, np.ndarray):
+                attr_name = attr_name.lstrip("_")  # remove leading underscore if present
                 if attr.shape == (self.capacity,):
                     # name, dtype, individual size, allocated size, in-use size
                     scalars.append((attr_name, attr.dtype.name, attr.dtype.itemsize, attr.nbytes, attr.dtype.itemsize * self.count))
