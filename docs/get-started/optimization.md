@@ -1,4 +1,4 @@
-# Optimizing Custom Models
+# Optimize custom models
 
 As an agent-based model, research using LASER will require thousands of simulation replicates. While the model is designed to perform well with large agent populations, there is still a need to utilize high compute power and to optimize model performance.
 
@@ -31,7 +31,7 @@ def run(self):
 This often reveals the top 1 to 3 performance bottlenecks. Focus first on the biggest offender—-it provides the most opportunity for speedup. Often, the largest bottleneck is not what you might instinctively expect. Avoid optimizing a component only to find out it contributes just a small percentage of the total runtime. A modest improvement in the runtime of an “expensive” component is often more effective than spending a lot of time on highly optimizing a component which only accounts for a small fraction of runtime. Also, make sure that your reporting code is being measured and reported, ideally in its own ‘bucket’. This may be easier or harder depending on how you are doing reporting. Since reporting usually involves counting over the entire population, it usually shows up as a hotspot sooner or later. Fortunately, it’s usually fairly easy to speed up. Or even eliminate.
 
 
-## Leveraging AI
+## Leverage AI
 
 Once you have identified the slowest component, the easiest way to improve performance is by using ChatGPT. Try prompting with:
 
@@ -45,7 +45,7 @@ This approach can often transform a naive implementation into a highly optimized
 
 
 
-## Implementing unit tests
+## Implement unit tests
 
 Instead of testing performance within the full simulation, consider building unit tests. This ensures correctness while optimizing for speed.
 
@@ -56,7 +56,7 @@ Instead of testing performance within the full simulation, consider building uni
 <!-- would be nice if we have unit tests already built? Things that are more concrete to share? -->
 
 
-## Optimizing with NumPy and Numba
+## Optimize with NumPy and Numba
 
 After achieving good performance with NumPy, consider trying Numba for further improvements.
 

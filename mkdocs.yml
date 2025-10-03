@@ -35,7 +35,7 @@ nav:
   - Home: index.md
   - What's new: whatsnew.md
   - Installation: installation.md
-  - Software Overview:
+  - Software overview:
     - software-overview/index.md
     - Components:
       - software-overview/components/index.md
@@ -43,7 +43,7 @@ nav:
       - software-overview/components/migration.md
       - software-overview/components/database.md
     - software-overview/modules.md
-  - Get Started Modeling:
+  - Get tarted modeling:
     - get-started/index.md
     - get-started/custom.md
     - get-started/initialization.md

@@ -1,4 +1,4 @@
-# Adding Squashing and Snapshot Support to SIR Models
+# Add squashing and snapshot support to SIR models
 
 The previous example demonstrated how to build SIR models, with and without spatial structure. As your models become more complex, utilizing methods to improve performance becomes important. Here, we will demonstrate how to implement squashing and snapshot support in your model.
 

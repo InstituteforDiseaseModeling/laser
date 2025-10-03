@@ -1,4 +1,4 @@
-# Development and Contributing to Code
+# Contribution guide
 
 <!-- Here's where all the relevant info for submitting tickets for bugs or feature requests, how to contribute to code, etc should go. No need to include persona information, users will navigate the docs based on what tasks they want to do. [If needed, this topic can be broken up with subtopic pages]. -->
 
@@ -17,7 +17,7 @@ If you are proposing a new feature or providing other feedback, please:
 - Remember that this is a volunteer-driven project, and that code contributions are welcome!
 
 
-## Contributing to code
+## Contribute to code
 
 Code contributions are welcome! If you develop new features for `laser-core`, fix bugs you've found in the model, or want to contribute a new disease type to the LASER framework, we would love to add your code.
 
@@ -62,7 +62,7 @@ Code contributions are welcome! If you develop new features for `laser-core`, fi
 
 <!-- other help that's not related to unit tests or code optimization, relevant info from the "iterative development cycle" can go here (only if it's actual workflow steps; don't include if that's just a generalized workflow) -->
 
-### Running unit tests
+### Run unit tests
 
 <!-- needs more information -->
 
@@ -74,7 +74,7 @@ To run all the test environments in parallel:
 
 `tox -p auto`
 
-### Optimizing code
+### Optimize code
 
 <!-- Current optimization info is in the "getting started, optimization" section; if we decide it's more relevant here, it should move; also should add higher-level (eg dev-focused) optimization here, so may be worth moving the Numba, NumPy, C and OpenMP sections here. -->
 

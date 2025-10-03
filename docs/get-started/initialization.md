@@ -1,13 +1,13 @@
-# Loading Data and Initializing Populations
+# Load data and initialize populations
 
 <!-- Need to add an introduction here.-->
 
 
-## Loading data
+## Load data
 
-## Initializing populations
+## Initialize populations
 
-## Squashing, saving, and loading
+## Squash, save, and load
 
 As the number agents in your LASER population model grows (e.g., 1e8), it can become computationally expensive and unnecessary to repeatedly run the same initialization routine every sim. In many cases -— particularly during model calibration -— it is far more efficient to initialize the population once, save it, and then reload the initialized state for subsequent runs.
 

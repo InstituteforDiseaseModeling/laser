@@ -1,4 +1,4 @@
-# Creating Custom Models
+# Create custom models
 
 <!-- How to model using LASER-core components
 
@@ -8,13 +8,13 @@ Installation should be already done, those instructions were on the installation
 Potential list of topics (edit based on how you actually do this! This may end up being a landing page, and each topic has its own page)
 -->
 
-## Assembling components/building a model
+## Assemble components/building a model
 
 <!-- make sure to include the base requirements: what components are needed to run a model? How do you create the base model? (define parameters, add components, run sim, visualize output?) -->
 
 ### Manually
 
-### Setting up an AI interface
+### Set up an AI interface
 
 The modular structure of LASER was designed to ultimately be use with AI.
 
@@ -25,7 +25,7 @@ For external users, while we cannot currently grant you access to internal tools
 <!--how to use an AI interface, suggested prompts, etc -->
 
 
-## Running simulations
+## Run simulations
 
 
 ## Visualize output
