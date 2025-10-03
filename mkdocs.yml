@@ -43,7 +43,7 @@ nav:
       - software-overview/components/migration.md
       - software-overview/components/database.md
     - software-overview/modules.md
-  - Get tarted modeling:
+  - Get started modeling:
     - get-started/index.md
     - get-started/custom.md
     - get-started/initialization.md
