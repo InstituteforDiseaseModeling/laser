@@ -1,4 +1,4 @@
-# Build SIR Models
+# Build SIR models
 
 One of the simplest and most commonly used models to describe the progression of an outbreak or epidemic is the SIR (Susceptible - Infected - Recovered) model. We can use the SIR model to explore how to use the LASER framework, staring with a basic SIR model and adding complexity.
 

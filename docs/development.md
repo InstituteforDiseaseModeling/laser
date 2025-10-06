@@ -23,7 +23,7 @@ If you are proposing a new feature or providing other feedback, please:
 
 Code contributions are welcome! If you develop new features for `laser-core`, fix bugs you've found in the model, or want to contribute a new disease type to the LASER framework, we would love to add your code.
 
-### Setting up your local environment
+### Set up your local environment
 
 1. Fork [LASER-core](https://github.com/InstituteforDiseaseModeling/laser) using the "Fork" button at the top right of the window.
 

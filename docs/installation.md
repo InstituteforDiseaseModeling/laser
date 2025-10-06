@@ -19,6 +19,6 @@ If you are interested in exploring model dynamics with `laser-generic` or other 
 If you are interested in contributing to code, instructions on how to install for development can be found in the [Contribution guide](development.md).
 
 
-## Setting up an AI interface
+## Set up an AI interface
 
 <!-- Info on Jenner, or other AI set-up instructions -->
