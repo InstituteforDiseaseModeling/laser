@@ -8,13 +8,13 @@ The LASER framework is designed to be flexible. The basis of the framework, `las
 
 <div class="grid cards" markdown>
 
--   :simple-jupyter:{ .lg .middle } __Tutorials__
+-   :material-laptop:{ .lg .middle } __Get started modeling__
 
     ---
 
-    An interactive tour of key features.
+    Create and run simulations.
 
-    [:octicons-arrow-right-24: Tutorials](tutorials/index.md)
+    [:octicons-arrow-right-24: Get started modeling](get-started/index.md)
 
 -   :material-api:{ .lg .middle } __Reference__
 
@@ -24,13 +24,13 @@ The LASER framework is designed to be flexible. The basis of the framework, `las
 
     [:octicons-arrow-right-24: API reference](parameters.md)
 
--   :material-new-box:{ .lg .middle } __What's new__
+-   :simple-jupyter:{ .lg .middle } __Tutorials__
 
     ---
 
-    See what's in the latest releases.
+    An interactive tour of key features.
 
-    [:octicons-arrow-right-24: What's new](whatsnew.md)
+    [:octicons-arrow-right-24: Tutorials](tutorials/index.md)
 
 -   :octicons-book-16:{ .lg .middle } __Glossary__
 
@@ -39,6 +39,17 @@ The LASER framework is designed to be flexible. The basis of the framework, `las
     Look up unfamiliar terms.
 
     [:octicons-arrow-right-24: Glossary](glossary.md)
+
+
+-   :material-new-box:{ .lg .middle } __What's new__
+
+    ---
+
+    See what's in the latest releases.
+
+    [:octicons-arrow-right-24: What's new](whatsnew.md)
+
+
 </div>
 
 <!-- [Don't write out personas or split tasks into persona groups; the docs should be task-oriented, so users can determine what they need by what tasks they're trying to accomplish. Understanding personas is an internal tool so we can appropriately identify tasks & necessary info]

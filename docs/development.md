@@ -7,11 +7,13 @@
 LASER is an open-source model, and we welcome code contributions, feature requests, documentation improvement requests, and identification of bugs. If you need to file a ticket (or submit a pull request), please submit your issue at <https://github.com/InstituteforDiseaseModeling/laser/issues>.
 
 When reporting a bug, please include:
+
 - Your operating system name and version.
 - Any details about your local setup that might be helpful in troubleshooting.
 - Detailed steps to reproduce the bug.
 
 If you are proposing a new feature or providing other feedback, please:
+
 - Explain in detail how the feature would work.
 - Keep the scope as narrow as possible, to make it easier to implement.
 - Remember that this is a volunteer-driven project, and that code contributions are welcome!

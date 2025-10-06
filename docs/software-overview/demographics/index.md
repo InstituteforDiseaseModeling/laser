@@ -142,7 +142,7 @@ for i in range(len(pyramid)):   # for each possible bin value...
 ```
 ///
 
-To explore working with age pyramids, see the [Age Pyramid Examples](../../tutorials/age_pyramid.ipynb) in the [Tutorials](../../tutorials/index.md) section.
+To explore working with age pyramids, see [Age pyramid examples](age_pyramid.ipynb).
 
 
 ## Kaplan-Meier estimators
@@ -189,6 +189,9 @@ In this example, values returned from predict_year_of_death() would need to be m
 ```
 
 `predict_age_at_death()` takes an array of current ages (in days) and returns an array of predicted ages (in days) at death. The implementation assumes that the cumulative deaths input array to the estimator represents one year age bins. If you are using non-constant width age bins, you should manually convert bin indices returned from `predict_year_of_death()` to ages.
+
+To explore working with Kapaln-Meier estimators, see [Non-disease death estimation](kmestimator.ipynb).
+
 
 
 ## Spatial distributions of populations
