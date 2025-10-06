@@ -1,4 +1,4 @@
-# Simulation Data and Properties
+# Simulation data and properties
 
 <!-- I think it's worth calling out LaserFrame and PropertySet as features, since this is where the nuts and bolts seem to happen (page could use a better title)
 

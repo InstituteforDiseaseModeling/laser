@@ -35,15 +35,15 @@ nav:
   - Home: index.md
   - What's new: whatsnew.md
   - Installation: installation.md
-  - Software Overview:
+  - Software overview:
     - software-overview/index.md
-    - Components:
-      - software-overview/components/index.md
-      - software-overview/components/demographics.md
-      - software-overview/components/migration.md
-      - software-overview/components/database.md
-    - software-overview/modules.md
-  - Get Started Modeling:
+    - Demographics:
+      - software-overview/demographics/index.md
+      - software-overview/demographics/age_pyramid.ipynb
+      - software-overview/demographics/kmestimator.ipynb
+    - software-overview/migration.md
+    - software-overview/database.md
+  - Get started modeling:
     - get-started/index.md
     - get-started/custom.md
     - get-started/initialization.md
@@ -53,12 +53,9 @@ nav:
   - Tutorials:
     - tutorials/index.md
     - tutorials/sir.md
-    - tutorials/squashing-sir.md
-    - tutorials/age_pyramid.ipynb
-    - tutorials/kmestimator.ipynb
-  - Parameters: parameters.md # place holder for API docs
+  - API reference: parameters.md # place holder for API docs
   - Glossary: glossary.md
-  - Development: development.md
+  - Contribution guide: development.md
 
 watch:
   - customization/includes # for the abbreviations file

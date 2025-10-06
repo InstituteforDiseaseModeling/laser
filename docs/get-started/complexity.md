@@ -1,9 +1,9 @@
-# Adding Model Complexity
+# Add model complexity
 
 <!--This will include how-to's for setting up the cool bits -->
 
 ## Vital dynamics
 
-## Adding spatial features 
+## Add spatial features
 
-### Adding migration
+### Add migration
