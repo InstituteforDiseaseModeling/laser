@@ -83,8 +83,8 @@ For merging, you should:
 
 1. Include passing tests (run `tox`).
 2. Update documentation when there's new API, functionality etc.
-3. Add a note to `CHANGELOG.rst` about the changes.
-4. Add yourself to `AUTHORS.rst`.
+3. Add a note to `CHANGELOG.md` about the changes.
+4. Add yourself to `AUTHORS.md`.
 
 ### Run tests
 Now you can run tests in the `tests` directory or run the entire check+docs+test suite with ```tox```. Running ```tox``` will run several consistency checks, build documentation, run tests against the supported versions of Python, and create a code coverage report based on the test suite. Note that the first run of ```tox``` may take a few minutes (~5). Subsequent runs should be quicker depending on the speed of your machine and the test suite (~2 minutes). You can use ```tox``` to run tests against a single version of Python with, for example, ```tox -e py310```.
