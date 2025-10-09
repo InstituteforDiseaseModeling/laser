@@ -16,7 +16,9 @@
 
 ![commits since v0.6.0](https://img.shields.io/github/commits-since/InstituteforDiseaseModeling/laser/v0.6.0.svg)
 
-## Getting Started
+## Overview
+
+LASER (Light Agent Spatial modeling for ERadication) is a high-performance, agent-based simulation framework for modeling the spread of infectious diseases. It supports spatial structure, age demographics, and modular disease logic using Python-based components.
 
 `laser-core` can be installed standalone with
 
@@ -28,55 +30,26 @@ However, it may be more instructive to install one the disease packages built on
 
 ### Documentation
 
-Documentation can be found [here](https://docs.idmod.org/projects/laser/en/latest/) at the moment.
+Documentation can be found [here](https://institutefordiseasemodeling.github.io/laser/) at the moment.
 
 ### Development
 
-1. clone the `laser-core` repository with
-```bash
-git clone https://github.com/InstituteforDiseaseModeling/laser-core.git
-```
-2. install [`uv`](https://github.com/astral-sh/uv?tab=readme-ov-file#installation) _in your system [Python]_, i.e. _before_ creating and activating a virtual environment
-3. install `tox` as a tool in `uv` with the `tox-uv` plugin with
-```bash
-uv tool install tox --with tox-uv
-```
-4. change to the `laser-core` directory with
-```bash
-cd laser-core
-```
-5. create a virtual environment for development with
-```bash
-uv venv
-```
-6. activate the virtual environment with
-
-**Mac or Linux:**
-```bash
-source .venv/bin/activate
-```
-
-**Windows:**
-```batch
-.venv\bin\Activate
-```
-
-Now you can run tests in the `tests` directory or run the entire check+docs+test suite with ```tox```. Running ```tox``` will run several consistency checks, build documentation, run tests against the supported versions of Python, and create a code coverage report based on the test suite. Note that the first run of ```tox``` may take a few minutes (~5). Subsequent runs should be quicker depending on the speed of your machine and the test suite (~2 minutes). You can use ```tox``` to run tests against a single version of Python with, for example, ```tox -e py310```.
+See [CONTRIBUTING](CONTRIBUTING.md) for development guidance. 
 
 ## Schedule
 
-### First 30 Days (EOY 2023)
+### First 30 days (EOY 2023)
 
 - [x] firm up team/stakeholders/advisory committee: **kmmcarthy, krosenfeld, clorton, jbloedow**
 - [x] enumerate necessary features for reproducing/supporting previous and in-progress modeling efforts
   - [Required Model Features](https://github.com/InstituteforDiseaseModeling/laser/wiki/Required-Model-Features)
 - <strike>enumerate necessary features for outstanding questions and issues</strike>
 
-### First 60 Days (January 31, 2024)
+### First 60 days (January 31, 2024)
 
 - [x] "paper search" / investigate potential existing solutions
 
-### First 120 Days (February 29, 2024)
+### First 120 days (February 29, 2024)
 
 - technical considerations
   - [x] single laptop
@@ -90,7 +63,7 @@ Now you can run tests in the `tests` directory or run the entire check+docs+test
   - [x] NumPy + Numba + C/C++
   - NumPy + Numba + CUDA
 
-## Problem Space
+## Problem space
 
 The problem is inherently an issue of heterogeneity. Spatial decomposition is the easiest consideration, but not sufficient - a model of N "independent" but identical communities is generally not useful.
 

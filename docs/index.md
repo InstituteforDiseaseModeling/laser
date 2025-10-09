@@ -2,7 +2,7 @@
 
 LASER (Light Agent Spatial modeling for ERadication) is a high-performance, agent-based simulation framework for modeling the spread of infectious diseases. It supports spatial structure, age demographics, and modular disease logic using Python-based components.
 
-The LASER framework is designed to be flexible. The basis of the framework, `laser-core`, is comprised of modular components which can be used to create custom epidemiological models. For those who wish to explore disease dynamics without the need to code from scratch, the development team is creating [pre-built models](get-started/index.md), which will include a generic epidemiological model and disease-specific models. These pre-built models range from simple compartmental models to more complex agent-based models with spatial dynamics. And finally, for those who wish to [contribute to code](development.md), the framework is open source and contributions are welcome!
+The LASER framework is designed to be flexible. The basis of the framework, `laser-core`, is composed of modular components that can be used to create custom epidemiological models. For those who want to explore disease dynamics without the need to code from scratch, the development team is creating [pre-built models](get-started/index.md), which will include a generic epidemiological model and disease-specific models. These pre-built models range from simple compartmental models to more complex agent-based models with spatial dynamics. And finally, for those who want to [contribute to code](contributions.md), the framework is open source and contributions are welcome!
 
 ## Learn more
 

@@ -81,7 +81,7 @@ If the best Numba solution still isn’t fast enough, consider compiled C.
 
 ## Additional advice
 
-- Don’t duplicate: Sometimes reporting will duplicate transmission code and need to be combined.
+- Don’t duplicate. Sometimes reporting will duplicate transmission code and need to be combined.
 
 - Never append. There may be cases where you are collecting information as it happens without knowing ahead of time how many rows/entries/elements you’ll need. This is easy in Python using list appending, for example, but that’s a performance killer. Really try to find a way to figure out ahead of time how many entries there will be, and then allocate memory for that, and insert into the existing row.
 

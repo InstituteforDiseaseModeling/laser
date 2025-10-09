@@ -67,8 +67,8 @@ nosetests.xml
 output/*.html
 output/*/index.html
 
-# Sphinx
-docs/_build
+# mkdocs
+site/
 
 # Mypy Cache
 .mypy_cache/

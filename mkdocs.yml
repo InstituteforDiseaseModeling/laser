@@ -1,19 +1,19 @@
 site_name: LASER
-site_url: https://mizzo-idm.github.io/laser/
-repo_name: MIzzo-IDM/laser
-repo_url: https://github.com/MIzzo-IDM/laser
+site_url: https://institutefordiseasemodeling.github.io/laser/
+repo_name: InstituteforDiseaseModeling/laser
+repo_url: https://github.com/InstituteforDiseaseModeling/laser
 theme:
   name: material
-  custom_dir: customization/overrides
+  custom_dir: docs/customization/overrides
   font: 
     text: Roboto
     code: Roboto Mono
   logo: images/idm-logo-transparent.png
   favicon: images/favicon.ico
   features:
-    - navigation.footer
-    - content.code.copy
-
+    - navigation.footer # include a footer with links to privacy, terms, etc.
+    - content.code.copy # enable copy buttons for code blocks
+    - navigation.indexes # enable parent index page for sections
   palette:
     # Light Mode
     - scheme: default
@@ -28,7 +28,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Dark mode
-      primary: white
+      primary: black
       accent: light blue
 
 nav:
@@ -55,10 +55,7 @@ nav:
     - tutorials/sir.md
   - API reference: parameters.md # place holder for API docs
   - Glossary: glossary.md
-  - Contribution guide: development.md
-
-watch:
-  - customization/includes # for the abbreviations file
+  - Contribution guide: contributions.md
 
 # icons, semantic markup, emojis 
 markdown_extensions:
@@ -73,13 +70,10 @@ markdown_extensions:
   - pymdownx.emoji: # emojis and icons
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - pymdownx.arithmatex: # Latex processing
+  - pymdownx.arithmatex: # Latex processing for math equations
       generic: true
-  - pymdownx.snippets: # glossary and snippet reuse
-     # auto_append: customization/includes/glossary.md #hitting permissionerror
+  - pymdownx.snippets: # snippet reuse functionality
   - pymdownx.blocks.details: # allows nesting of collapsible code
-
-# markdown formatting
   - pymdownx.highlight: # syntax highlighting for code blocks
       linenums: true
       default_lang: 'python'
@@ -90,21 +84,22 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.blocks.caption # captions for images, tables, etc.
 
-# javascript customization
+# javascript and CSS customization
 extra_javascript:
-  - customization/javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+extra_css: 
+  - customization/css/extra.css # custom CSS for footer spacing
   
 plugins:
-  - search
+plugins:
+  - search # search functionality
   - autorefs # automatically create linkable references
-  - include-markdown: # include other files, such as READMEs
-  - mkdocs-jupyter:
-      execute: false
-      allow_errors: true
+  - include-markdown # include other files, such as READMEs
+  - mkdocs-jupyter: # enables Jupyter notebooks to be rendered
+      execute: true
+      allow_errors: false # set to true to continue executing cells even if one fails
       include-source: true
-  - section-index # enables nested sections
-  - table-reader
+  - table-reader # enables rendering of CSV/TSV files as tables
 
 copyright: Copyright &copy; 2025 Gates Foundation. All rights reserved.
 
@@ -112,9 +107,9 @@ extra:
   generator: false
   footer_links:
     - text: "Privacy and Cookies Notice"
-    - href: "https://www.gatesfoundation.org/Privacy-and-Cookies-Notice"
+      href: "https://www.gatesfoundation.org/Privacy-and-Cookies-Notice"
     - text: "Terms of Use"
-    - href: "https://www.gatesfoundation.org/Terms-of-Use"
+      href: "https://www.gatesfoundation.org/Terms-of-Use"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/InstituteforDiseaseModeling/modeling-hub
@@ -128,20 +123,20 @@ extra:
       link: https://linkedin.com/company/institute-disease-modeling
 
   analytics:
-  provider: google
-  property: G-SVDSQH04EM
-  feedback:
-    title: Was this page helpful?
-    ratings:
-      - icon: material/emoticon-happy-outline
-        name: This page was helpful
-        data: 1
-        note: >-
-          Thanks for your feedback! If you like, provide additional information by
-          using our <a href="https://app.smartsheet.com/b/form/ec8dbb77809949ecab7286a5ca74a206" target="_blank" rel="noopener">feedback form</a>.
-      - icon: material/emoticon-sad-outline
-        name: This page could be improved
-        data: 0
-        note: >-
-          Thanks for your feedback! Help us improve this page by
-          using our <a href="https://app.smartsheet.com/b/form/ec8dbb77809949ecab7286a5ca74a206" target="_blank" rel="noopener">feedback form</a>.
+    provider: google
+    property: # no tracking until we can implement OneTrust cookie consent
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback! If you like, provide additional information by
+            using our <a href="https://app.smartsheet.com/b/form/ec8dbb77809949ecab7286a5ca74a206" target="_blank" rel="noopener">feedback form</a>.
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            using our <a href="https://app.smartsheet.com/b/form/ec8dbb77809949ecab7286a5ca74a206" target="_blank" rel="noopener">feedback form</a>.
