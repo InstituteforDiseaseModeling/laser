@@ -16,7 +16,7 @@ If you are interested in exploring model dynamics with `laser-generic` or other 
 
 ## LASER development
 
-If you are interested in contributing to code, instructions on how to install for development can be found in the [Contribution guide](development.md).
+If you are interested in contributing to code, instructions on how to install for development can be found in the [Contribution guide](contributions.md).
 
 
 ## Set up an AI interface
