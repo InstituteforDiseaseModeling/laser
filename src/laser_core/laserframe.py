@@ -166,6 +166,9 @@ class LaserFrame:
 
         """
 
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
+
         # initialize the property to a NumPy array with given shape, dtype, and default value
         setattr(self, name, np.full(shape, default, dtype=dtype))
         return

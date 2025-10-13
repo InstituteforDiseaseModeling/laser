@@ -465,6 +465,65 @@ class TestLaserFrame(unittest.TestCase):
 
         return
 
+    def test_catch_duplicate_property(self):
+        lf = LaserFrame(capacity=1024, initial_count=0)
+
+        # Test add_scalar_property()
+        lf.add_scalar_property("age", dtype=np.int32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'age' already exists in LaserFrame.")):
+            lf.add_scalar_property("age", dtype=np.int32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'age' already exists in LaserFrame.")):
+            lf.add_vector_property("age", 3, dtype=np.int32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'age' already exists in LaserFrame.")):
+            lf.add_array_property("age", shape=(10, 10), dtype=np.int32)
+
+        # Test add_vector_property()
+        lf.add_vector_property("position", 3, dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'position' already exists in LaserFrame.")):
+            lf.add_scalar_property("position", dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'position' already exists in LaserFrame.")):
+            lf.add_vector_property("position", 3, dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'position' already exists in LaserFrame.")):
+            lf.add_array_property("position", shape=(10, 10), dtype=np.float32)
+
+        # Test add_array_property()
+        lf.add_array_property("sensor_data", shape=(10, 10), dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'sensor_data' already exists in LaserFrame.")):
+            lf.add_scalar_property("sensor_data", dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'sensor_data' already exists in LaserFrame.")):
+            lf.add_vector_property("sensor_data", 3, dtype=np.float32)
+
+        with pytest.raises(ValueError, match=re.escape("Property 'sensor_data' already exists in LaserFrame.")):
+            lf.add_array_property("sensor_data", shape=(10, 10), dtype=np.float32)
+
+        return
+
+    def test_underlying_array_access(self):
+        lf = LaserFrame(capacity=1024, initial_count=0)
+        lf.add_scalar_property("age", dtype=np.int32)
+        lf.add_vector_property("position", 3, dtype=np.float32)
+
+        # Access underlying arrays
+        age_array = lf._age
+        assert isinstance(age_array, np.ndarray)
+        assert age_array.shape == (1024,)
+        assert age_array.dtype == np.int32
+
+        position_array = lf._position
+        assert isinstance(position_array, np.ndarray)
+        assert position_array.shape == (3, 1024)
+        assert position_array.dtype == np.float32
+
+        return
+
 
 if __name__ == "__main__":
     unittest.main()
