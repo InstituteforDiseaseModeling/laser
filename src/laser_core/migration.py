@@ -426,6 +426,12 @@ def distance(lat1, lon1, lat2=None, lon2=None):
         float: The distance between the two points in kilometers.
     """
 
+    # Sanity checks, part 1
+    _is_instance(lat1, (Number, np.ndarray), f"lat1 must be a numeric value or NumPy array ({type(lat1)=})")
+    _is_instance(lon1, (Number, np.ndarray), f"lon1 must be a numeric value or NumPy array ({type(lon1)=})")
+    _has_values((-90 <= lat1) & (lat1 <= 90), "lat1 must be in the range [-90, 90]")
+    _has_values((-180 <= lon1) & (lon1 <= 180), "lon1 must be in the range [-180, 180]")
+
     if (lat2 is None) and (lon2 is None):
         lat2 = lat1
         lon2 = lon1
@@ -433,13 +439,9 @@ def distance(lat1, lon1, lat2=None, lon2=None):
     if (lat2 is None) or (lon2 is None):
         raise ValueError("Either both or neither of lat2 and lon2 must be provided.")
 
-    # Sanity checks
-    _is_instance(lat1, (Number, np.ndarray), f"lat1 must be a numeric value or NumPy array ({type(lat1)=})")
-    _is_instance(lon1, (Number, np.ndarray), f"lon1 must be a numeric value or NumPy array ({type(lon1)=})")
+    # Sanity checks, part 2
     _is_instance(lat2, (Number, np.ndarray), f"lat2 must be a numeric value or NumPy array ({type(lat2)=})")
     _is_instance(lon2, (Number, np.ndarray), f"lon2 must be a numeric value or NumPy array ({type(lon2)=})")
-    _has_values((-90 <= lat1) & (lat1 <= 90), "lat1 must be in the range [-90, 90]")
-    _has_values((-180 <= lon1) & (lon1 <= 180), "lon1 must be in the range [-180, 180]")
     _has_values((-90 <= lat2) & (lat2 <= 90), "lat2 must be in the range [-90, 90]")
     _has_values((-180 <= lon2) & (lon2 <= 180), "lon2 must be in the range [-180, 180]")
 
