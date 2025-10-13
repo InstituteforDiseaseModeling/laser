@@ -2,11 +2,6 @@ from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
 
-"""
-ext-modules = [
-  {name = "_extension", sources = ["src/laser_core/_extension.c"]}
-]
-"""
 
 setup(
     package_dir={"": "src"},
