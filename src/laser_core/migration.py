@@ -400,11 +400,13 @@ def radiation(pops, distances, k, include_home, **params):
     return network
 
 
-def distance(lat1, lon1, lat2, lon2):
+def distance(lat1, lon1, lat2=None, lon2=None):
     """
     Calculate the great-circle distance between two points on the Earth's surface.
     This function uses the Haversine formula to compute the distance between two points
     specified by their latitude and longitude in decimal degrees.
+
+    If lat2 and lon2 are not provided, they default to lat1 and lon1, respectively.
 
     If all arguments are scalars, will return a single scalar distance, (lat1, lon1) to (lat2, lon2).
 
@@ -424,11 +426,18 @@ def distance(lat1, lon1, lat2, lon2):
         float: The distance between the two points in kilometers.
     """
 
+    if (lat2 is None) and (lon2 is None):
+        lat2 = lat1
+        lon2 = lon1
+
+    if (lat2 is None) or (lon2 is None):
+        raise ValueError("Either both or neither of lat2 and lon2 must be provided.")
+
     # Sanity checks
-    _is_instance(lat1, (Number, np.ndarray), "lat1 must be a numeric value or NumPy array")
-    _is_instance(lon1, (Number, np.ndarray), "lon1 must be a numeric value or NumPy array")
-    _is_instance(lat2, (Number, np.ndarray), "lat2 must be a numeric value or NumPy array")
-    _is_instance(lon2, (Number, np.ndarray), "lon2 must be a numeric value or NumPy array")
+    _is_instance(lat1, (Number, np.ndarray), f"lat1 must be a numeric value or NumPy array ({type(lat1)=})")
+    _is_instance(lon1, (Number, np.ndarray), f"lon1 must be a numeric value or NumPy array ({type(lon1)=})")
+    _is_instance(lat2, (Number, np.ndarray), f"lat2 must be a numeric value or NumPy array ({type(lat2)=})")
+    _is_instance(lon2, (Number, np.ndarray), f"lon2 must be a numeric value or NumPy array ({type(lon2)=})")
     _has_values((-90 <= lat1) & (lat1 <= 90), "lat1 must be in the range [-90, 90]")
     _has_values((-180 <= lon1) & (lon1 <= 180), "lon1 must be in the range [-180, 180]")
     _has_values((-90 <= lat2) & (lat2 <= 90), "lat2 must be in the range [-90, 90]")
