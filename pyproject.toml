@@ -35,7 +35,9 @@ dependencies = [
     "numba",
     "matplotlib",
     "pandas",
-    "h5py"
+    "h5py",
+    "geopandas",
+    "shapely"
 ]
 
 [project.optional-dependencies]
