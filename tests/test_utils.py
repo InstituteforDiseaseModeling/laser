@@ -159,6 +159,7 @@ class TestGridUtilityFunction(unittest.TestCase):
 
         self.check_grid_validity(gdf, M, N, node_size_km=node_size_km, origin_x=origin_x, origin_y=origin_y)
         assert gdf["population"].min() == 100, f"Expected min population == 100, got {gdf['population'].min()}"
+        # max row is M-1, max col is N-1, but the custom population function adds 1 so max population is M*N*100
         assert gdf["population"].max() == (M * N * 100), f"Expected max population == {(M * N * 100)}, got {gdf['population'].max()}"
 
         return

@@ -104,7 +104,7 @@ def grid(M=5, N=5, node_size_km=10, population_fn=None, origin_x=0, origin_y=0):
         M (int): Number of rows (north-south).
         N (int): Number of columns (east-west).
         node_size_km (float): Size of each cell in kilometers (default 10).
-        population (callable): Function(row, col) returning population for a cell. Default is uniform random between 1,000 and 100,000.
+        population_fn (callable): Function(row, col) returning population for a cell. Default is uniform random between 1,000 and 100,000.
         origin_x (float): longitude of the origin in decimal degrees (bottom-left corner) -180 <= origin_x < 180.
         origin_y (float): latitude of the origin in decimal degrees (bottom-left corner) -90 <= origin_y < 90.
 
@@ -143,11 +143,11 @@ def grid(M=5, N=5, node_size_km=10, population_fn=None, origin_x=0, origin_y=0):
             y1 = y0 + node_size_deg
             poly = Polygon(
                 [
-                    (x0, y0),  # NW
-                    (x1, y0),  # NE
-                    (x1, y1),  # SE
-                    (x0, y1),  # SW
-                    (x0, y0),  # Close polygon
+                    (x0, y0),  # SW
+                    (x1, y0),  # SE
+                    (x1, y1),  # NE
+                    (x0, y1),  # NW
+                    (x0, y0),  # Close polygon in SW
                 ]
             )
             population = population_fn(row, col)
