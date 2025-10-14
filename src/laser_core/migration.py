@@ -406,7 +406,7 @@ def distance(lat1, lon1, lat2=None, lon2=None):
     This function uses the Haversine formula to compute the distance between two points
     specified by their latitude and longitude in decimal degrees.
 
-    If lat2 and lon2 are not provided, they default to lat1 and lon1, respectively.
+    If lat2 and lon2 are not provided, they default to lat1 and lon1, respectively. This supports the default case of calculating the NxN matrix of distances between all pairs of points in (lat1, lon1).
 
     If all arguments are scalars, will return a single scalar distance, (lat1, lon1) to (lat2, lon2).
 

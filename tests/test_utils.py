@@ -49,19 +49,19 @@ class TestUtilityFunctions(unittest.TestCase):
 class TestGridUtilityFunction(unittest.TestCase):
     def check_grid_validity(self, gdf, M, N, node_size_km=10, origin_x=0, origin_y=0):
         assert gdf.shape[0] == M * N, f"Expected {M * N} rows, got {gdf.shape[0]}"
-        assert all(col in gdf.columns for col in ["nodeid", "population", "geometry"]), (
-            f"Expected columns 'nodeid', 'population', 'geometry', got {gdf.columns}"
-        )
+        assert all(
+            col in gdf.columns for col in ["nodeid", "population", "geometry"]
+        ), f"Expected columns 'nodeid', 'population', 'geometry', got {gdf.columns}"
 
         assert gdf["nodeid"].min() == 0, f"Expected min nodeid 0, got {gdf['nodeid'].min()}"
         assert gdf["nodeid"].max() == M * N - 1, f"Expected max nodeid {M * N - 1}, got {gdf['nodeid'].max()}"
 
-        assert gdf["geometry"].geom_type.nunique() == 1, (
-            f"Expected all geometries to have the same type, got {gdf['geometry'].geom_type.unique()}"
-        )
-        assert gdf["geometry"].geom_type.unique()[0] == "Polygon", (
-            f"Expected all geometries to be Polygons, got {gdf['geometry'].geom_type.unique()}"
-        )
+        assert (
+            gdf["geometry"].geom_type.nunique() == 1
+        ), f"Expected all geometries to have the same type, got {gdf['geometry'].geom_type.unique()}"
+        assert (
+            gdf["geometry"].geom_type.unique()[0] == "Polygon"
+        ), f"Expected all geometries to be Polygons, got {gdf['geometry'].geom_type.unique()}"
 
         # Check bounding box: lower left should be (origin_x, origin_y), upper right should be (origin_x + N*node_size_km/111, origin_y + M*node_size_km/111)
         # 1 degree latitude ~ 111 km, longitude varies but for small grids this is a reasonable check
