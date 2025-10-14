@@ -184,13 +184,13 @@ class TestLaserFrame(unittest.TestCase):
         istart = 0
         iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)  # random ages 0-100 years
-        original_age = np.array(pop.age[: pop.count])
+        original_age = np.array(pop.age)
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
-        original_height = np.array(pop.height[: pop.count])
-        indices = np.argsort(pop.age[: pop.count])
+        original_height = np.array(pop.height)
+        indices = np.argsort(pop.age)
         pop.sort(indices, verbose=False)
-        assert np.all(pop.age[: pop.count] == np.sort(original_age))
-        assert np.all(pop.height[: pop.count] == original_height[indices])
+        assert np.all(pop.age == np.sort(original_age))
+        assert np.all(pop.height == original_height[indices])
 
         return
 
@@ -201,7 +201,7 @@ class TestLaserFrame(unittest.TestCase):
         istart = 0
         iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)
-        indices = np.argsort(pop.age[: pop.count])
+        indices = np.argsort(pop.age)
 
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.sort(indices.tolist(), verbose=True)
@@ -223,14 +223,14 @@ class TestLaserFrame(unittest.TestCase):
         istart = 0
         iend = pop.count
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)  # random ages 0-100 years
-        original_age = np.array(pop.age[: pop.count])
+        original_age = np.array(pop.age)
         pop.height[istart:iend] = np.random.default_rng().uniform(0.5, 2.0, 100)  # random heights 0.5-2 meters
-        original_height = np.array(pop.height[: pop.count])
-        keep = pop.age[: pop.count] >= 40
+        original_height = np.array(pop.height)
+        keep = pop.age >= 40
         pop.squash(keep, verbose=False)
         assert pop.count == keep.sum()
-        assert np.all(pop.age[: pop.count] == original_age[keep])
-        assert np.all(pop.height[: pop.count] == original_height[keep])
+        assert np.all(pop.age == original_age[keep])
+        assert np.all(pop.height == original_height[keep])
 
         return
 
@@ -241,7 +241,7 @@ class TestLaserFrame(unittest.TestCase):
         istart = 0
         iend = 100
         pop.age[istart:iend] = np.random.default_rng().integers(0, 100, 100)
-        keep = pop.age[: pop.count] >= 40
+        keep = pop.age >= 40
 
         with pytest.raises(TypeError, match=re.escape(f"Indices must be a numpy array (got {list})")):
             pop.squash(keep.tolist(), verbose=True)
@@ -305,12 +305,11 @@ class TestLaserFrame(unittest.TestCase):
 
             # Assign values
             np.random.seed(42)
-            frame.age[:count] = np.random.randint(0, 100, size=count)
-            frame.status[:count] = np.random.choice([0, 1], size=count)  # 1 = recovered
+            frame.age = np.random.randint(0, 100, size=count)
+            frame.status = np.random.choice([0, 1], size=count)  # 1 = recovered
 
             # Squash agents who are recovered or age > 70
             mask = (frame.status == 1) | (frame.age > 70)
-            mask = mask[:count]
             removed = mask.sum()
             frame.squash(~mask)
 
@@ -328,8 +327,8 @@ class TestLaserFrame(unittest.TestCase):
             loaded, r_loaded, pars_loaded = frame.load_snapshot(path, n_ppl=None, cbr=None, nt=None)
 
             assert loaded.count == frame.count
-            assert np.array_equal(loaded.age[: loaded.count], frame.age[: frame.count])
-            assert np.array_equal(loaded.status[: loaded.count], frame.status[: frame.count])
+            assert np.array_equal(loaded.age, frame.age)
+            assert np.array_equal(loaded.status, frame.status)
             assert np.array_equal(r_loaded, results_r)
             assert pars_loaded["r0"] == 2.5
             # print(f"pars_loaded={pars_loaded}")
@@ -543,8 +542,8 @@ class TestLaserFrame(unittest.TestCase):
         test_prop += 3  # Increment all values by 3
 
         # Check that only the active portion is modified
-        assert np.all(lf.test_prop[:initial_count] == default_value + 3), "Active portion not modified correctly."
-        assert np.all(lf.test_prop[initial_count:] == default_value), "Inactive portion should remain at default value."
+        assert np.all(lf._test_prop[:initial_count] == default_value + 3), "Active portion not modified correctly."
+        assert np.all(lf._test_prop[initial_count:] == default_value), "Inactive portion should remain at default value."
 
         return
 
