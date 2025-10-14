@@ -114,7 +114,7 @@ class KaplanMeierEstimator:
         """
 
         if max_index is None:
-            max_index = len(self._cumulative_deaths) - 2  # -1 for leading zero, -1 for zero-based index
+            max_index = len(self.cumulative_deaths) - 1  # index of the last valid bin
         max_index = np.uint32(max_index)
         if not max_index < len(self.cumulative_deaths):
             raise ValueError(f"{max_index=} must be less than {len(self.cumulative_deaths)=}")
@@ -124,7 +124,7 @@ class KaplanMeierEstimator:
 
         return predictions
 
-    def predict_year_of_death(self, ages_years: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = 100) -> np.ndarray:
+    def predict_year_of_death(self, ages_years: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = None) -> np.ndarray:
         """
         Calculate the predicted year of death based on the given ages in years.
 
@@ -132,7 +132,7 @@ class KaplanMeierEstimator:
 
             ages_years (np.ndarray): The ages of the individuals in years.
 
-            max_year (int): The maximum year to consider for calculating the predicted year of death. Default is 100.
+            max_year (int, optional): The maximum year to consider for calculating the predicted year of death. Default is None, which uses the maximum year from the source data.
 
         Returns:
 
@@ -145,6 +145,8 @@ class KaplanMeierEstimator:
             predict_year_of_death(np.array([40, 50, 60]), max_year=80) # returns something like array([62, 72, 82])
         """
 
+        if max_year is None:
+            max_year = len(self.cumulative_deaths) - 1  # index of the last valid year
         max_year = np.uint32(max_year)
         if not max_year < len(self.cumulative_deaths):
             raise ValueError(f"{max_year=} must be less than {len(self.cumulative_deaths)=}")
@@ -157,7 +159,7 @@ class KaplanMeierEstimator:
 
         return year_of_death
 
-    def predict_age_at_death(self, ages_days: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = 100) -> np.ndarray:
+    def predict_age_at_death(self, ages_days: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = None) -> np.ndarray:
         """
         Calculate the predicted age at death (in days) based on the given ages in days.
 
@@ -165,7 +167,7 @@ class KaplanMeierEstimator:
 
             ages_days (np.ndarray): The ages of the individuals in days.
 
-            max_year (int): The maximum year to consider for calculating the predicted year of death. Default is 100.
+            max_year (int, optional): The maximum year to consider for calculating the predicted year of death. Default is None, which uses the maximum year from the source data.
 
         Returns:
 
@@ -177,6 +179,12 @@ class KaplanMeierEstimator:
 
             predict_age_at_death(np.array([40*365, 50*365, 60*365]), max_year=80) # returns something like array([22732, 26297, 29862])
         """
+
+        if max_year is None:
+            max_year = len(self.cumulative_deaths) - 1  # index of the last valid year
+        max_year = np.uint32(max_year)
+        if not max_year < len(self.cumulative_deaths):
+            raise ValueError(f"{max_year=} must be less than {len(self.cumulative_deaths)=}")
 
         if not np.all(ages_days < ((max_year + 1) * 365)):
             raise ValueError(f"{ages_days.max()=} is not less than {((max_year + 1) * 365)=}")
