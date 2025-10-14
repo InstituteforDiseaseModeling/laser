@@ -100,16 +100,17 @@ class KaplanMeierEstimator:
 
     def sample(self, current: np.ndarray[Any, np.dtype[np.integer]], max_index: np.uint32 = None) -> np.ndarray:
         """
-        Alias for predict_year_of_death.
+        Similar to `predict_year_of_death`, but operates on indices rather than years.
+        This method predicts the expiration (death) index for each individual, given their current index.
 
         Parameters:
 
             current (np.ndarray): The current indices of the individuals.
-            max_index (int): The index to consider for calculating the predicted expiration. Default is None, which uses the maximum index from the source data.
+            max_index (int, optional): The maximum index to consider for calculating the predicted expiration. Default is None, which uses the maximum index from the source data.
 
         Returns:
 
-            year_of_death (np.ndarray): The predicted years of death for each individual.
+            predictions (np.ndarray): The predicted expiration indices for each individual.
         """
 
         if max_index is None:
@@ -118,7 +119,7 @@ class KaplanMeierEstimator:
         if not max_index < len(self.cumulative_deaths):
             raise ValueError(f"{max_index=} must be less than {len(self.cumulative_deaths)=}")
         if not np.all(current <= max_index):
-            raise ValueError(f"all current indices must be less than {max_index=} ({current.max()=})")
+            raise ValueError(f"all current indices must be less than or equal to {max_index=} ({current.max()=})")
         predictions = _pyod(current, self._cumulative_deaths, max_index)
 
         return predictions
@@ -149,7 +150,7 @@ class KaplanMeierEstimator:
             raise ValueError(f"{max_year=} must be less than {len(self.cumulative_deaths)=}")
 
         if not np.all(ages_years <= max_year):
-            raise ValueError(f"all current ages must be less than {max_year=} ({ages_years.max()=})")
+            raise ValueError(f"all current ages must be less than or equal to {max_year=} ({ages_years.max()=})")
         year_of_death = _pyod(ages_years, self._cumulative_deaths, max_year)
         # We assert here because we are doing internal consistency checking, not validating user input
         assert np.all(year_of_death <= max_year), f"{year_of_death.max()=} is not less than {max_year=}"
