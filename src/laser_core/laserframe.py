@@ -151,6 +151,12 @@ class LaserFrame:
             return backing[0 : self.count] if len(backing.shape) == 1 else backing[:, 0 : self.count]
         raise AttributeError(f"'LaserFrame' object has no attribute '{name}'")
 
+    def __setattr__(self, name, value):
+        if ("_properties" in self.__dict__) and (name in self._properties):
+            raise RuntimeError(f"Cannot reassign property '{name}'. Modify the array in place instead, e.g., lf.{name}[:] = new_values")
+        else:
+            super().__setattr__(name, value)
+
     def add_array_property(self, name: str, shape: tuple, dtype=np.uint32, default=0) -> None:
         """
         Adds an array property to the object.

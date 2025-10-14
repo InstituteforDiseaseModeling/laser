@@ -298,15 +298,15 @@ class TestLaserFrame(unittest.TestCase):
 
         try:
             # Create frame
-            count = 10000
-            frame = LaserFrame(capacity=100000, initial_count=count)
+            count = 10_000
+            frame = LaserFrame(capacity=100_000, initial_count=count)
             frame.add_scalar_property("age", dtype=np.int32)
             frame.add_scalar_property("status", dtype=np.int8)
 
             # Assign values
             np.random.seed(42)
-            frame.age = np.random.randint(0, 100, size=count)
-            frame.status = np.random.choice([0, 1], size=count)  # 1 = recovered
+            frame.age[:] = np.random.randint(0, 100, size=count)
+            frame.status[:] = np.random.choice([0, 1], size=count)  # 1 = recovered
 
             # Squash agents who are recovered or age > 70
             mask = (frame.status == 1) | (frame.age > 70)
@@ -571,6 +571,17 @@ class TestLaserFrame(unittest.TestCase):
         lf.age[:] = 42
         assert np.all(lf.age == 42)
         assert np.all(lf._age == 42)
+
+        return
+
+    def test_cannot_reassign_property(self):
+        lf = LaserFrame(capacity=100, initial_count=10)
+        lf.add_scalar_property("age", dtype=np.int32, default=13)
+
+        with pytest.raises(
+            RuntimeError, match=re.escape("Cannot reassign property 'age'. Modify the array in place instead, e.g., lf.age[:] = new_values")
+        ):
+            lf.age = np.arange(10)
 
         return
 
