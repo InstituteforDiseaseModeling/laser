@@ -239,6 +239,64 @@ class TestKaplanMeierEstimator(unittest.TestCase):
 
         return
 
+    def test_simple_sample(self):
+        cumulative = np.full(100, 1000, dtype=np.uint32).cumsum().astype(np.uint32)
+        estimator = KaplanMeierEstimator(cumulative)
+        ages = np.array([0, 1, 2, 3, 5, 8], dtype=np.uint32)
+        predicted = estimator.sample(ages)
+        assert np.all(predicted >= ages), f"predicted ages at death should be >= current ages {predicted=}, {ages=}"
+        assert np.all(predicted < len(cumulative)), f"predicted ages at death should be < {len(cumulative)} ({predicted.max()=})"
+
+        return
+
+    def test_limited_sample(self):
+        cumulative = np.full(100, 1000, dtype=np.uint32).cumsum().astype(np.uint32)
+        estimator = KaplanMeierEstimator(cumulative)
+        OLDEST = 50
+        ages = np.random.randint(0, OLDEST, 10_000, dtype=np.uint32)
+        MAXIMUM = 80
+        predicted = estimator.sample(ages, max_index=MAXIMUM)
+        assert np.all(predicted >= ages), f"predicted ages at death should be >= current ages {predicted=}, {ages=}"
+        assert np.all(predicted <= MAXIMUM), f"predicted ages at death should be < {MAXIMUM} ({predicted.max()=})"
+
+        return
+
+    def test_max_year_out_of_range(self):
+        estimator = KaplanMeierEstimator(self.cumulative_deaths)  # Should _definitely_ match...
+        ages_years = np.array([0, 1, 1, 2, 3, 5, 8], dtype=np.uint32)
+        with pytest.raises(ValueError, match=re.escape("max_year=np.uint32(115) must be less than len(self.cumulative_deaths)=101")):
+            estimator.predict_year_of_death(ages_years, max_year=115)
+
+        return
+
+    def test_max_index_out_of_range(self):
+        estimator = KaplanMeierEstimator(self.cumulative_deaths)  # Should _definitely_ match...
+        ages_years = np.array([0, 1, 1, 2, 3, 5, 8], dtype=np.uint32)
+        with pytest.raises(ValueError, match=re.escape("max_index=np.uint32(115) must be less than len(self.cumulative_deaths)=101")):
+            estimator.sample(ages_years, max_index=115)
+
+        return
+
+    def test_input_years_out_of_range(self):
+        estimator = KaplanMeierEstimator(self.cumulative_deaths)
+        ages_years = np.array([0, 1, 1, 2, 3, 5, 80, 85, 90, 95, 100], dtype=np.uint32)
+        with pytest.raises(
+            ValueError, match=re.escape("all current ages must be less than max_year=np.uint32(79) (ages_years.max()=np.uint32(100))")
+        ):
+            estimator.predict_year_of_death(ages_years, max_year=79)
+
+        return
+
+    def test_input_indices_out_of_range(self):
+        estimator = KaplanMeierEstimator(self.cumulative_deaths)
+        age_indices = np.array([0, 1, 1, 2, 3, 5, 80, 85, 90, 95, 100], dtype=np.uint32)
+        with pytest.raises(
+            ValueError, match=re.escape("all current indices must be less than max_index=np.uint32(79) (current.max()=np.uint32(100))")
+        ):
+            estimator.sample(age_indices, max_index=79)
+
+        return
+
 
 def _compare_estimators(etest, eexpected, max_year=100):
     """

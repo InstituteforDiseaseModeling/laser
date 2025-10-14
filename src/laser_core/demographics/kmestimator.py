@@ -98,6 +98,31 @@ class KaplanMeierEstimator:
         """
         return self._cumulative_deaths[1:]  # exclude the leading zero
 
+    def sample(self, current: np.ndarray[Any, np.dtype[np.integer]], max_index: np.uint32 = None) -> np.ndarray:
+        """
+        Alias for predict_year_of_death.
+
+        Parameters:
+
+            current (np.ndarray): The current indices of the individuals.
+            max_index (int): The index to consider for calculating the predicted expiration. Default is None, which uses the maximum index from the source data.
+
+        Returns:
+
+            year_of_death (np.ndarray): The predicted years of death for each individual.
+        """
+
+        if max_index is None:
+            max_index = len(self._cumulative_deaths) - 2  # -1 for leading zero, -1 for zero-based index
+        max_index = np.uint32(max_index)
+        if not max_index < len(self.cumulative_deaths):
+            raise ValueError(f"{max_index=} must be less than {len(self.cumulative_deaths)=}")
+        if not np.all(current <= max_index):
+            raise ValueError(f"all current indices must be less than {max_index=} ({current.max()=})")
+        predictions = _pyod(current, self._cumulative_deaths, max_index)
+
+        return predictions
+
     def predict_year_of_death(self, ages_years: np.ndarray[Any, np.dtype[np.integer]], max_year: np.uint32 = 100) -> np.ndarray:
         """
         Calculate the predicted year of death based on the given ages in years.
@@ -119,8 +144,14 @@ class KaplanMeierEstimator:
             predict_year_of_death(np.array([40, 50, 60]), max_year=80) # returns something like array([62, 72, 82])
         """
 
-        assert np.all(ages_years <= max_year), f"{ages_years.max()=} is not less than {max_year=}"
-        year_of_death = _pyod(ages_years, self._cumulative_deaths, np.uint32(max_year))
+        max_year = np.uint32(max_year)
+        if not max_year < len(self.cumulative_deaths):
+            raise ValueError(f"{max_year=} must be less than {len(self.cumulative_deaths)=}")
+
+        if not np.all(ages_years <= max_year):
+            raise ValueError(f"all current ages must be less than {max_year=} ({ages_years.max()=})")
+        year_of_death = _pyod(ages_years, self._cumulative_deaths, max_year)
+        # We assert here because we are doing internal consistency checking, not validating user input
         assert np.all(year_of_death <= max_year), f"{year_of_death.max()=} is not less than {max_year=}"
 
         return year_of_death
@@ -146,12 +177,14 @@ class KaplanMeierEstimator:
             predict_age_at_death(np.array([40*365, 50*365, 60*365]), max_year=80) # returns something like array([22732, 26297, 29862])
         """
 
-        assert np.all(ages_days < ((max_year + 1) * 365)), f"{ages_days.max()=} is not less than {((max_year + 1) * 365)=}"
+        if not np.all(ages_days < ((max_year + 1) * 365)):
+            raise ValueError(f"{ages_days.max()=} is not less than {((max_year + 1) * 365)=}")
         n = ages_days.shape[0]
         age_at_death = np.empty(n, dtype=ages_days.dtype)
         ages_years = np.empty(ages_days.shape, dtype=np.uint8)
         np.floor_divide(ages_days, 365, out=ages_years, casting="unsafe")
         year_of_death = _pyod(ages_years, self._cumulative_deaths, np.uint32(max_year))
+        # We assert here because we are doing internal consistency checking, not validating user input
         assert np.all(year_of_death <= max_year), f"{year_of_death.max()=} is not less than {max_year=}"
 
         _pdod(ages_days, year_of_death, age_at_death)
@@ -159,6 +192,7 @@ class KaplanMeierEstimator:
         # doy is now in age_at_death, add in the year
         age_at_death += year_of_death * 365
         # incoming individuals of age max. year + 364 days will die on the first day of the next year
+        # We assert here because we are doing internal consistency checking, not validating user input
         assert np.all(age_at_death < ((max_year + 1) * 365)), f"{age_at_death.max()=} is not <= {((max_year + 1) * 365)=}"
 
         return age_at_death
