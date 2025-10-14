@@ -150,7 +150,7 @@ def grid(M=5, N=5, node_size_km=10, population_fn=None, origin_x=0, origin_y=0):
                     (x0, y0),  # Close polygon in SW
                 ]
             )
-            population = population_fn(row, col)
+            population = int(population_fn(row, col))
             if population < 0:
                 raise ValueError(f"population_fn returned negative population {population} for row {row}, col {col}")
             cells.append({"nodeid": nodeid, "population": population, "geometry": poly})
