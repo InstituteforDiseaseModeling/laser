@@ -6,9 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from laser_core.migration import distance
 from laser_core.utils import calc_capacity
-from laser_core.utils import calc_distances
 from laser_core.utils import grid
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
@@ -35,27 +33,6 @@ class TestUtilityFunctions(unittest.TestCase):
             cls.city_data = [transmogrify(row) for row in reader]
 
         cls.top_ten = cls.city_data[0:10]
-
-    def test_calc_distances(self):
-        latitudes = np.array([city.lat for city in self.top_ten])
-        longitudes = np.array([city.long for city in self.top_ten])
-
-        distances = calc_distances(latitudes, longitudes)
-
-        assert distances.shape == (10, 10), f"Expected shape (10, 10), got {distances.shape}"
-        assert distances[0, 0] == 0.0, f"Expected distances[0, 0] == 0.0, got {distances[0, 0]}"
-        assert np.all(distances == distances.T), "Expected distances to be symmetric"
-        assert distances[0, 1] == np.float32(
-            distance(latitudes[0], longitudes[0], latitudes[1], longitudes[1])
-        ), f"Expected distance from New York to Los Angeles to be {np.float32(distance(latitudes[0], longitudes[0], latitudes[1], longitudes[1]))}, got {distances[0, 1]}"
-        assert distances[0, 2] == np.float32(
-            distance(latitudes[0], longitudes[0], latitudes[2], longitudes[2])
-        ), f"Expected distance from New York to Chicago to be {np.float32(distance(latitudes[0], longitudes[0], latitudes[2], longitudes[2]))}, got {distances[0, 2]}"
-        assert distances[1, 2] == np.float32(
-            distance(latitudes[1], longitudes[1], latitudes[2], longitudes[2])
-        ), f"Expected distance from Los Angeles to Chicago to be {np.float32(distance(latitudes[1], longitudes[1], latitudes[2], longitudes[2]))}, got {distances[1, 2]}"
-
-        return
 
     def test_calc_capacity(self):
         population = 1000

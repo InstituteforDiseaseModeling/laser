@@ -339,6 +339,64 @@ class TestMigrationFunctions(unittest.TestCase):
 
         return
 
+    def test_distance_with_self(self):
+        """Test the distance function with only lat1 and lon1 provided."""
+        top_ten = self.city_data[0:10]
+        lat1 = np.array([city.lat for city in top_ten])
+        lon1 = np.array([city.long for city in top_ten])
+        distances = distance(lat1, lon1)
+        expected = self.distances
+        assert np.allclose(distances, expected, atol=1e-05), f"distance({lat1=}, {lon1=}) = {distances}, expected {expected=}"
+
+        return
+
+    def test_distance_invalid_arguments(self):
+        """Test the distance function with invalid arguments."""
+        lat1 = "0"
+        with pytest.raises(TypeError, match=re.escape(f"lat1 must be a numeric value or NumPy array ({type(lat1)=})")):
+            distance(lat1, 0, 0, 1)
+
+        lon1 = "0"
+        with pytest.raises(TypeError, match=re.escape(f"lon1 must be a numeric value or NumPy array ({type(lon1)=})")):
+            distance(0, lon1, 0, 1)
+
+        lat2 = "0"
+        with pytest.raises(TypeError, match=re.escape(f"lat2 must be a numeric value or NumPy array ({type(lat2)=})")):
+            distance(0, 0, lat2, 1)
+
+        lon2 = "1"
+        with pytest.raises(TypeError, match=re.escape(f"lon2 must be a numeric value or NumPy array ({type(lon2)=})")):
+            distance(0, 0, 0, lon2)
+
+        # Additional shape mismatch tests for distance function
+
+        # lat1 and lon1 shape mismatch
+        lat1 = np.array([0, 1])
+        lon1 = np.array([0, 1, 2])
+        lat2 = np.array([0, 1])
+        lon2 = np.array([0, 1])
+        with pytest.raises(TypeError, match=r"lat1 and lon1 must have the same shape"):
+            distance(lat1, lon1, lat2, lon2)
+
+        # lat2 and lon2 shape mismatch
+        lat1 = np.array([0, 1])
+        lon1 = np.array([0, 1])
+        lat2 = np.array([0, 1, 2])
+        lon2 = np.array([0, 1])
+        with pytest.raises(TypeError, match=r"lat2 and lon2 must have the same shape"):
+            distance(lat1, lon1, lat2, lon2)
+
+        top_ten = self.city_data[0:10]
+        lat1 = np.array([city.lat for city in top_ten])
+        lon1 = np.array([city.long for city in top_ten])
+        with pytest.raises(ValueError, match=r"Either both or neither of lat2 and lon2 must be provided."):
+            distance(lat1, lon1, None, lon1)
+
+        with pytest.raises(ValueError, match=r"Either both or neither of lat2 and lon2 must be provided."):
+            distance(lat1, lon1, lat1, None)
+
+        return
+
 
 class TestMigrationFunctionSanityChecks(unittest.TestCase):
     def test_gravity_model_sanity(self):
