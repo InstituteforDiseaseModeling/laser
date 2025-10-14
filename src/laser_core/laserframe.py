@@ -21,6 +21,13 @@ Usage Example:
 Attributes:
     count (int): The current count of active elements.
     capacity (int): The maximum capacity of the frame.
+
+Note:
+
+    Since count can be less than capacity, properties return slices of the underlying arrays up to count by default so users do not have to include the slice themselves.
+    I.e., if `lf` is a LaserFrame, then `lf.age` returns `lf._age[0:lf.count]` automatically.
+    The full underlying array is always available as `lf._age` (or whatever the property name is).
+    The slice returned is valid for all NumPy operations, including assignment, as well as for use with Numba compiled functions.
 """
 
 from functools import reduce

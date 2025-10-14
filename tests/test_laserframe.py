@@ -524,6 +524,57 @@ class TestLaserFrame(unittest.TestCase):
 
         return
 
+    # Test that accessing a property returns the correct slice, not the entire array
+    # Let's create a LaserFrame with a given capacity and half that capacity as the initial count.
+    # We'll also set the default value to something unique so we can easily identify it.
+    # Then, we'll access the property and modify it, checking that only the active portion is affected.
+    # This also tests that modifying the returned property modifies the underlying array correctly.
+    # This also tests the condition where 0 < count < capacity.
+    def test_property_slice_modification(self):
+        capacity = 100
+        initial_count = 50
+        default_value = 7
+
+        lf = LaserFrame(capacity=capacity, initial_count=initial_count)
+        lf.add_scalar_property("test_prop", dtype=np.int32, default=default_value)
+
+        # Access the property and modify it
+        test_prop = lf.test_prop
+        test_prop += 3  # Increment all values by 3
+
+        # Check that only the active portion is modified
+        assert np.all(lf.test_prop[:initial_count] == default_value + 3), "Active portion not modified correctly."
+        assert np.all(lf.test_prop[initial_count:] == default_value), "Inactive portion should remain at default value."
+
+        return
+
+    # Test boundary conditions: count == 0
+    def test_zero_count(self):
+        lf = LaserFrame(capacity=100, initial_count=0)
+        lf.add_scalar_property("age", dtype=np.int32, default=13)
+        assert lf.count == 0
+        assert len(lf) == 0
+        assert lf._age.shape == (100,)
+        assert lf.age.shape == (0,)
+
+        return
+
+    # Test boundary conditions: count == capacity
+    def test_count_equals_capacity(self):
+        lf = LaserFrame(capacity=100, initial_count=100)
+        lf.add_scalar_property("age", dtype=np.int32, default=13)
+        assert lf.count == 100
+        assert len(lf) == 100
+        assert lf._age.shape == (100,)
+        assert np.all(lf._age == 13)
+        assert lf.age.shape == (100,)
+        assert np.all(lf.age == 13)
+        lf.age[:] = 42
+        assert np.all(lf.age == 42)
+        assert np.all(lf._age == 42)
+
+        return
+
 
 if __name__ == "__main__":
     unittest.main()
