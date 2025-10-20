@@ -2,7 +2,6 @@
 This module provides utility functions for the laser-measles project.
 
 Functions:
-
     calc_capacity(population: np.uint32, nticks: np.uint32, cbr: np.float32, verbose: bool = False) -> np.uint32:
         Calculate the population capacity after a given number of ticks based on a constant birth rate.
 
@@ -22,14 +21,12 @@ def calc_capacity(population: np.uint32, nticks: np.uint32, cbr: np.float32, ver
     Calculate the population capacity after a given number of ticks based on a constant birth rate (CBR).
 
     Args:
-
         population (np.uint32): The initial population.
         nticks (np.uint32): The number of ticks (time steps) to simulate.
         cbr (np.float32): The constant birth rate per 1000 people per year.
         verbose (bool, optional): If True, prints detailed population growth information. Defaults to False.
 
     Returns:
-
         np.uint32: The estimated population capacity after the given number of ticks.
     """
 

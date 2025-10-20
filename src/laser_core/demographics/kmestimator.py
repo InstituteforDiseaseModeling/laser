@@ -2,22 +2,18 @@
 This module provides the KaplanMeierEstimator class for predicting the year and age at death based on given ages and cumulative death data.
 
 Classes:
-
     - KaplanMeierEstimator: A class to perform Kaplan-Meier estimation for predicting the year and age at death.
 
 Functions:
-
     - _pyod(ages_years: np.ndarray, cumulative_deaths: np.ndarray, max_year: np.uint32 = 100): Calculate the predicted year of death based on the given ages in years.
-
     - _pdod(age_in_days: np.ndarray, year_of_death: np.ndarray, day_of_death: np.ndarray): Calculate the predicted day of death based on the given ages in days and predicted years of death.
 
 Usage example:
-
-.. code-block:: python
-
+    ```
     estimator = KaplanMeierEstimator(cumulative_deaths=np.array([...]))
     year_of_death = estimator.predict_year_of_death(np.array([40, 50, 60]), max_year=80)
     age_at_death = estimator.predict_age_at_death(np.array([40*365, 50*365, 60*365]), max_year=80)
+    ```
 """
 
 from pathlib import Path
@@ -34,37 +30,27 @@ class KaplanMeierEstimator:
         Initializes the KMEstimator with the given source data.
 
         Parameters:
-
             source : Union[np.ndarray, list, Path, str]
 
                 The source data for the KMEstimator. It can be:
 
                 - A numpy array of unsigned 32-bit integers.
-
                 - A list of integers.
-
                 - A Path object pointing to a file containing the data.
-
                 - A string representing the file path.
 
         Raises:
-
-            FileNotFoundError
-
+            - FileNotFoundError
                 If the provided file path does not exist or is not a file.
 
-            TypeError
-
+            - TypeError
                 If the source type is not one of the accepted types (np.ndarray, list, Path, str).
 
-            Value Error
-
+            - ValueError
                 If the source inputs contain negative values or are not monotonically non-decreasing.
 
         Notes:
-
             - If the source is a file path, the file should contain comma-separated values with the data in the second column.
-
             - The source data is converted to a numpy array of unsigned 32-bit integers.
         """
 
@@ -104,12 +90,10 @@ class KaplanMeierEstimator:
         This method predicts the expiration (death) index for each individual, given their current index.
 
         Parameters:
-
             current (np.ndarray): The current indices of the individuals.
             max_index (int, optional): The maximum index to consider for calculating the predicted expiration. Default is None, which uses the maximum index from the source data.
 
         Returns:
-
             predictions (np.ndarray): The predicted expiration indices for each individual.
         """
 
@@ -129,20 +113,16 @@ class KaplanMeierEstimator:
         Calculate the predicted year of death based on the given ages in years.
 
         Parameters:
-
             ages_years (np.ndarray): The ages of the individuals in years.
-
             max_year (int, optional): The maximum year to consider for calculating the predicted year of death. Default is None, which uses the maximum year from the source data.
 
         Returns:
-
             year_of_death (np.ndarray): The predicted years of death.
 
         Example:
-
-        .. code-block:: python
-
+            ```
             predict_year_of_death(np.array([40, 50, 60]), max_year=80) # returns something like array([62, 72, 82])
+            ```
         """
 
         if max_year is None:
@@ -164,20 +144,16 @@ class KaplanMeierEstimator:
         Calculate the predicted age at death (in days) based on the given ages in days.
 
         Parameters:
-
             ages_days (np.ndarray): The ages of the individuals in days.
-
             max_year (int, optional): The maximum year to consider for calculating the predicted year of death. Default is None, which uses the maximum year from the source data.
 
         Returns:
-
             age_at_death (np.ndarray): The predicted days of death.
 
         Example:
-
-        .. code-block:: python
-
+            ```
             predict_age_at_death(np.array([40*365, 50*365, 60*365]), max_year=80) # returns something like array([22732, 26297, 29862])
+            ```
         """
 
         if max_year is None:
@@ -231,22 +207,17 @@ def _pyod(ages_years: np.ndarray, cumulative_deaths: np.ndarray, max_year: np.ui
     Calculate the predicted year of death based on the given ages in years.
 
     Parameters:
-
         ages_years (np.ndarray): The ages of the individuals in years.
-
         cumulative_deaths (np.ndarray): Cumulative deaths by year.
-
         max_year (int): The maximum year to consider for calculating the predicted year of death. Default is 100.
 
     Returns:
-
         ysod (np.ndarray): The predicted years of death.
 
     Example:
-
-    .. code-block:: python
-
+        ```
         _pyod(np.array([40, 50, 60]), max_year=80) # returns something like array([62, 72, 82])
+        ```
     """
 
     n = ages_years.shape[0]
