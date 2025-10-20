@@ -24,7 +24,7 @@ import numpy as np
 
 def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: float, c: float, **kwargs):
     r"""
-Calculate a gravity model network.
+    Calculate a gravity model network.
 
     This function computes a gravity model network based on the provided populations and distances.
     The gravity model estimates migration or interaction flows between populations using a mathematical formula
