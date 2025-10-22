@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from laser_core.random import prng
+from laser.core.random import prng
 
 
 class AliasedDistribution:

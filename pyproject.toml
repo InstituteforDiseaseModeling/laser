@@ -123,10 +123,10 @@ exclude_also = [
     ]
 
 [tool.setuptools]
-packages = ["laser_core"]
-ext-modules = [
-  {name = "_extension", sources = ["src/laser_core/_extension.c"]}
-]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 "tests" = ["data/*.csv"]
@@ -179,7 +179,7 @@ search = 'version = release = "{current_version}"'
 replace = 'version = release = "{new_version}"'
 
 [[tool.bumpversion.files]]
-filename = "src/laser_core/__init__.py"
+filename = "src/laser/core/__init__.py"
 search = '__version__ = "{current_version}"'
 replace = '__version__ = "{new_version}"'
 

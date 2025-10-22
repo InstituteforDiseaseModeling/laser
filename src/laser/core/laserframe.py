@@ -29,7 +29,7 @@ from operator import mul
 import h5py
 import numpy as np
 
-from laser_core.utils import calc_capacity
+from laser.core.utils import calc_capacity
 
 
 class LaserFrame:
@@ -277,7 +277,7 @@ class LaserFrame:
             results_r: Optional 2D numpy array of recovered counts
             pars: Optional PropertySet or dict of parameters
         """
-        from laser_core.propertyset import PropertySet  # to avoid circular import
+        from laser.core.propertyset import PropertySet  # to avoid circular import
 
         with h5py.File(path, "w") as f:
             self._save(f, "people")

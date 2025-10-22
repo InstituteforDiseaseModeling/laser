@@ -40,7 +40,7 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
 
     Examples
     --------
-    >>> from laser_core.demographics.spatialpops import distribute_population_skewed
+    >>> from laser.core.demographics.spatialpops import distribute_population_skewed
     >>> np.random.seed(42)  # For reproducibility
     >>> tot_pop = 1000
     >>> num_nodes = 5
@@ -119,7 +119,7 @@ def distribute_population_tapered(tot_pop, num_nodes):
     --------
     Distribute a total population of 1000 across 5 nodes:
 
-    >>> from laser_core.demographics.spatialpops import distribution_population_tapered
+    >>> from laser.core.demographics.spatialpops import distribution_population_tapered
     >>> distribute_population_tapered(1000, 5)
     array([500, 250, 125, 75, 50])
 

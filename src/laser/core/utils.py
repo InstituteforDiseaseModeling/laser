@@ -13,7 +13,7 @@ Functions:
 import click
 import numpy as np
 
-from laser_core.migration import distance
+from laser.core.migration import distance
 
 
 def __deprecated(msg):

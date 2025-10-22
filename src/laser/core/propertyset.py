@@ -10,7 +10,7 @@ class PropertySet:
     Examples
     --------
     Basic Initialization:
-        >>> from laser_core import PropertySet
+        >>> from laser.core import PropertySet
         >>> ps = PropertySet()
         >>> ps['infection_status'] = 'infected'
         >>> ps['age'] = 35
