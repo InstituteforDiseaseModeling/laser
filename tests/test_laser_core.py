@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 
-from laser_core.cli import main
+from laser.core.cli import main
 
 
 def test_main():

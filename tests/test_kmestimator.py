@@ -1,5 +1,5 @@
 """
-Unit tests for the KaplanMeierEstimator class from the laser_core.demographics module.
+Unit tests for the KaplanMeierEstimator class from the laser.core.demographics module.
 
 This module contains a suite of unit tests to validate the functionality and robustness of the
 KaplanMeierEstimator class. The tests cover various initialization scenarios, prediction limits,
@@ -37,9 +37,9 @@ import numpy as np
 import pytest
 from scipy.stats import kstest
 
-from laser_core.demographics import AliasedDistribution
-from laser_core.demographics import KaplanMeierEstimator
-from laser_core.demographics import load_pyramid_csv
+from laser.core.demographics import AliasedDistribution
+from laser.core.demographics import KaplanMeierEstimator
+from laser.core.demographics import load_pyramid_csv
 
 
 class TestKaplanMeierEstimator(unittest.TestCase):

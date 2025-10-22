@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from laser_core.demographics.spatialpops import distribute_population_skewed
-from laser_core.demographics.spatialpops import distribute_population_tapered
+from laser.core.demographics.spatialpops import distribute_population_skewed
+from laser.core.demographics.spatialpops import distribute_population_tapered
 
 
 # Test the basic functionality of distribute_population_skewed
