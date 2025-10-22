@@ -5,9 +5,9 @@ from pathlib import Path
 
 import numpy as np
 
-from laser_core.migration import distance
-from laser_core.utils import calc_capacity
-from laser_core.utils import calc_distances
+from laser.core.migration import distance
+from laser.core.utils import calc_capacity
+from laser.core.utils import calc_distances
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
 

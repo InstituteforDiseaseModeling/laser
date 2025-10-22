@@ -7,12 +7,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from laser_core.migration import competing_destinations
-from laser_core.migration import distance
-from laser_core.migration import gravity
-from laser_core.migration import radiation
-from laser_core.migration import row_normalizer
-from laser_core.migration import stouffer
+from laser.core.migration import competing_destinations
+from laser.core.migration import distance
+from laser.core.migration import gravity
+from laser.core.migration import radiation
+from laser.core.migration import row_normalizer
+from laser.core.migration import stouffer
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
 

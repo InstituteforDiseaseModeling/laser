@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import pytest
 
-from laser_core import SortedQueue
+from laser.core import SortedQueue
 
 
 class TestSortedQueue(unittest.TestCase):

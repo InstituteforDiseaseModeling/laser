@@ -1,5 +1,5 @@
 """
-Unit tests for the AliasedDistribution class and the load_pyramid_csv function from the laser_core.demographics module.
+Unit tests for the AliasedDistribution class and the load_pyramid_csv function from the laser.core.demographics module.
 
 This module contains the following test cases:
 - TestAliasedDistribution: Tests for the AliasedDistribution class.
@@ -26,8 +26,8 @@ import numpy as np
 import pytest
 from scipy.stats import kstest
 
-from laser_core.demographics import AliasedDistribution
-from laser_core.demographics import load_pyramid_csv
+from laser.core.demographics import AliasedDistribution
+from laser.core.demographics import load_pyramid_csv
 
 
 class TestAliasedDistribution(unittest.TestCase):

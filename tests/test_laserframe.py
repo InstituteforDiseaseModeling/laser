@@ -1,5 +1,5 @@
 """
-Unit tests for the LaserFrame class in the laser_core.laserframe module.
+Unit tests for the LaserFrame class in the laser.core.laserframe module.
 
 This module contains a series of unit tests for the LaserFrame class, which is
 designed to manage a collection of agents with various properties. The tests
@@ -44,9 +44,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from laser_core import LaserFrame
-from laser_core import PropertySet
-from laser_core.utils import calc_capacity
+from laser.core import LaserFrame
+from laser.core import PropertySet
+from laser.core.utils import calc_capacity
 
 
 class TestLaserFrame(unittest.TestCase):
