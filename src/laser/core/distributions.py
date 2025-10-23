@@ -229,14 +229,46 @@ def weibull(a, lam):
 
 # Shared Numba sampling functions
 @nb.njit(parallel=True, nogil=True, cache=True)
-def sample_floats(fn, count, dest):
+def sample_floats(fn, dest):
+    """
+    Fill an array with floating point values sampled from a Numba-wrapped distribution function.
+
+    Parameters
+    ----------
+    fn : function
+        Numba-wrapped distribution function returning float32 values.
+    dest : np.ndarray
+        Pre-allocated destination float32 array to store samples.
+
+    Returns
+    -------
+    np.ndarray
+        The destination array filled with sampled values.
+    """
+    count = dest.shape[0]
     for i in nb.prange(count):
         dest[i] = fn()
     return dest
 
 
 @nb.njit(parallel=True, nogil=True, cache=True)
-def sample_ints(fn, count, dest):
+def sample_ints(fn, dest):
+    """
+    Fill an array with integer values sampled from a Numba-wrapped distribution function.
+
+    Parameters
+    ----------
+    fn : function
+        Numba-wrapped distribution function returning int32 values.
+    dest : np.ndarray
+        Pre-allocated destination int32 array to store samples.
+
+    Returns
+    -------
+    np.ndarray
+        The destination array filled with sampled values.
+    """
+    count = dest.shape[0]
     for i in nb.prange(count):
         dest[i] = fn()
     return dest
