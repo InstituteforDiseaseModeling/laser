@@ -36,7 +36,7 @@ def beta(a, b):
     """
 
     @nb.njit(nogil=True)
-    def _beta():
+    def _beta(_tick: int, _node: int):
         return np.float32(np.random.beta(a, b))
 
     return _beta
@@ -52,7 +52,7 @@ def binomial(n, p):
     """
 
     @nb.njit(nogil=True)
-    def _binomial():
+    def _binomial(_tick: int, _node: int):
         return np.int32(np.random.binomial(n, p))
 
     return _binomial
@@ -66,7 +66,7 @@ def constant_float(value):
     """
 
     @nb.njit(nogil=True)
-    def _constant():
+    def _constant(_tick: int, _node: int):
         return np.float32(value)
 
     return _constant
@@ -80,7 +80,7 @@ def constant_int(value):
     """
 
     @nb.njit(nogil=True)
-    def _constant():
+    def _constant(_tick: int, _node: int):
         return np.int32(value)
 
     return _constant
@@ -96,7 +96,7 @@ def exponential(scale):
     """
 
     @nb.njit(nogil=True)
-    def _exponential():
+    def _exponential(_tick: int, _node: int):
         return np.float32(np.random.exponential(scale))
 
     return _exponential
@@ -112,7 +112,7 @@ def gamma(shape, scale):
     """
 
     @nb.njit(nogil=True)
-    def _gamma():
+    def _gamma(_tick: int, _node: int):
         return np.float32(np.random.gamma(shape, scale))
 
     return _gamma
@@ -128,7 +128,7 @@ def logistic(loc, scale):
     """
 
     @nb.njit(nogil=True)
-    def _logistic():
+    def _logistic(_tick: int, _node: int):
         return np.float32(np.random.logistic(loc, scale))
 
     return _logistic
@@ -144,7 +144,7 @@ def lognormal(mean, sigma):
     """
 
     @nb.njit(nogil=True)
-    def _lognormal():
+    def _lognormal(_tick: int, _node: int):
         return np.float32(np.random.lognormal(mean, sigma))
 
     return _lognormal
@@ -173,7 +173,7 @@ def negative_binomial(n, p):
     """
 
     @nb.njit(nogil=True)
-    def _negative_binomial():
+    def _negative_binomial(_tick: int, _node: int):
         return np.int32(np.random.negative_binomial(n, p))
 
     return _negative_binomial
@@ -189,7 +189,7 @@ def normal(loc, scale):
     """
 
     @nb.njit(nogil=True)
-    def _normal():
+    def _normal(_tick: int, _node: int):
         return np.float32(np.random.normal(loc, scale))
 
     return _normal
@@ -205,7 +205,7 @@ def poisson(lam):
     """
 
     @nb.njit(nogil=True)
-    def _poisson():
+    def _poisson(_tick: int, _node: int):
         return np.int32(np.random.poisson(lam))
 
     return _poisson
@@ -221,7 +221,7 @@ def uniform(low, high):
     """
 
     @nb.njit(nogil=True)
-    def _uniform():
+    def _uniform(_tick: int, _node: int):
         return np.float32(np.random.uniform(low, high))
 
     return _uniform
@@ -237,7 +237,7 @@ def weibull(a, lam):
     """
 
     @nb.njit(nogil=True)
-    def _weibull():
+    def _weibull(_tick: int, _node: int):
         return np.float32(lam * np.random.weibull(a))
 
     return _weibull
@@ -245,7 +245,7 @@ def weibull(a, lam):
 
 # Shared Numba sampling functions
 @nb.njit(parallel=True, nogil=True, cache=True)
-def sample_floats(fn, dest):
+def sample_floats(fn, dest, tick=0, node=0):
     """
     Fill an array with floating point values sampled from a Numba-wrapped distribution function.
 
@@ -263,12 +263,12 @@ def sample_floats(fn, dest):
     """
     count = dest.shape[0]
     for i in nb.prange(count):
-        dest[i] = fn()
+        dest[i] = fn(tick, node)
     return dest
 
 
 @nb.njit(parallel=True, nogil=True, cache=True)
-def sample_ints(fn, dest):
+def sample_ints(fn, dest, tick=0, node=0):
     """
     Fill an array with integer values sampled from a Numba-wrapped distribution function.
 
@@ -286,5 +286,5 @@ def sample_ints(fn, dest):
     """
     count = dest.shape[0]
     for i in nb.prange(count):
-        dest[i] = fn()
+        dest[i] = fn(tick, node)
     return dest
