@@ -9,6 +9,7 @@ import unittest
 from itertools import product
 from time import perf_counter_ns
 
+import numba as nb
 import numpy as np
 from scipy.stats import beta as beta_ref
 from scipy.stats import binom
@@ -162,7 +163,10 @@ class TestDistributions(unittest.TestCase):
         # print(f"LASER normal: {(t3 - t2) / 1_000_000:.2f} ms")
         # print(f"{_nbsamples.mean():.4f} ± {_nbsamples.std():.4f}")
 
-        assert (t3 - t2) < (t1 - t0), "Numba-compatible distribution slower than NumPy"
+        if nb.get_num_threads() > 2:
+            assert (t3 - t2) < (t1 - t0), (
+                f"Numba-compatible distribution ({(t3 - t2) / 1_000_000:.2f} ms) slower than NumPy ({(t1 - t0) / 1_000_000:.2f} ms)"
+            )
 
 
 if __name__ == "__main__":
