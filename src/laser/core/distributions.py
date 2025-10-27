@@ -20,11 +20,14 @@ A simple example of usage::
 
 """
 
+from functools import lru_cache
+
 import numba as nb
 import numpy as np
 
 
 # beta(a, b, size=None)
+@lru_cache
 def beta(a, b):
     r"""
     Beta distribution.
@@ -32,7 +35,7 @@ def beta(a, b):
     where B(a, b) is the beta function.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _beta():
         return np.float32(np.random.beta(a, b))
 
@@ -40,6 +43,7 @@ def beta(a, b):
 
 
 # binomial(n, p, size=None)
+@lru_cache
 def binomial(n, p):
     r"""
     Binomial distribution.
@@ -47,33 +51,35 @@ def binomial(n, p):
     where *n* is the number of trials and *p* is the probability of success [0, 1].
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _binomial():
         return np.int32(np.random.binomial(n, p))
 
     return _binomial
 
 
+@lru_cache
 def constant_float(value):
     """
     Constant distribution.
     Always returns the same floating point value.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _constant():
         return np.float32(value)
 
     return _constant
 
 
+@lru_cache
 def constant_int(value):
     """
     Constant distribution.
     Always returns the same integer value.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _constant():
         return np.int32(value)
 
@@ -81,6 +87,7 @@ def constant_int(value):
 
 
 # exponential(scale=1.0, size=None)
+@lru_cache
 def exponential(scale):
     r"""
     Exponential distribution.
@@ -88,7 +95,7 @@ def exponential(scale):
     where *β* is the scale parameter (β = 1 / λ).
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _exponential():
         return np.float32(np.random.exponential(scale))
 
@@ -96,6 +103,7 @@ def exponential(scale):
 
 
 # gamma(shape, scale=1.0, size=None)
+@lru_cache
 def gamma(shape, scale):
     r"""
     Gamma distribution.
@@ -103,7 +111,7 @@ def gamma(shape, scale):
     where *k* is the shape, *θ* is the scale, and *Γ(k)* is the gamma function.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _gamma():
         return np.float32(np.random.gamma(shape, scale))
 
@@ -111,6 +119,7 @@ def gamma(shape, scale):
 
 
 # logistic(loc=0.0, scale=1.0, size=None)
+@lru_cache
 def logistic(loc, scale):
     r"""
     Logistic distribution.
@@ -118,7 +127,7 @@ def logistic(loc, scale):
     where *μ* is the location parameter and *s* is the scale parameter.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _logistic():
         return np.float32(np.random.logistic(loc, scale))
 
@@ -126,6 +135,7 @@ def logistic(loc, scale):
 
 
 # lognormal(mean=0.0, sigma=1.0, size=None)
+@lru_cache
 def lognormal(mean, sigma):
     r"""
     Log-normal distribution.
@@ -133,7 +143,7 @@ def lognormal(mean, sigma):
     where *μ* is the mean and *σ* is the standard deviation of the underlying normal distribution.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _lognormal():
         return np.float32(np.random.lognormal(mean, sigma))
 
@@ -141,8 +151,9 @@ def lognormal(mean, sigma):
 
 
 # # multinomial(n, pvals, size=None)
+# @lru_cache
 # def multinomial(n, pvals):
-#     @nb.njit(nogil=True, cache=True)
+#     @nb.njit(nogil=True)
 #     def _multinomial():
 #         return np.int32(np.random.multinomial(n, pvals))
 #
@@ -150,6 +161,7 @@ def lognormal(mean, sigma):
 
 
 # negative_binomial(n, p, size=None)
+@lru_cache
 def negative_binomial(n, p):
     r"""
     Negative binomial distribution.
@@ -160,7 +172,7 @@ def negative_binomial(n, p):
     which is the more common form of this term.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _negative_binomial():
         return np.int32(np.random.negative_binomial(n, p))
 
@@ -168,6 +180,7 @@ def negative_binomial(n, p):
 
 
 # normal(loc=0.0, scale=1.0, size=None)
+@lru_cache
 def normal(loc, scale):
     r"""
     Normal (Gaussian) distribution.
@@ -175,7 +188,7 @@ def normal(loc, scale):
     where *μ* is the mean and *σ* is the standard deviation.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _normal():
         return np.float32(np.random.normal(loc, scale))
 
@@ -183,6 +196,7 @@ def normal(loc, scale):
 
 
 # poisson(lam=1.0, size=None)
+@lru_cache
 def poisson(lam):
     r"""
     Poisson distribution.
@@ -190,7 +204,7 @@ def poisson(lam):
     where *λ* is the expected number of events in the given interval.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _poisson():
         return np.int32(np.random.poisson(lam))
 
@@ -198,6 +212,7 @@ def poisson(lam):
 
 
 # uniform(low=0.0, high=1.0, size=None)
+@lru_cache
 def uniform(low, high):
     r"""
     Uniform distribution.
@@ -205,7 +220,7 @@ def uniform(low, high):
     where *a* is the lower bound and *b* is the upper bound, [*a*, *b*).
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _uniform():
         return np.float32(np.random.uniform(low, high))
 
@@ -213,6 +228,7 @@ def uniform(low, high):
 
 
 # weibull(a, size=None)
+@lru_cache
 def weibull(a, lam):
     r"""
     Weibull distribution.
@@ -220,7 +236,7 @@ def weibull(a, lam):
     where *a* is the shape parameter and *λ* is the scale parameter.
     """
 
-    @nb.njit(nogil=True, cache=True)
+    @nb.njit(nogil=True)
     def _weibull():
         return np.float32(lam * np.random.weibull(a))
 
