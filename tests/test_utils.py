@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from laser_core.utils import calc_capacity
-from laser_core.utils import grid
+from laser.core.utils import calc_capacity
+from laser.core.utils import grid
 
 City = namedtuple("City", ["name", "pop", "lat", "long"])
 

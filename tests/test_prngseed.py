@@ -3,10 +3,10 @@ import unittest
 import numba as nb
 import numpy as np
 
-import laser_core.random as random
-from laser_core.random import get_seed
-from laser_core.random import prng as rng
-from laser_core.random import seed
+import laser.core.random as random
+from laser.core.random import get_seed
+from laser.core.random import prng as rng
+from laser.core.random import seed
 
 
 # Make some calls to various random number generators with Numba threads.
@@ -131,8 +131,8 @@ class TestRandomSeed(unittest.TestCase):
         random._seed = None
         random._prng = None
         prng = rng()
-        assert prng is not None, "Calling laser_core.random.prng() should initialize the LASER global prng."
-        assert get_seed() is not None, "Calling laser_core.random.prng() should initialize the LASER global prng seed."
+        assert prng is not None, "Calling laser.core.random.prng() should initialize the LASER global prng."
+        assert get_seed() is not None, "Calling laser.core.random.prng() should initialize the LASER global prng seed."
 
         return
 

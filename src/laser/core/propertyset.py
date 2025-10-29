@@ -7,10 +7,10 @@ from pathlib import Path
 class PropertySet:
     """A class that can be used to store properties in a dictionary-like object with `.property` access to properties.
 
-    Examples:
-        Basic initialization:
-        ```
-        >>> from laser_core import PropertySet
+    Examples
+    --------
+    Basic Initialization:
+        >>> from laser.core import PropertySet
         >>> ps = PropertySet()
         >>> ps['infection_status'] = 'infected'
         >>> ps['age'] = 35
