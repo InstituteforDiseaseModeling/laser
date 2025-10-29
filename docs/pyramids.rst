@@ -46,7 +46,7 @@ Example
 .. code-block:: python
 
     import numpy as np
-    from laser_core.demographics import load_pyramid_csv, AliasedDistribution
+    from laser.core.demographics import load_pyramid_csv, AliasedDistribution
     import importlib.util
     import os
 
@@ -57,9 +57,9 @@ Example
     MAXCOL = 1
 
     # Access the bundled file dynamically
-    laser_core_path = importlib.util.find_spec("laser_core").origin
-    laser_core_dir = os.path.dirname(laser_core_path)
-    pyramid_file = os.path.join(laser_core_dir, "data/us-pyramid-2023.csv")
+    laser.core_path = importlib.util.find_spec("laser.core").origin
+    laser.core_dir = os.path.dirname(laser.core_path)
+    pyramid_file = os.path.join(laser.core_dir, "data/us-pyramid-2023.csv")
 
     pyramid = load_pyramid_csv(pyramid_file)
     sampler = AliasedDistribution(pyramid[:, MCOL])    # We'll use the male population in this example.

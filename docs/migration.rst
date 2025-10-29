@@ -36,7 +36,7 @@ Below is an example of how to use the gravity model to compute migration flows b
 .. code-block:: python
 
     import numpy as np
-    from laser_core.migration import gravity
+    from laser.core.migration import gravity
 
     # Define populations and distances
     populations = np.array([5000, 10000, 15000, 20000, 25000])  # Unequal populations

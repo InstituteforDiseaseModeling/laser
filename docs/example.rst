@@ -20,8 +20,8 @@ The `SIRModel` class is the core of the implementation. It initializes a populat
 
     import numpy as np
     import matplotlib.pyplot as plt
-    from laser_core import LaserFrame
-    from laser_core import PropertySet
+    from laser.core import LaserFrame
+    from laser.core import PropertySet
 
     class SIRModel:
         def __init__(self, params):
