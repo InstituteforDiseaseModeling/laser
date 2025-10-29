@@ -35,7 +35,6 @@ class SortedQueue:
         This avoids making copies of the sort values.
 
         Parameters:
-
             capacity (int): The maximum number of elements the queue can hold.
             values (np.ndarray): A reference to an array of values to be accessed by the queue.
         """
@@ -57,11 +56,9 @@ class SortedQueue:
         to its correct position.
 
         Parameters:
-
             index (int): The index of the element to be added to the sorted queue.
 
         Raises:
-
             IndexError: If the sorted queue is full.
         """
 
@@ -77,11 +74,9 @@ class SortedQueue:
         Returns the index of the smallest value element in the sorted queue without removing it.
 
         Raises:
-
             IndexError: If the sorted queue is empty.
 
         Returns:
-
             np.uint32: The index of the smallest value element.
         """
 
@@ -94,11 +89,9 @@ class SortedQueue:
         Return the smallest value from the sorted queue without removing it.
 
         Raises:
-
             IndexError: If the sorted queue is empty.
 
         Returns:
-
             Any: The value with the smallest value in the sorted queue.
         """
 
@@ -111,11 +104,9 @@ class SortedQueue:
         Returns the index and value of the smallest value element in the sorted queue without removing it.
 
         Returns:
-
             tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
 
         Raises:
-
             IndexError: If the sorted queue is empty.
         """
 
@@ -131,7 +122,6 @@ class SortedQueue:
         then removes the element from the queue using `pop()`, and finally returns the index.
 
         Returns:
-
             np.uint32: The index of the smallest value element in the sorted queue.
         """
 
@@ -149,7 +139,6 @@ class SortedQueue:
         from the queue by calling `pop()`. The retrieved value is then returned.
 
         Returns:
-
             Any: The value at the front of the sorted queue.
         """
 
@@ -166,7 +155,6 @@ class SortedQueue:
         then removes the element from the queue using `pop()`, and finally returns the index and value.
 
         Returns:
-
             tuple[np.uint32, Any]: A tuple containing the index and value of the smallest value element.
         """
         ivtuple = self.peekiv()
@@ -179,14 +167,11 @@ class SortedQueue:
         Removes the smallest value element from the sorted queue.
 
         Raises:
-
             IndexError: If the sorted queue is empty.
 
-        Side Effects:
-
-            Decreases the size of the sorted queue by one.
-
-            Reorganizes the internal structure of the sorted queue to maintain the heap property.
+        Side effects:
+            - Decreases the size of the sorted queue by one.
+            - Reorganizes the internal structure of the sorted queue to maintain the heap property.
         """
 
         if self.size == 0:
@@ -201,7 +186,6 @@ class SortedQueue:
         Return the number of elements in the sorted queue.
 
         Returns:
-
             int: The number of elements in the sorted queue.
         """
 

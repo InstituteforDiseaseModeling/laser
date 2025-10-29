@@ -8,19 +8,24 @@ Classes:
     LaserFrame: A class to manage dynamically allocated data for agents or nodes/patches.
 
 Usage Example:
-
-.. code-block:: python
-
+    ```python
     laser_frame = LaserFrame(capacity=100)
     laser_frame.add_scalar_property('age', dtype=np.int32, default=0)
     laser_frame.add_vector_property('position', length=3, dtype=np.float32, default=0.0)
     start, end = laser_frame.add(10)
     laser_frame.sort(np.arange(10)[::-1])
     laser_frame.squash(np.array([True, False, True, False, True, False, True, False, True, False]))
+    ```
 
 Attributes:
     count (int): The current count of active elements.
     capacity (int): The maximum capacity of the frame.
+
+Note:
+    Since count can be less than capacity, properties return slices of the underlying arrays up to count by default so users do not have to include the slice themselves.
+    I.e., if `lf` is a LaserFrame, then `lf.age` returns `lf._age[0:lf.count]` automatically.
+    The full underlying array is always available as `lf._age` (or whatever the property name is).
+    The slice returned is valid for all NumPy operations, including assignment, as well as for use with Numba compiled functions.
 """
 
 from functools import reduce
@@ -70,6 +75,7 @@ class LaserFrame:
 
         self._count = initial_count
         self._capacity = capacity
+        self._properties = {}
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -86,18 +92,21 @@ class LaserFrame:
         stored as a 1-D NumPy array (scalar / entry) with a specified data type and default value.
 
         Parameters:
-
             name (str): The name of the scalar property to be added.
             dtype (data-type, optional): The desired data type for the property. Default is np.uint32.
             default (scalar, optional): The default value for the property. Default is 0.
 
         Returns:
-
             None
         """
 
         # initialize the property to a NumPy array with of size self._capacity, dtype, and default value
-        setattr(self, name, np.full(self._capacity, default, dtype=dtype))
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
+
+        setattr(self, f"_{name}", np.full(self._capacity, default, dtype=dtype))
+        self._properties[name] = getattr(self, f"_{name}")
+
         return
 
     def add_vector_property(self, name: str, length: int, dtype=np.uint32, default=0) -> None:
@@ -111,20 +120,36 @@ class LaserFrame:
         determined by the `dtype` parameter.
 
         Parameters:
-
             name (str): The name of the property to be added.
             length (int): The length of the vector.
             dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
             default (scalar, optional): The default value to fill the array with, default is 0.
 
         Returns:
-
             None
         """
 
         # initialize the property to a NumPy array with of size (length, self._capacity), dtype, and default value
-        setattr(self, name, np.full((length, self._capacity), default, dtype=dtype))
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
+
+        setattr(self, f"_{name}", np.full((length, self._capacity), default, dtype=dtype))
+        self._properties[name] = getattr(self, f"_{name}")
+
         return
+
+    def __getattr__(self, name: str):
+        if name in self._properties:
+            backing = self._properties[name]
+            # Handle scalar and vector properties
+            return backing[0 : self.count] if len(backing.shape) == 1 else backing[:, 0 : self.count]
+        raise AttributeError(f"'LaserFrame' object has no attribute '{name}'")
+
+    def __setattr__(self, name, value):
+        if ("_properties" in self.__dict__) and (name in self._properties):
+            raise RuntimeError(f"Cannot reassign property '{name}'. Modify the array in place instead, e.g., lf.{name}[:] = new_values")
+        else:
+            super().__setattr__(name, value)
 
     def add_array_property(self, name: str, shape: tuple, dtype=np.uint32, default=0) -> None:
         """
@@ -136,17 +161,17 @@ class LaserFrame:
         datatype (default is np.uint32), and default value (default is 0).
 
         Parameters:
-
             name (str): The name of the property to be added.
             shape (tuple): The shape of the array.
             dtype (data-type, optional): The desired data-type for the array, default is np.uint32.
             default (scalar, optional): The default value to fill the array with, default is 0.
 
         Returns:
-
             None
-
         """
+
+        if hasattr(self, name):
+            raise ValueError(f"Property '{name}' already exists in LaserFrame.")
 
         # initialize the property to a NumPy array with given shape, dtype, and default value
         setattr(self, name, np.full(shape, default, dtype=dtype))
@@ -158,7 +183,6 @@ class LaserFrame:
         Returns the current count (equivalent to len()).
 
         Returns:
-
             int: The current count value.
         """
 
@@ -170,7 +194,6 @@ class LaserFrame:
         Returns the capacity of the laser frame (total possible entries for dynamic properties).
 
         Returns:
-
             int: The capacity of the laser frame.
         """
 
@@ -183,15 +206,12 @@ class LaserFrame:
         This method increments the internal count by the given count, ensuring that the total does not exceed the frame's capacity. If the addition would exceed the capacity, an assertion error is raised. This method is typically used to add new births during the simulation.
 
         Parameters:
-
             count (int): The number to add to the current count.
 
         Returns:
-
             tuple[int, int]: A tuple containing the [start index, end index) after the addition.
 
         Raises:
-
             AssertionError: If the resulting count exceeds the frame's capacity.
         """
 
@@ -211,13 +231,10 @@ class LaserFrame:
         Sorts the elements of the object's numpy arrays based on the provided indices.
 
         Parameters:
-
             indices (np.ndarray): An array of indices used to sort the numpy arrays. Must be of integer type and have the same length as the frame count (`self._count`).
-
             verbose (bool, optional): If True, prints the sorting progress for each numpy array attribute. Defaults to False.
 
         Raises:
-
             AssertionError: If `indices` is not an integer array or if its length does not match the frame count of active elements.
         """
 
@@ -225,13 +242,16 @@ class LaserFrame:
         _has_shape(indices, (self._count,), f"Indices must have the same length as the frame active element count ({self._count})")
         _is_dtype(indices, np.integer, f"Indices must be an integer array (got {indices.dtype})")
 
-        for key, value in self.__dict__.items():
-            if isinstance(value, np.ndarray) and len(value.shape) == 1 and value.shape[0] == self._capacity:
+        for name, data in self._properties.items():
+            # Only sorting scalar properties at the moment.
+            # TODO support sorting vector properties.
+            if data.shape == (self._capacity,):
                 if verbose:
-                    print(f"Sorting {self._count:,} elements of {key}")
-                sort = np.zeros_like(value)
-                sort[: self._count] = value[indices]
-                self.__dict__[key] = sort
+                    print(f"Sorting {self._count:,} elements of {name} ... ", end="")
+                temp = data.copy()
+                data[0 : self._count] = temp[indices]
+                if verbose:
+                    print("done.")
 
         return
 
@@ -240,16 +260,13 @@ class LaserFrame:
         Reduces the active count of the internal numpy arrays keeping only elements True in the provided boolean indices.
 
         Parameters:
-
             indices (np.ndarray): A boolean array indicating which elements to keep. Must have the same length as the current frame active element count.
             verbose (bool, optional): If True, prints detailed information about the squashing process. Defaults to False.
 
         Raises:
-
             AssertionError: If `indices` is not a boolean array or if its length does not match the current frame active element count.
 
         Returns:
-
             None
         """
 
@@ -297,12 +314,12 @@ class LaserFrame:
         group.attrs["count"] = self._count
         group.attrs["capacity"] = self._capacity
 
-        for key in dir(self):
-            if not key.startswith("_"):
-                value = getattr(self, key)
-                if isinstance(value, np.ndarray):
-                    data = value[: self._count]
-                    group.create_dataset(key, data=data)
+        for name, data in self._properties.items():
+            # Currently only saving scalar properties (implied by loading logic)
+            if data.shape == (self._capacity,):
+                group.create_dataset(name, data=data[0 : self._count])
+
+        return
 
     def _save_dict(self, data, group):
         """
@@ -412,6 +429,7 @@ class LaserFrame:
         for attr_name in sorted(self.__dict__.keys()):
             attr = getattr(self, attr_name)
             if isinstance(attr, np.ndarray):
+                attr_name = attr_name.lstrip("_")  # remove leading underscore if present
                 if attr.shape == (self.capacity,):
                     # name, dtype, individual size, allocated size, in-use size
                     scalars.append((attr_name, attr.dtype.name, attr.dtype.itemsize, attr.nbytes, attr.dtype.itemsize * self.count))

@@ -586,7 +586,7 @@ This section describes an alternative approach to modeling migration by using in
 
     import numpy as np
     from laser_core.migration import gravity
-    from laser_core.utils import calc_distances
+    from laser_core.migration import distance
 
     class TransmissionComponent:
         """
@@ -634,8 +634,8 @@ This section describes an alternative approach to modeling migration by using in
 
             # Compute all pairwise distances in one call (this speeds up initialization significantly)
             # from laser_core.migration import gravity, row_normalizer
-            # from laser_core.utils import calc_distances
-            distances = calc_distances(self.locations[:, 0], self.locations[:, 1])
+            # from laser_core.migration import distance
+            distances = distance(self.locations[:, 0], self.locations[:, 1])
             self.network = gravity(initial_populations, distances, k, a, b, c)
             self.network /= np.power(initial_populations.sum(), c)  # Normalize
             self.network = row_normalizer(self.network, 0.01) # 0.01=max_frac

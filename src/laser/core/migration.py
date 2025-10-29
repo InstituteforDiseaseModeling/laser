@@ -6,23 +6,14 @@ Additionally, it includes a utility function to calculate the great-circle dista
 on the Earth's surface using the Haversine formula.
 
 Functions:
-
     gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: float, c: float, max_frac: Union[float, None]=None, kwargs) -> np.ndarray:
-
     row_normalizer(network: np.ndarray, max_rowsum: float) -> np.ndarray:
-
         Normalize the rows of a given network matrix such that no row sum exceeds a specified maximum value.
-
     competing_destinations(pops: np.ndarray, distances: np.ndarray, b: float, c: float, delta: float, params) -> np.ndarray:
-
     stouffer(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: float, include_home: bool, params) -> np.ndarray:
-
         Compute a migration network using a modified Stouffer's model.
-
     radiation(pops: np.ndarray, distances: np.ndarray, k: float, include_home: bool, params) -> np.ndarray:
-
     distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-
         Calculate the great-circle distance between two points on the Earth's surface using the Haversine formula.
 """
 
@@ -39,42 +30,31 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
     The gravity model estimates migration or interaction flows between populations using a mathematical formula
     that incorporates scaling, population sizes, and distances.
 
-    **Mathematical Formula**:
-
-    .. math::
+    Mathematical formula:
+        $$
         network_{i,j} = k \cdot \frac{p_i^a \cdot p_j^b}{distance_{i,j}^c}
+        $$
 
-    As implemented in NumPy:
-
-    .. code-block:: python
-
+        As implemented in NumPy:
+        ```
         network = k * (pops[:, np.newaxis] ** a) * (pops ** b) * (distances ** (-1 * c))
+        ```
 
-    **Parameters**:
-        pops (numpy.ndarray):
-            1D array of population sizes for each node.
-        distances (numpy.ndarray):
-            2D array of distances between nodes. Must be symmetric, with self-distances (diagonal) handled.
-        k (float):
-            Scaling constant to adjust the overall magnitude of interaction flows.
-        a (float):
-            Exponent for the population size of the origin node.
-        b (float):
-            Exponent for the population size of the destination node.
-        c (float):
-            Exponent for the distance between nodes, controlling how distance impacts flows.
-        \*\*kwargs:
-            Additional keyword arguments (not used in the current implementation).
+    Parameters:
+        pops (numpy.ndarray): 1D array of population sizes for each node.
+        distances (numpy.ndarray): 2D array of distances between nodes. Must be symmetric, with self-distances (diagonal) handled.
+        k (float): Scaling constant to adjust the overall magnitude of interaction flows.
+        a (float): Exponent for the population size of the origin node.
+        b (float): Exponent for the population size of the destination node.
+        c (float): Exponent for the distance between nodes, controlling how distance impacts flows.
+        \*\*kwargs: Additional keyword arguments (not used in the current implementation).
 
-    **Returns**:
-        numpy.ndarray:
-            A 2D matrix representing the interaction network, where each element `network[i, j]` corresponds
+    Returns:
+        numpy.ndarray: A 2D matrix representing the interaction network, where each element `network[i, j]` corresponds
             to the flow from node `i` to node `j`.
 
-    **Example Usage**:
-
-    .. code-block:: python
-
+    Example usage:
+        ```
         import numpy as np
         from gravity_model import gravity
 
@@ -97,8 +77,9 @@ def gravity(pops: np.ndarray, distances: np.ndarray, k: float, a: float, b: floa
 
         print("Migration Network:")
         print(migration_network)
+        ```
 
-    **Notes**:
+    Notes:
         - The diagonal of the `distances` array is set to `1` internally to avoid division by zero.
         - The diagonal of the output `network` matrix is set to `0` to represent no self-loops.
         - Ensure the `distances` matrix is symmetric and non-negative.
@@ -127,12 +108,10 @@ def row_normalizer(network, max_rowsum):
     Normalizes the rows of a given network matrix such that no row sum exceeds a specified maximum value.
 
     Parameters:
-
         network (numpy.ndarray): A 2D array representing the network matrix.
         max_rowsum (float): The maximum allowable sum for any row in the network matrix.
 
     Returns:
-
         numpy.ndarray: The normalized network matrix where no row sum exceeds the specified maximum value.
     """
 
@@ -166,25 +145,21 @@ def competing_destinations(pops, distances, k, a, b, c, delta, **params):
     interference from other destinations.
 
     Mathematical formula:
+        Element-by-element:
+            $$
+            network_{i,j} = k \times p_i^a \times p_j^b / distance_{i,j}^c \times \sum_k {(p_k^b / distance_{j,k}^c \text {\small for k not in [i,j]})^{delta} }
+            $$
 
-        element-by-element: :math:`network_{i,j} = k \times p_i^a \times p_j^b / distance_{i,j}^c \times \sum_k {(p_k^b / distance_{j,k}^c \text {\small for k not in [i,j]})^{delta} }`
+        As-implemented numpy math:
 
-        as-implemented numpy math:
-
-            compute all terms up to the sum_k using the gravity model
-
-            Construct the matrix inside the sum: ``p**b * distances**(1-c)``
-
-            Sum on the second axis (k), and subtract off the diagonal (j=k terms):
-
-                ``row_sums = np.sum(competition_matrix, axis=1) - np.diag(competition_matrix)``
-
-            Now element-by-element, subtract k=i terms off the sum, exponentiate, and multiply the original network term:
-
-                ``network[i][j] = network[i][j] * (row_sums[i] - competition_matrix[i][j]) ** delta``
+        - Compute all terms up to the sum_k using the gravity model
+        - Construct the matrix inside the sum: ``p**b * distances**(1-c)``
+        - Sum on the second axis (k), and subtract off the diagonal (j=k terms):
+            ``row_sums = np.sum(competition_matrix, axis=1) - np.diag(competition_matrix)``
+        - Now element-by-element, subtract k=i terms off the sum, exponentiate, and multiply the original network term:
+            ``network[i][j] = network[i][j] * (row_sums[i] - competition_matrix[i][j]) ** delta``
 
     Parameters:
-
         pops (numpy.ndarray): Array of populations.
         distances (numpy.ndarray): Array of distances between locations.
         k (float): Scaling constant.
@@ -195,7 +170,6 @@ def competing_destinations(pops, distances, k, a, b, c, delta, **params):
         \*\*params: Additional parameters to be passed to the gravity model.
 
     Returns:
-
         numpy.ndarray: Adjusted network matrix based on the competing destinations model.
     """
 
@@ -267,24 +241,22 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
     (Stouffer SA. Intervening opportunities: a theory relating mobility and distance. American sociological review. 1940;5(6):845-867)
 
     Mathematical formula:
+        Element-by-element:
+            $$
+            network_{i,j} = k \times p_i \times p_j / ( (p_i + \sum_k {p_k}) (p_i + p_j + \sum_k {p_k}) )
+            $$
+            the parameter ``include_home`` determines whether $p_i$ is included or excluded from the sum
 
-        element-by-element: :math:`network_{i,j} = k \times p_i \times p_j / ( (p_i + \sum_k {p_k}) (p_i + p_j + \sum_k {p_k}) )`
+        As-implemented numpy math:
 
-        the parameter ``include_home`` determines whether :math:`p_i` is included or excluded from the sum
+        - Sort each row of the distance matrix (we'll use \' below to indicate distance-sorted vectors)
+        - Loop over "source nodes" i:
 
-        as-implemented numpy math:
+            - Cumulative sum the sorted populations, ensuring appropriate handling when there are multiple destinations equidistant from the source
+            - Subtract the source node population if ``include_home`` is ``False``
+            - Construct the row of the network matrix as $k \times p_i^a \times (p_{j'} / \sum_{k'} {p_{k'}})^b$
 
-            Sort each row of the distance matrix (we'll use \' below to indicate distance-sorted vectors)
-
-            Loop over "source nodes" i:
-
-                Cumulative sum the sorted populations, ensuring appropriate handling when there are multiple destinations equidistant from the source
-
-                Subtract the source node population if ``include_home`` is ``False``
-
-                Construct the row of the network matrix as :math:`k \times p_i^a \times (p_{j'} / \sum_{k'} {p_{k'}})^b`
-
-            Unsort the rows of the network
+        - Unsort the rows of the network
 
     Parameters:
 
@@ -297,7 +269,6 @@ def stouffer(pops, distances, k, a, b, include_home, **params):
         \*\*params: Additional parameters (not used in the current implementation).
 
     Returns:
-
         numpy.ndarray: A 2D array representing the migration network, where network[i][j] is the migration rate from location i to location j.
     """
 
@@ -335,33 +306,28 @@ def radiation(pops, distances, k, include_home, **params):
     (Simini F, Gonza ́lez MC, Maritan A, Baraba ́si AL. A universal model for mobility and migration patterns. Nature. 2012;484(7392):96-100.)
 
     Mathematical formula:
+        Element-by-element:
+            $$
+            network_{i,j} = k \times p_i^a \times (p_j / \sum_k {p_k} )^b,
+            $$
+            where the sum proceeds over all $k$ such that $distances_{i,k} \leq distances_{i,j}$
+            the parameter ``include_home`` determines whether $p_i$ is included or excluded from the sum.
 
-        element-by-element:
+        As-implemented numpy math:
 
-            :math:`network_{i,j} = k \times p_i^a \times (p_j / \sum_k {p_k} )^b`,
+        - Sort each row of the distance matrix (we'll use \' below to indicate distance-sorted vectors)
+        - Loop over "source nodes" i
 
-            where the sum proceeds over all :math:`k` such that :math:`distances_{i,k} \leq distances_{i,j}`
+            - Cumulative sum the sorted populations, ensuring appropriate handling when there are multiple destinations equidistant from the source
+            - Subtract the source node population if ``include_home`` is ``False``
+            - Construct the row of the network matrix as
+                $$
+                k \times p_i \times p_{j'} / (p_i + \sum_{k'} {p_{k'}}) / (p_i + p_{j'} + \sum_{k'} {p_{k'}})
+                $$
 
-        the parameter ``include_home`` determines whether :math:`p_i` is included or excluded from the sum
-
-        as-implemented numpy math:
-
-            Sort each row of the distance matrix (we'll use \' below to indicate distance-sorted vectors)
-
-            Loop over "source nodes" i:
-
-                Cumulative sum the sorted populations, ensuring appropriate handling when there are multiple destinations equidistant from the source
-
-                Subtract the source node population if ``include_home`` is ``False``
-
-                Construct the row of the network matrix as
-
-                    :math:`k \times p_i \times p_{j'} / (p_i + \sum_{k'} {p_{k'}}) / (p_i + p_{j'} + \sum_{k'} {p_{k'}})`
-
-            Unsort the rows of the network
+        - Unsort the rows of the network
 
     Parameters:
-
         pops (numpy.ndarray): Array of population sizes for each node.
         distances (numpy.ndarray): 2D array of distances between nodes.
         k (float): Scaling factor for the migration rates.
@@ -369,7 +335,6 @@ def radiation(pops, distances, k, include_home, **params):
         \*\*params: Additional parameters (currently not used).
 
     Returns:
-
         numpy.ndarray: 2D array representing the migration network.
     """
 
@@ -400,37 +365,43 @@ def radiation(pops, distances, k, include_home, **params):
     return network
 
 
-def distance(lat1, lon1, lat2, lon2):
+def distance(lat1, lon1, lat2=None, lon2=None):
     """
     Calculate the great-circle distance between two points on the Earth's surface.
     This function uses the Haversine formula to compute the distance between two points
     specified by their latitude and longitude in decimal degrees.
 
-    If all arguments are scalars, will return a single scalar distance, (lat1, lon1) to (lat2, lon2).
-
-    If lat2, lon2 are vectors, will return a vector of distances, (lat1, lon1) to each lat/lon in lat2, lon2.
-
-    If lat1, lon1 and lat2, lon2 are vectors, will return a matrix with shape (N, M) of distances where N is the length of lat1/lon1 and M is the length of lat2/lon2.
+    - If lat2 and lon2 are not provided, they default to lat1 and lon1, respectively. This supports the default case of calculating the NxN matrix of distances between all pairs of points in (lat1, lon1).
+    - If all arguments are scalars, will return a single scalar distance, (lat1, lon1) to (lat2, lon2).
+    - If lat2, lon2 are vectors, will return a vector of distances, (lat1, lon1) to each lat/lon in lat2, lon2.
+    - If lat1, lon1 and lat2, lon2 are vectors, will return a matrix with shape (N, M) of distances where N is the length of lat1/lon1 and M is the length of lat2/lon2.
 
     Parameters:
-
         lat1 (float): Latitude of the first point(s) in decimal degrees [-90, 90].
         lon1 (float): Longitude of the first point(s) in decimal degrees [-180, 180].
         lat2 (float): Latitude of the second point(s) in decimal degrees [-90, 90].
         lon2 (float): Longitude of the second point(s) in decimal degrees [-180, 180].
 
     Returns:
-
         float: The distance between the two points in kilometers.
     """
 
-    # Sanity checks
-    _is_instance(lat1, (Number, np.ndarray), "lat1 must be a numeric value or NumPy array")
-    _is_instance(lon1, (Number, np.ndarray), "lon1 must be a numeric value or NumPy array")
-    _is_instance(lat2, (Number, np.ndarray), "lat2 must be a numeric value or NumPy array")
-    _is_instance(lon2, (Number, np.ndarray), "lon2 must be a numeric value or NumPy array")
+    # Sanity checks, part 1
+    _is_instance(lat1, (Number, np.ndarray), f"lat1 must be a numeric value or NumPy array ({type(lat1)=})")
+    _is_instance(lon1, (Number, np.ndarray), f"lon1 must be a numeric value or NumPy array ({type(lon1)=})")
     _has_values((-90 <= lat1) & (lat1 <= 90), "lat1 must be in the range [-90, 90]")
     _has_values((-180 <= lon1) & (lon1 <= 180), "lon1 must be in the range [-180, 180]")
+
+    if (lat2 is None) and (lon2 is None):
+        lat2 = lat1
+        lon2 = lon1
+
+    if (lat2 is None) or (lon2 is None):
+        raise ValueError("Either both or neither of lat2 and lon2 must be provided.")
+
+    # Sanity checks, part 2
+    _is_instance(lat2, (Number, np.ndarray), f"lat2 must be a numeric value or NumPy array ({type(lat2)=})")
+    _is_instance(lon2, (Number, np.ndarray), f"lon2 must be a numeric value or NumPy array ({type(lon2)=})")
     _has_values((-90 <= lat2) & (lat2 <= 90), "lat2 must be in the range [-90, 90]")
     _has_values((-180 <= lon2) & (lon2 <= 180), "lon2 must be in the range [-180, 180]")
 

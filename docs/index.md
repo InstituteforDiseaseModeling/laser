@@ -25,4 +25,3 @@
 - [Index](genindex.md)
 - [Module Index](modindex.md)
 - [Search](search.md)
-
