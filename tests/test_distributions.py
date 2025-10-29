@@ -23,7 +23,7 @@ from scipy.stats import poisson
 from scipy.stats import uniform as uniform_ref
 from scipy.stats import weibull_min
 
-import laser_core.distributions as dists
+import laser.core.distributions as dists
 
 NSAMPLES = 100_000
 KS_THRESHOLD = 0.02  # Acceptable KS statistic for similarity
@@ -152,7 +152,8 @@ class TestDistributions(unittest.TestCase):
         t0 = perf_counter_ns()
         _npsamples = rng.normal(loc=7.0, scale=0.875, size=NSAMPLES).astype(np.float32)
         t1 = perf_counter_ns()
-        # print(f"NumPy normal: {(t1 - t0) / 1_000_000:.2f} ms")
+        tnumpy = t1 - t0
+        # print(f"NumPy normal: {tnumpy / 1_000_000:.2f} ms")
         # print(f"{_npsamples.mean():.4f} ± {_npsamples.std():.4f}")
 
         gaussian = dists.normal(loc=7.0, scale=0.875)
@@ -160,13 +161,14 @@ class TestDistributions(unittest.TestCase):
         t2 = perf_counter_ns()
         _nbsamples = dists.sample_floats(gaussian, np.zeros(NSAMPLES, dtype=np.float32))
         t3 = perf_counter_ns()
-        # print(f"LASER normal: {(t3 - t2) / 1_000_000:.2f} ms")
+        tnumba = t3 - t2
+        # print(f"LASER normal: {tnumba / 1_000_000:.2f} ms")
         # print(f"{_nbsamples.mean():.4f} ± {_nbsamples.std():.4f}")
 
         if nb.get_num_threads() > 2:
-            assert (t3 - t2) < (t1 - t0), (
-                f"Numba-compatible distribution ({(t3 - t2) / 1_000_000:.2f} ms) slower than NumPy ({(t1 - t0) / 1_000_000:.2f} ms)"
-            )
+            assert (
+                tnumba < tnumpy
+            ), f"Numba-compatible distribution ({tnumba / 1_000_000:.2f} ms) slower than NumPy ({tnumpy / 1_000_000:.2f} ms)"
 
 
 if __name__ == "__main__":
