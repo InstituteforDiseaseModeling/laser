@@ -51,7 +51,7 @@ Example
 
 .. code-block:: python
 
-    from laser_core.demographics import KaplanMeierEstimator
+    from laser.core.demographics import KaplanMeierEstimator
 
     estimator = KaplanMeierEstimator(cumulative)
     nagents = 100_000

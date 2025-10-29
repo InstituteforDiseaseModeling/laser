@@ -71,7 +71,7 @@ The top-level script serves as the orchestrator for the simulation and consists 
            pass
 
        # Initialize the model and its population
-       from laser_core import LaserFrame
+       from laser.core import LaserFrame
        model = Model()
        # Create the agent population with max size 1000
        model.population = LaserFrame(capacity=1000)
@@ -168,7 +168,7 @@ Demographics
 Age Structure
 -------------
 
-  If you want to work with age structure for a short simulation which doesn't need births you can just give everyone an age (based on distribution) and increment it each timestep. The laser_core.demographics.pyramid module is provided to support the initialization of agents with plausible initial ages.
+  If you want to work with age structure for a short simulation which doesn't need births you can just give everyone an age (based on distribution) and increment it each timestep. The laser.core.demographics.pyramid module is provided to support the initialization of agents with plausible initial ages.
 
 
 Births
@@ -197,7 +197,7 @@ If calculating age isn't frequent or essential, you can avoid explicitly trackin
 
 Deaths
 ------
-  The recommended way of doing mortality in LASER is by precalculating a lifespan for each agent, rather than probabilistically killing agents as the simulation runs. This can take different forms: If you prefer to track agent age, you can also have an agent lifespan. Alternatively, if you are just using `date_of_birth` you can have a `date_of_death`, where theses 'dates' are really simulation times ('sim day of birth' and 'sim day of death'). Also, in LASER, as mentioned in the 'Principles' section, we strive to leave the contiguous arrays of agent data in place, without adding or deleting elements (allocating or freeing). This means that to model mortality, we prefer to 'kill' agents by doing either 1) check that their age is greater than their lifespan (or that the current timestep is greater than their 'sim day of death') in each component that cares, or 2) Set an active flag to false or a dead flag to true. The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, laser_core.demographics.kmestimator is provided to support these calculations.
+  The recommended way of doing mortality in LASER is by precalculating a lifespan for each agent, rather than probabilistically killing agents as the simulation runs. This can take different forms: If you prefer to track agent age, you can also have an agent lifespan. Alternatively, if you are just using `date_of_birth` you can have a `date_of_death`, where theses 'dates' are really simulation times ('sim day of birth' and 'sim day of death'). Also, in LASER, as mentioned in the 'Principles' section, we strive to leave the contiguous arrays of agent data in place, without adding or deleting elements (allocating or freeing). This means that to model mortality, we prefer to 'kill' agents by doing either 1) check that their age is greater than their lifespan (or that the current timestep is greater than their 'sim day of death') in each component that cares, or 2) Set an active flag to false or a dead flag to true. The second approach is simpler, and avoids doing millions of comparison operations, at the cost of an additional property. Note that many component operations (step functions) can be done without checking whether the agent is alive, because, for example, as long as transmission never infects a dead person, decrementing all non-zero infection timers will only operate on live agents. Finally, while you can set lifespans using any algorith you want, laser.core.demographics.kmestimator is provided to support these calculations.
 
 
 User Customizability

@@ -302,9 +302,9 @@ The model is initialized with the defined parameters, components are added, and 
 .. code-block:: python
 
     # Load example population pyramid
-    laser_core_path = importlib.util.find_spec("laser_core").origin
-    laser_core_dir = os.path.dirname(laser_core_path)
-    pyramid_file = os.path.join(laser_core_dir, "data/us-pyramid-2023.csv")
+    laser.core_path = importlib.util.find_spec("laser.core").origin
+    laser.core_dir = os.path.dirname(laser.core_path)
+    pyramid_file = os.path.join(laser.core_dir, "data/us-pyramid-2023.csv")
     pyramid = load_pyramid_csv(pyramid_file)
 
     # Build cumulative deaths array

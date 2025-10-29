@@ -37,9 +37,9 @@ Imports
     import numpy as np
     import matplotlib.pyplot as plt
     import csv
-    from laser_core.laserframe import LaserFrame
-    from laser_core.demographics.spatialpops import distribute_population_skewed as dps
-    from laser_core.migration import gravity
+    from laser.core.laserframe import LaserFrame
+    from laser.core.demographics.spatialpops import distribute_population_skewed as dps
+    from laser.core.migration import gravity
 
 
 Model Class
@@ -585,8 +585,8 @@ This section describes an alternative approach to modeling migration by using in
 .. code-block:: python
 
     import numpy as np
-    from laser_core.migration import gravity
-    from laser_core.migration import distance
+    from laser.core.migration import gravity
+    from laser.core.migration import distance
 
     class TransmissionComponent:
         """
@@ -633,8 +633,8 @@ This section describes an alternative approach to modeling migration by using in
             a, b, c, k = self.model.params.a, self.model.params.b, self.model.params.c, self.model.params.k
 
             # Compute all pairwise distances in one call (this speeds up initialization significantly)
-            # from laser_core.migration import gravity, row_normalizer
-            # from laser_core.migration import distance
+            # from laser.core.migration import gravity, row_normalizer
+            # from laser.core.migration import distance
             distances = distance(self.locations[:, 0], self.locations[:, 1])
             self.network = gravity(initial_populations, distances, k, a, b, c)
             self.network /= np.power(initial_populations.sum(), c)  # Normalize

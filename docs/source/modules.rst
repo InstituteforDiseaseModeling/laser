@@ -1,7 +1,7 @@
-laser_core
-==========
+laser.core
+====
 
 .. toctree::
    :maxdepth: 4
 
-   laser_core
+   laser.core
