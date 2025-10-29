@@ -28,7 +28,6 @@ def _nbseed(seed):  # pragma: no cover
     then sets the seed for each thread in a parallel execution environment.
 
     Parameters:
-
         seed (uint32): The seed value to initialize the PRNG.
     """
 
@@ -50,11 +49,9 @@ def seed(seed) -> np.random.Generator:
     generators with the same seed.
 
     Parameters:
-
         seed (int): The seed value to initialize the random number generators.
 
     Returns:
-
         numpy.random.Generator: The initialized pseudo-random number generator.
     """
 
@@ -73,7 +70,6 @@ def get_seed() -> np.uint32:
     Return the seed used to initialize the pseudo-random number generator.
 
     Returns:
-
         uint32: The seed value used to initialize the random number generators.
     """
 

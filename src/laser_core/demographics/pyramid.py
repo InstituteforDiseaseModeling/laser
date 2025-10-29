@@ -60,11 +60,9 @@ class AliasedDistribution:
         Generate samples from the distribution.
 
         Parameters:
-
             count (int): The number of samples to generate. Default is 1.
 
         Returns:
-
             int or numpy.ndarray: A single integer if count is 1, otherwise an array of integers representing the generated samples.
         """
 
@@ -90,32 +88,28 @@ def load_pyramid_csv(file: Path, verbose=False) -> np.ndarray:
 
     The CSV file is expected to have the following schema:
 
-        - The first line is a header: "Age,M,F"
-        - Subsequent lines contain age ranges and population counts for males and females:
+    - The first line is a header: "Age,M,F"
+    - Subsequent lines contain age ranges and population counts for males and females:
 
-        .. code-block:: text
-
-            "low-high,#males,#females"
-            ...
-            "max+,#males,#females"
-
-        Where low, high, males, females, and max are integer values >= 0.
+    ```
+    "low-high,#males,#females"
+    ...
+    "max+,#males,#females"
+    ```
+    Where low, high, males, females, and max are integer values >= 0.
 
     The function processes the CSV file to create a NumPy array with the following columns:
 
-        - Start age of the range
-        - End age of the range
-        - Number of males
-        - Number of females
+    - Start age of the range
+    - End age of the range
+    - Number of males
+    - Number of females
 
     Parameters:
-
         file (Path): The path to the CSV file.
-
         verbose (bool): If True, prints the file reading status. Default is False.
 
     Returns:
-
         np.ndarray: A NumPy array with the processed population pyramid data.
     """
 

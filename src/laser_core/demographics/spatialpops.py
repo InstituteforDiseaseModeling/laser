@@ -14,32 +14,26 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
     sum matches the total population and the specified fraction of rural
     population is respected.
 
-    Parameters
-    ----------
-    tot_pop : int
-        The total population to be distributed across the nodes.
-    num_nodes : int
-        The total number of nodes among which the population will be distributed.
-    frac_rural : float
-        The fraction of the total population to be assigned to rural nodes
-        (value between 0 and 1). Defaults to 0.3. The 0 node is the single urban
-        node and has (1-frac_rural) of the population.
+    Parameters:
+        tot_pop (int): The total population to be distributed across the nodes.
+        num_nodes (int): The total number of nodes among which the population will be distributed.
+        frac_rural (float): The fraction of the total population to be assigned to rural nodes
+            (value between 0 and 1). Defaults to 0.3. The 0 node is the single urban
+            node and has (1-frac_rural) of the population.
 
-    Returns
-    -------
-    list of int
-        A list of integers representing the population at each node. The sum
-        of the list equals `tot_pop`.
+    Returns:
+        list of int
+            A list of integers representing the population at each node. The sum
+            of the list equals `tot_pop`.
 
-    Notes
-    -----
-    - The population distribution is weighted using an exponential random
-      distribution to create heterogeneity among node populations.
-    - Adjustments are made to ensure the total fraction assigned to rural
-      nodes adheres to `frac_rural`.
+    Notes:
+        - The population distribution is weighted using an exponential random
+        distribution to create heterogeneity among node populations.
+        - Adjustments are made to ensure the total fraction assigned to rural
+        nodes adheres to `frac_rural`.
 
-    Examples
-    --------
+    Example:
+    ```
     >>> from laser_core.demographics.spatialpops import distribute_population_skewed
     >>> np.random.seed(42)  # For reproducibility
     >>> tot_pop = 1000
@@ -53,6 +47,7 @@ def distribute_population_skewed(tot_pop, num_nodes, frac_rural=0.3):
     >>> frac_rural = 0.4
     >>> distribute_population_skewed(tot_pop, num_nodes, frac_rural)
     [300, 136, 64]
+    ```
     """
     # Valid input data checks
     if tot_pop <= 0:
@@ -91,53 +86,45 @@ def distribute_population_tapered(tot_pop, num_nodes):
     The function ensures the sum of the distributed populations matches the
     `tot_pop` exactly by adjusting the largest node if rounding introduces discrepancies.
 
-    Parameters
-    ----------
-    tot_pop : int
-        The total population to distribute. Must be a positive integer.
-    num_nodes : int
-        The number of nodes to distribute the population across. Must be a positive integer.
+    Parameters:
+        tot_pop (int): The total population to distribute. Must be a positive integer.
+        num_nodes (int): The number of nodes to distribute the population across. Must be a positive integer.
 
-    Returns
-    -------
-    numpy.ndarray
-        A 1D array of integers where each element represents the population assigned
-        to a specific node. The length of the array is equal to `num_nodes`.
+    Returns:
+        numpy.ndarray: A 1D array of integers where each element represents the population assigned
+            to a specific node. The length of the array is equal to `num_nodes`.
 
-    Raises
-    ------
-    ValueError
-        If `tot_pop` or `num_nodes` is not greater than 0.
+    Raises:
+        ValueError: If `tot_pop` or `num_nodes` is not greater than 0.
 
-    Notes
-    -----
-    - The logarithmic-like distribution ensures that Node 0 has the highest population,
-      and subsequent nodes receive progressively smaller proportions.
-    - The function guarantees that the sum of the returned array equals `tot_pop`.
+    Notes:
+        - The logarithmic-like distribution ensures that Node 0 has the highest population,
+        and subsequent nodes receive progressively smaller proportions.
+        - The function guarantees that the sum of the returned array equals `tot_pop`.
 
-    Examples
-    --------
-    Distribute a total population of 1000 across 5 nodes:
-
-    >>> from laser_core.demographics.spatialpops import distribution_population_tapered
-    >>> distribute_population_tapered(1000, 5)
-    array([500, 250, 125, 75, 50])
-
-    Distribute a total population of 1200 across 3 nodes:
-
-    >>> distribute_population_tapered(1200, 3)
-    array([600, 400, 200])
-
-    Handling a small total population with more nodes:
-
-    >>> distribute_population_tapered(10, 4)
-    array([5, 3, 2, 0])
-
-    Ensuring the distribution adds up to the total population:
-
-    >>> pop = distribute_population_tapered(1000, 5)
-    >>> pop.sum()
-    1000
+    Examples:
+        Distribute a total population of 1000 across 5 nodes:
+            ```
+            >>> from laser_core.demographics.spatialpops import distribution_population_tapered
+            >>> distribute_population_tapered(1000, 5)
+            array([500, 250, 125, 75, 50])
+            ```
+        Distribute a total population of 1200 across 3 nodes:
+            ```
+            >>> distribute_population_tapered(1200, 3)
+            array([600, 400, 200])
+            ```
+        Handling a small total population with more nodes:
+            ```
+            >>> distribute_population_tapered(10, 4)
+            array([5, 3, 2, 0])
+            ```
+        Ensuring the distribution adds up to the total population:
+            ```
+            >>> pop = distribute_population_tapered(1000, 5)
+            >>> pop.sum()
+            1000
+            ```
     """
     if num_nodes <= 0 or tot_pop <= 0:
         raise ValueError("Both tot_pop and num_nodes must be greater than 0.")
