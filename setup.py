@@ -10,7 +10,7 @@ setup(
     ext_modules=[
         Extension(
             name="_extension",
-            sources=["src/laser_core/_extension.c"],
+            sources=["src/laser/core/_extension.c"],
             include_dirs=["include"],
             # libraries=["m"], library_dirs=[...], extra_compile_args=[...], etc.
         ),
