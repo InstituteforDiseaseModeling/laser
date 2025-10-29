@@ -8,6 +8,8 @@ build:
 
 sphinx:
   configuration: docs/conf.py
+  # TODO: Re-enable `fail_on_warning` once the namespace migration is complete and all Sphinx warnings are resolved.
+  #       See tracking issue: https://github.com/your-org/your-repo/issues/1234
   fail_on_warning: false
 
 formats:
