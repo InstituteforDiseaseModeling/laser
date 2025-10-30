@@ -145,6 +145,7 @@ class TestDistributions(unittest.TestCase):
             stat, _ = ks_2samp(samples, ref_samples)
             assert stat < KS_THRESHOLD, f"Weibull({a},{lam}) KS={stat}"
 
+    @unittest.skip("Performance test, not a unit test")
     def test_perf(self):
         NSAMPLES = 1_000_000
         rng = np.random.default_rng(42)
