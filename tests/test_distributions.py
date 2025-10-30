@@ -167,9 +167,9 @@ class TestDistributions(unittest.TestCase):
         # print(f"{_nbsamples.mean():.4f} ± {_nbsamples.std():.4f}")
 
         if nb.get_num_threads() > 2:
-            assert tnumba < tnumpy, (
-                f"Numba-compatible distribution ({tnumba / 1_000_000:.2f} ms) slower than NumPy ({tnumpy / 1_000_000:.2f} ms)"
-            )
+            assert (
+                tnumba < tnumpy
+            ), f"Numba-compatible distribution ({tnumba / 1_000_000:.2f} ms) slower than NumPy ({tnumpy / 1_000_000:.2f} ms)"
 
 
 if __name__ == "__main__":
