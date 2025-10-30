@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     package_dir={"": "src"},
     packages=find_packages(where="src"),
-    package_data={"laser_core": ["*.c"]},
+    package_data={"laser.core": ["*.c"]},
     include_package_data=True,
     ext_modules=[
         Extension(

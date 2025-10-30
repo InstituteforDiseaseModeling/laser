@@ -132,7 +132,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-laser_core = ["*.c"]
+"laser.core" = ["*.c"]
 "tests" = ["data/*.csv"]
 
 [tool.bumpversion]

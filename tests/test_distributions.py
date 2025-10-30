@@ -1,8 +1,8 @@
 """
-Unit tests for laser_core.distributions module.
+Unit tests for laser.core.distributions module.
 
 Note that this is not intended to test NumPy, Numba, or SciPy themselves, but rather to ensure that the
-distributions implemented in laser_core.distributions have been "wired up" correctly.
+distributions implemented in laser.core.distributions have been "wired up" correctly.
 """
 
 import unittest
@@ -166,9 +166,9 @@ class TestDistributions(unittest.TestCase):
         # print(f"{_nbsamples.mean():.4f} ± {_nbsamples.std():.4f}")
 
         if nb.get_num_threads() > 2:
-            assert (
-                tnumba < tnumpy
-            ), f"Numba-compatible distribution ({tnumba / 1_000_000:.2f} ms) slower than NumPy ({tnumpy / 1_000_000:.2f} ms)"
+            assert tnumba < tnumpy, (
+                f"Numba-compatible distribution ({tnumba / 1_000_000:.2f} ms) slower than NumPy ({tnumpy / 1_000_000:.2f} ms)"
+            )
 
 
 if __name__ == "__main__":
