@@ -25,4 +25,4 @@ python:
 search:
   ranking:
     installation.html: 3
-    laser_core.html: 2
+    laser.core.html: 2
