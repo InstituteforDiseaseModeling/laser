@@ -4,6 +4,30 @@ Changelog
 Unreleased
 ----------
 
+* Add ``laser.core.plotting.animate_choropleth`` for rendering a sequence of
+  per-region value frames as an animation on the same regions, with a **shared
+  colorbar** across all frames (auto-computed global min/max, or explicit
+  ``vmin`` / ``vmax``). Output format is inferred from the ``output_path``
+  extension:
+
+  - ``.gif`` → ``PillowWriter`` (Pillow is a hard dep of matplotlib — no extra
+    install).
+  - ``.html`` / ``.htm`` → self-contained JS animation via ``to_jshtml()``
+    (matplotlib only — no extra install).
+  - ``.mp4`` / ``.webm`` / ``.mov`` → ``FFMpegWriter`` (requires the ``ffmpeg``
+    binary on ``PATH``). A missing binary raises ``RuntimeError`` with
+    ``brew`` / ``apt-get`` / ``conda`` install hints rather than a bare
+    matplotlib traceback.
+
+  Also adds ``vmin`` / ``vmax`` parameters to ``choropleth()`` so callers can
+  pin a shared color scale across multiple static calls (used internally by the
+  animation). Ten new tests in ``tests/test_plotting.py`` cover frame-count
+  handling, shared-scale semantics, GIF and HTML output paths, the ffmpeg
+  install-hint error, region-count validation, and empty / mismatched-title
+  input rejection. New ``examples/choropleth_examples.ipynb`` section (c)
+  demonstrates all three output formats on 24 frames of a synthetic Mali
+  admin-2 metric.
+
 * ``calc_capacity()`` now returns a ``uint32`` array (previously ``int32``) and
   clamps per-node estimates that exceed ``2**32 - 1`` to the ``uint32`` maximum
   before casting, preventing silent overflow / wraparound for very large
