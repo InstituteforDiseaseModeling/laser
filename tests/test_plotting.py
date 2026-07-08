@@ -8,16 +8,17 @@ delegates to this function) or any downstream caller mapping their own per-regio
 
 import re
 
-import matplotlib
-
-matplotlib.use("Agg")  # headless backend so tests never try to open a window
-
 import geopandas as gpd
+import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 from shapely.geometry import Polygon
 
+from laser.core.plotting import animate_choropleth
 from laser.core.plotting import choropleth
+
+matplotlib.use("Agg")  # headless backend so tests never try to open a window
 
 
 def _square_regions(values=None):
@@ -183,6 +184,195 @@ class TestChoropleth:
 
         assert set(gdf.columns) == original_columns
         plt.close(fig)
+
+
+class TestAnimateChoropleth:
+    """Test suite for animate_choropleth."""
+
+    def test_returns_funcanimation_with_correct_frame_count(self):
+        """Given a GeoDataFrame and a (nframes, nregions) values array,
+        when animate_choropleth() is called with no output_path,
+        then it returns a matplotlib FuncAnimation with the expected number of frames.
+
+        Baseline sanity: the animation object round-trips its frame count and can be
+        used with any downstream writer (Pillow, JS-HTML, ffmpeg).
+        """
+        from matplotlib.animation import FuncAnimation
+
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 2, 3]], dtype=float)
+
+        anim = animate_choropleth(gdf, frames)
+
+        assert isinstance(anim, FuncAnimation)
+        assert anim._save_count == 4, f"Expected 4 frames, got {anim._save_count}"
+        plt.close(anim._fig)
+
+    def test_shared_color_scale_from_global_min_max(self):
+        """Given frames whose values span [0, 100],
+        when animate_choropleth() is called without vmin/vmax,
+        then the shared color scale is exactly [0, 100] on every frame.
+
+        Pins the "one shared colorbar" contract that motivates animate_choropleth over
+        the subplot-grid pattern — colors must be comparable across frames.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[0.0, 50.0, 100.0], [25.0, 75.0, 50.0]])
+
+        anim = animate_choropleth(gdf, frames)
+        # Advance the animation to draw frames; the underlying PolyCollection carries
+        # the color-scale limits (norm.vmin / norm.vmax).
+        anim._draw_next_frame(0, blit=False)
+        collections = [c for c in anim._fig.axes[0].collections if getattr(c, "norm", None) is not None]
+        assert collections, "expected at least one drawn collection with a color norm"
+        assert collections[0].norm.vmin == 0.0
+        assert collections[0].norm.vmax == 100.0
+
+        plt.close(anim._fig)
+
+    def test_explicit_vmin_vmax_override_global(self):
+        """Given ``vmin=0`` and ``vmax=10`` passed explicitly,
+        when animate_choropleth() is called on values that span [0, 100],
+        then the color scale uses [0, 10] (values above vmax will clip at the top color).
+
+        User-supplied vmin/vmax must beat the auto-computed global range so callers can
+        force a domain-meaningful scale (e.g. [0, 1] for a probability).
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[0.0, 50.0, 100.0], [25.0, 75.0, 50.0]])
+
+        anim = animate_choropleth(gdf, frames, vmin=0.0, vmax=10.0)
+        anim._draw_next_frame(0, blit=False)
+        collections = [c for c in anim._fig.axes[0].collections if getattr(c, "norm", None) is not None]
+        assert collections[0].norm.vmin == 0.0
+        assert collections[0].norm.vmax == 10.0
+
+        plt.close(anim._fig)
+
+    def test_saves_gif_via_pillow(self, tmp_path):
+        """Given ``output_path`` with a ``.gif`` suffix,
+        when animate_choropleth() is called,
+        then a valid non-empty GIF file is written using Pillow (no external tool).
+
+        This is the recommended path for callers who want portable animated output
+        without adding ffmpeg to their dependency chain. If this ever fails we've
+        regressed the "lightweight animation" contract.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1], [2, 2, 2]], dtype=float)
+        out = tmp_path / "test.gif"
+
+        anim = animate_choropleth(gdf, frames, output_path=out, fps=2)
+
+        assert out.exists()
+        assert out.stat().st_size > 1000, "expected a non-trivial GIF payload"
+        with out.open("rb") as fh:
+            magic = fh.read(6)
+        assert magic in (b"GIF89a", b"GIF87a"), f"expected GIF magic bytes, got {magic!r}"
+        plt.close(anim._fig)
+
+    def test_saves_html_via_jshtml(self, tmp_path):
+        """Given ``output_path`` with a ``.html`` suffix,
+        when animate_choropleth() is called,
+        then a self-contained HTML file with an embedded JS-driven animation is written.
+
+        Pins the notebook-friendly path (no external tool). HTML output is what
+        ``anim.to_jshtml()`` produces — a JS animation controller plus base64-encoded
+        frame PNGs — playable in any modern browser.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1]], dtype=float)
+        out = tmp_path / "test.html"
+
+        anim = animate_choropleth(gdf, frames, output_path=out, fps=2)
+
+        text = out.read_text(encoding="utf-8")
+        assert "<script" in text, "expected embedded <script> for the JS animation"
+        assert "base64" in text, "expected base64-encoded frame PNGs"
+        plt.close(anim._fig)
+
+    def test_mp4_without_ffmpeg_raises_helpful_error(self, tmp_path, monkeypatch):
+        """Given ``output_path`` with ``.mp4`` and no ffmpeg on PATH,
+        when animate_choropleth() is called,
+        then it raises ``RuntimeError`` with an install-hint (brew / apt-get / conda),
+        NOT a bare matplotlib "MovieWriter ffmpeg unavailable" traceback.
+
+        Guards against a poor first-time experience for users who try MP4 without
+        installing ffmpeg — the helper's job is to point at the fix, not to leak a
+        matplotlib internal error.
+        """
+        from matplotlib import animation as mpl_animation
+
+        # Force FFMpegWriter.isAvailable() to return False no matter what's on PATH.
+        monkeypatch.setattr(mpl_animation.FFMpegWriter, "isAvailable", staticmethod(lambda: False))
+
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1]], dtype=float)
+        out = tmp_path / "test.mp4"
+
+        with pytest.raises(RuntimeError, match=re.compile(r"ffmpeg.*PATH.*brew.*apt-get", re.DOTALL)):
+            animate_choropleth(gdf, frames, output_path=out)
+
+    def test_rejects_mismatched_region_count(self):
+        """Given a values-per-frame array whose per-frame length doesn't match the number
+        of regions in the GeoDataFrame,
+        when animate_choropleth() is called,
+        then it raises ``ValueError`` with a clear message.
+
+        Baseline shape-validation: without it the animation would silently misalign
+        values to regions.
+        """
+        gdf = _square_regions([10, 20, 30])  # 3 regions
+        frames = np.array([[1, 2], [3, 4]], dtype=float)  # 2 regions per frame — WRONG
+
+        with pytest.raises(ValueError, match=re.escape("must align one-to-one")):
+            animate_choropleth(gdf, frames)
+
+    def test_rejects_empty_frames(self):
+        """Given a values-per-frame array with zero frames,
+        when animate_choropleth() is called,
+        then it raises ``ValueError``.
+
+        A zero-frame "animation" has no meaningful vmin/vmax and no frames to write —
+        catch it at the input boundary rather than at some downstream matplotlib
+        internal.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.empty((0, 3), dtype=float)
+
+        with pytest.raises(ValueError, match="at least one frame"):
+            animate_choropleth(gdf, frames)
+
+    def test_rejects_mismatched_frame_titles(self):
+        """Given ``frame_titles`` of length 2 and ``values_by_frame`` of length 3,
+        when animate_choropleth() is called,
+        then it raises ``ValueError``.
+
+        Otherwise a bad caller would either see a silent title truncation or an
+        IndexError deep in the draw callback — neither is helpful.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1], [2, 2, 2]], dtype=float)
+
+        with pytest.raises(ValueError, match="frame_titles length"):
+            animate_choropleth(gdf, frames, frame_titles=["a", "b"])
+
+    def test_one_dimensional_values_treated_as_single_frame(self):
+        """Given a 1-D values array (nregions,),
+        when animate_choropleth() is called,
+        then it produces a single-frame animation (a convenience for callers who want to
+        reuse the animation machinery for a one-shot render).
+        """
+        from matplotlib.animation import FuncAnimation
+
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([1, 2, 3], dtype=float)  # 1-D
+
+        anim = animate_choropleth(gdf, frames)
+
+        assert isinstance(anim, FuncAnimation)
+        assert anim._save_count == 1
+        plt.close(anim._fig)
 
 
 if __name__ == "__main__":
