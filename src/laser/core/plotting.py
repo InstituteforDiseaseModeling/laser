@@ -1,10 +1,35 @@
 """Reusable plotting helpers for region-keyed (spatial) data.
 
-This module holds standalone, dependency-light plotting utilities that are not tied to
-the laser-init pipeline, so they can be reused directly and are straightforward to lift
-into `laser.generic` later. The headline helper is [`choropleth`][laser.init.plotting.choropleth],
-which renders a choropleth from either a column already present on a GeoDataFrame or an
-arbitrary array of user-supplied values aligned to the rows (e.g. per-node model output).
+Two headline helpers, both operating on a `GeoDataFrame` (or a path to a vector file
+readable by `geopandas.read_file`) with an aligned array of per-region values:
+
+- [`choropleth`][laser.core.plotting.choropleth] — a static single-panel map. Values
+  come from either a column already present on the GeoDataFrame (pass ``column``) or an
+  array of user-supplied values in row order (pass ``values``), so per-node model output
+  can be mapped without first materializing it back onto the geometry file. Supports
+  log-scaling for wide dynamic ranges, explicit ``vmin`` / ``vmax`` for shared scales
+  across multiple calls, and composition into subplot grids via ``ax=``.
+- [`animate_choropleth`][laser.core.plotting.animate_choropleth] — the same map, animated
+  over a sequence of per-region value frames (shape ``(nframes, nregions)``) with a
+  **shared colorbar** across every frame so absolute colors are directly comparable.
+  Output format is inferred from the extension of ``output_path``:
+
+  | Extension                       | Writer                                  | External deps |
+  | ------------------------------- | --------------------------------------- | ------------- |
+  | ``.gif``                        | `matplotlib.animation.PillowWriter`     | Pillow — already a hard dependency of matplotlib, no extra install. |
+  | ``.html`` / ``.htm``            | HTML5 + JavaScript via `to_jshtml()`    | None (matplotlib only). |
+  | ``.mp4`` / ``.webm`` / ``.mov`` | `matplotlib.animation.FFMpegWriter`     | `ffmpeg` binary on `PATH`. |
+
+  MP4 is the only path that requires a non-Python dependency; the helper checks for the
+  binary at save time and raises a `RuntimeError` with `brew` / `apt-get` / `conda`
+  install hints if it isn't found. If no ``output_path`` is given, the returned
+  `FuncAnimation` can be embedded inline in a Jupyter notebook with
+  `IPython.display.HTML(anim.to_jshtml())`.
+
+This module is intentionally dependency-light (matplotlib + geopandas + numpy — all
+already required by `laser.core`) so it is straightforward to lift into
+`laser.generic` later. See ``examples/choropleth_examples.ipynb`` for runnable
+end-to-end demonstrations of every path above.
 """
 
 from pathlib import Path
@@ -238,8 +263,8 @@ def animate_choropleth(
             ``.webm`` / ``.mov`` output is requested but ``ffmpeg`` is not on PATH
             (message points at the installation steps).
         ValueError: If ``values_by_frame`` is empty, if any frame's length disagrees with
-            the number of regions in ``data``, or if ``frame_titles`` length disagrees
-            with the number of frames.
+            the number of regions in ``data``, if ``frame_titles`` length disagrees with
+            the number of frames, or if ``fps <= 0``.
 
     Example:
         ```python
@@ -281,6 +306,11 @@ def animate_choropleth(
         )
     if frame_titles is not None and len(frame_titles) != nframes:
         raise ValueError(f"frame_titles length ({len(frame_titles)}) must match number of frames ({nframes})")
+    # fps <= 0 would produce a nonsensical frame interval (division-by-zero for fps=0,
+    # negative interval for fps<0) and every writer (Pillow / to_jshtml / FFMpeg) would
+    # either reject it downstream or silently emit garbage. Reject at the API boundary.
+    if fps <= 0:
+        raise ValueError(f"fps must be a positive integer, got {fps}")
 
     # Compute the shared color scale (post-log-transform if requested) so every frame
     # renders on the same numeric range and colors are directly comparable across frames.

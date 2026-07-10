@@ -4,29 +4,42 @@ Changelog
 Unreleased
 ----------
 
-* Add ``laser.core.plotting.animate_choropleth`` for rendering a sequence of
-  per-region value frames as an animation on the same regions, with a **shared
-  colorbar** across all frames (auto-computed global min/max, or explicit
-  ``vmin`` / ``vmax``). Output format is inferred from the ``output_path``
-  extension:
+* Add ``laser.core.plotting`` — a new dependency-light module for region-keyed
+  spatial plotting, ported into ``laser.core`` from an upstream project. Two
+  helpers, both operating on a ``GeoDataFrame`` (or a path to a vector file
+  readable by ``geopandas.read_file``) with per-region values supplied via
+  either an existing column or an aligned array:
 
-  - ``.gif`` → ``PillowWriter`` (Pillow is a hard dep of matplotlib — no extra
-    install).
-  - ``.html`` / ``.htm`` → self-contained JS animation via ``to_jshtml()``
-    (matplotlib only — no extra install).
-  - ``.mp4`` / ``.webm`` / ``.mov`` → ``FFMpegWriter`` (requires the ``ffmpeg``
-    binary on ``PATH``). A missing binary raises ``RuntimeError`` with
-    ``brew`` / ``apt-get`` / ``conda`` install hints rather than a bare
-    matplotlib traceback.
+  - **``choropleth``** — a static single-panel map. Values come from
+    ``column=`` (an existing column) or ``values=`` (an aligned per-region
+    array, so per-node model output can be mapped without materializing it back
+    onto the geometry file). Supports log scaling, explicit ``vmin`` /
+    ``vmax`` for shared scales across multiple calls, and composition into
+    subplot grids via ``ax=``.
+  - **``animate_choropleth``** — the same map, animated over a sequence of
+    per-region value frames with a **shared colorbar** across all frames so
+    absolute colors are directly comparable frame-to-frame. Output format is
+    inferred from the ``output_path`` extension:
 
-  Also adds ``vmin`` / ``vmax`` parameters to ``choropleth()`` so callers can
-  pin a shared color scale across multiple static calls (used internally by the
-  animation). Ten new tests in ``tests/test_plotting.py`` cover frame-count
-  handling, shared-scale semantics, GIF and HTML output paths, the ffmpeg
-  install-hint error, region-count validation, and empty / mismatched-title
-  input rejection. New ``examples/choropleth_examples.ipynb`` section (c)
-  demonstrates all three output formats on 24 frames of a synthetic Mali
-  admin-2 metric.
+    - ``.gif`` → ``PillowWriter`` (Pillow is a hard dep of matplotlib — no
+      extra install).
+    - ``.html`` / ``.htm`` → self-contained JS animation via ``to_jshtml()``
+      (matplotlib only — no extra install).
+    - ``.mp4`` / ``.webm`` / ``.mov`` → ``FFMpegWriter`` (requires the
+      ``ffmpeg`` binary on ``PATH``). A missing binary raises ``RuntimeError``
+      with ``brew`` / ``apt-get`` / ``conda`` install hints rather than a
+      bare matplotlib traceback.
+
+  Full test coverage lands with the module: ``tests/test_plotting.py`` covers
+  both helpers (column and values plot paths, log transform, path-loading,
+  subplot composition, non-mutation of the input, and — for the animation —
+  frame-count handling, shared-scale semantics, GIF and HTML output writing,
+  the ffmpeg install-hint error, ``fps > 0`` validation, and region-count /
+  empty / mismatched-title / non-string input rejection). New
+  ``examples/choropleth_examples.ipynb`` runs (a) a single choropleth of Mali
+  admin-2 population from ``examples/MLI_admin2.gpkg``, (b) a 3×2 grid of
+  stochastic per-patch values, and (c) a 24-frame animated choropleth in all
+  three output formats.
 
 * ``calc_capacity()`` now returns a ``uint32`` array (previously ``int32``) and
   clamps per-node estimates that exceed ``2**32 - 1`` to the ``uint32`` maximum
