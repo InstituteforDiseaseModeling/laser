@@ -1,4 +1,4 @@
-"""Tests for laser.init.plotting.
+"""Tests for laser.core.plotting.
 
 These tests exercise the standalone ``choropleth`` helper, which is intended to be
 reusable (and eventually portable into laser.generic). Failures here mean the choropleth
@@ -10,15 +10,17 @@ import re
 
 import geopandas as gpd
 import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import pytest
-from shapely.geometry import Polygon
 
-from laser.core.plotting import animate_choropleth
-from laser.core.plotting import choropleth
+# headless backend so tests never try to open a window
+matplotlib.use("Agg")
 
-matplotlib.use("Agg")  # headless backend so tests never try to open a window
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+from shapely.geometry import Polygon  # noqa: E402
+
+from laser.core.plotting import animate_choropleth  # noqa: E402
+from laser.core.plotting import choropleth  # noqa: E402
 
 
 def _square_regions(values=None):
@@ -356,6 +358,45 @@ class TestAnimateChoropleth:
 
         with pytest.raises(ValueError, match="frame_titles length"):
             animate_choropleth(gdf, frames, frame_titles=["a", "b"])
+
+    def test_rejects_non_positive_fps(self):
+        """Given ``fps <= 0``,
+        when animate_choropleth() is called,
+        then it raises ``ValueError`` with a message identifying the offending value.
+
+        ``fps <= 0`` produces a nonsensical frame interval (division-by-zero for
+        ``fps=0``, negative interval for ``fps<0``) and downstream writers either
+        reject it or silently emit garbage. Rejecting at the API boundary keeps the
+        error close to the caller's mistake.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1]], dtype=float)
+
+        with pytest.raises(ValueError, match=r"fps must be a positive integer, got 0"):
+            animate_choropleth(gdf, frames, fps=0)
+
+        with pytest.raises(ValueError, match=r"fps must be a positive integer, got -1"):
+            animate_choropleth(gdf, frames, fps=-1)
+
+        with pytest.raises(ValueError, match=r"fps must be a positive integer, got -30"):
+            animate_choropleth(gdf, frames, fps=-30)
+
+    def test_accepts_smallest_positive_fps(self):
+        """Given ``fps=1`` (the smallest positive value),
+        when animate_choropleth() is called,
+        then it succeeds — the boundary is strictly ``fps > 0``, not ``fps >= 2``.
+
+        Guards against the check accidentally becoming ``fps < 1`` (which would still
+        reject 0 but also reject fractional values like 0.5, and, more importantly,
+        might drift to ``fps <= 1`` in a future edit and lock out legitimate slow-
+        animation use cases).
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1, 2, 3], [3, 2, 1]], dtype=float)
+
+        # Should not raise.
+        anim = animate_choropleth(gdf, frames, fps=1)
+        plt.close(anim._fig)
 
     def test_one_dimensional_values_treated_as_single_frame(self):
         """Given a 1-D values array (nregions,),
