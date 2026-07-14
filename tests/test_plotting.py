@@ -416,5 +416,114 @@ class TestAnimateChoropleth:
         plt.close(anim._fig)
 
 
+class TestChoroplethInputValidation:
+    """Red-team regression tests for hostile / ambiguous inputs."""
+
+    def test_log_rejects_values_less_than_or_equal_to_negative_one(self):
+        """Given values that make log1p invalid, when log=True, choropleth()
+        should reject them with a clear ValueError instead of silently producing
+        NaNs or a misleading plot.
+        """
+        gdf = _square_regions([10, 20, 30])
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("log=True requires all plotted values to be greater than -1"),
+        ):
+            choropleth(gdf, column="attack_rate", values=[0.5, -1.0, 2.0], log=True)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("log=True requires all plotted values to be greater than -1"),
+        ):
+            choropleth(gdf, column="attack_rate", values=[0.5, -2.0, 2.0], log=True)
+
+    def test_log_rejects_existing_column_values_less_than_or_equal_to_negative_one(self):
+        """Given an existing plotted column containing values invalid for log1p,
+        when log=True, choropleth() should fail at the API boundary with a clear
+        ValueError.
+        """
+        gdf = _square_regions([10, 20, 30]).copy()
+        gdf["delta"] = [1.0, -1.0, 3.0]
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("log=True requires all plotted values to be greater than -1"),
+        ):
+            choropleth(gdf, column="delta", log=True)
+
+    def test_rejects_non_numeric_values_array(self):
+        """Given non-numeric values, choropleth() should raise a clean error
+        instead of leaking a numpy/matplotlib/geopandas exception.
+        """
+        gdf = _square_regions([10, 20, 30])
+
+        with pytest.raises((TypeError, ValueError), match="numeric|number|float|int"):
+            choropleth(gdf, column="attack_rate", values=["a", "b", "c"])
+
+    def test_rejects_ragged_values_by_frame_with_clean_api_error(self):
+        """Given a ragged per-frame input, animate_choropleth() should reject it
+        with a clean API-level error, not a raw ndarray construction error.
+        """
+        gdf = _square_regions([10, 20, 30])
+        ragged = [[1, 2, 3], [4, 5]]
+
+        with pytest.raises((TypeError, ValueError)) as excinfo:
+            animate_choropleth(gdf, ragged)
+
+        msg = str(excinfo.value)
+        assert "setting an array element with a sequence" not in msg, (
+            "animate_choropleth() currently leaks a low-level NumPy ragged-array error "
+            "instead of raising a clean API-level validation error."
+        )
+
+
+    def test_rejects_non_numeric_values_by_frame_with_clean_api_error(self):
+        """Given non-numeric frame values, animate_choropleth() should reject them
+        with a clean API-level error, not a raw NumPy reduction/type error.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = [["a", "b", "c"], ["d", "e", "f"]]
+
+        with pytest.raises((TypeError, ValueError)) as excinfo:
+            animate_choropleth(gdf, frames)
+
+        msg = str(excinfo.value)
+        assert "ufunc" not in msg and "did not contain a loop with signature" not in msg, (
+            "animate_choropleth() currently leaks a low-level NumPy dtype/reduction error "
+            "instead of raising a clean API-level validation error."
+        )
+
+class TestAnimateChoroplethEdgeCases:
+    """Red-team regression tests for animation edge cases."""
+
+    def test_log_rejects_frame_values_less_than_or_equal_to_negative_one(self):
+        """Given frame values invalid for log1p, when log=True,
+        animate_choropleth() should reject them clearly instead of computing
+        NaN-filled display frames.
+        """
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[1.0, 2.0, 3.0], [0.5, -1.0, 4.0]])
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("log=True requires all plotted values to be greater than -1"),
+        ):
+            animate_choropleth(gdf, frames, log=True)
+
+    def test_constant_frames_are_accepted_under_shared_scale(self):
+        """Given constant-valued frames, animate_choropleth() should still return
+        a valid animation object rather than failing on a degenerate shared scale.
+        """
+        from matplotlib.animation import FuncAnimation
+
+        gdf = _square_regions([10, 20, 30])
+        frames = np.array([[7.0, 7.0, 7.0], [7.0, 7.0, 7.0]], dtype=float)
+
+        anim = animate_choropleth(gdf, frames)
+
+        assert isinstance(anim, FuncAnimation)
+        plt.close(anim._fig)
+
 if __name__ == "__main__":
     pytest.main()
