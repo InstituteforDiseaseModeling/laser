@@ -417,12 +417,23 @@ class TestAnimateChoropleth:
 
 
 class TestChoroplethInputValidation:
-    """Red-team regression tests for hostile / ambiguous inputs."""
+    """Regression tests for input-validation boundaries in ``choropleth`` and
+    ``animate_choropleth``.
+
+    Every test in this class targets an input the helpers must reject *at their own API
+    boundary* — before the value reaches NumPy, matplotlib, or geopandas — so callers
+    see a clean, actionable ``TypeError`` / ``ValueError`` naming the offending parameter
+    rather than a deep traceback from a downstream library.
+    """
 
     def test_log_rejects_values_less_than_or_equal_to_negative_one(self):
-        """Given values that make log1p invalid, when log=True, choropleth()
-        should reject them with a clear ValueError instead of silently producing
-        NaNs or a misleading plot.
+        """Given user-supplied ``values`` containing at least one entry ``<= -1`` (invalid
+        input to ``log1p``), when ``choropleth()`` is called with ``log=True``, then it
+        raises ``ValueError`` with a message identifying the ``log1p`` domain requirement.
+
+        Failure indicates the log-transform path silently produces ``-inf`` (for ``-1``)
+        or ``NaN`` (for ``< -1``) instead of failing at the API boundary — a rendered plot
+        with those masked/blank regions would misrepresent the underlying data.
         """
         gdf = _square_regions([10, 20, 30])
 
@@ -439,9 +450,14 @@ class TestChoroplethInputValidation:
             choropleth(gdf, column="attack_rate", values=[0.5, -2.0, 2.0], log=True)
 
     def test_log_rejects_existing_column_values_less_than_or_equal_to_negative_one(self):
-        """Given an existing plotted column containing values invalid for log1p,
-        when log=True, choropleth() should fail at the API boundary with a clear
-        ValueError.
+        """Given a GeoDataFrame with an existing numeric column containing a value
+        ``<= -1``, when ``choropleth()`` is called on that column with ``log=True``, then
+        it raises ``ValueError`` with a message identifying the ``log1p`` domain
+        requirement.
+
+        Failure indicates the ``values=`` and ``column=`` paths validate differently —
+        both must reject invalid-for-``log1p`` inputs cleanly, since the underlying data
+        is the same regardless of how the caller supplied it.
         """
         gdf = _square_regions([10, 20, 30]).copy()
         gdf["delta"] = [1.0, -1.0, 3.0]
@@ -453,8 +469,13 @@ class TestChoroplethInputValidation:
             choropleth(gdf, column="delta", log=True)
 
     def test_rejects_non_numeric_values_array(self):
-        """Given non-numeric values, choropleth() should raise a clean error
-        instead of leaking a numpy/matplotlib/geopandas exception.
+        """Given user-supplied ``values`` that are strings (or otherwise non-numeric),
+        when ``choropleth()`` is called, then it raises ``TypeError`` or ``ValueError``
+        whose message names the offending dtype (matches ``numeric|number|float|int``).
+
+        Failure indicates non-numeric values leak past the API boundary into
+        ``geopandas.GeoDataFrame.plot`` / matplotlib, producing a deep, unhelpful
+        traceback instead of a clean, actionable error at the caller's line.
         """
         gdf = _square_regions([10, 20, 30])
 
@@ -462,8 +483,15 @@ class TestChoroplethInputValidation:
             choropleth(gdf, column="attack_rate", values=["a", "b", "c"])
 
     def test_rejects_ragged_values_by_frame_with_clean_api_error(self):
-        """Given a ragged per-frame input, animate_choropleth() should reject it
-        with a clean API-level error, not a raw ndarray construction error.
+        """Given a ragged per-frame input such as ``[[1, 2, 3], [4, 5]]``, when
+        ``animate_choropleth()`` is called, then it raises ``TypeError`` or ``ValueError``
+        whose message does NOT contain the low-level NumPy phrase ``"setting an array
+        element with a sequence"``.
+
+        Failure indicates the helper is exposing NumPy's internal array-construction
+        error verbatim to the caller — the API should validate at its own boundary and
+        surface a message that references its own parameters (``values_by_frame``) rather
+        than NumPy internals.
         """
         gdf = _square_regions([10, 20, 30])
         ragged = [[1, 2, 3], [4, 5]]
@@ -477,10 +505,16 @@ class TestChoroplethInputValidation:
             "instead of raising a clean API-level validation error."
         )
 
-
     def test_rejects_non_numeric_values_by_frame_with_clean_api_error(self):
-        """Given non-numeric frame values, animate_choropleth() should reject them
-        with a clean API-level error, not a raw NumPy reduction/type error.
+        """Given non-numeric per-frame values such as ``[["a", "b", "c"], ["d", "e",
+        "f"]]``, when ``animate_choropleth()`` is called, then it raises ``TypeError`` or
+        ``ValueError`` whose message does NOT contain the low-level NumPy phrases
+        ``"ufunc"`` or ``"did not contain a loop with signature"``.
+
+        Failure indicates non-numeric input reaches NumPy's ufunc dispatch (e.g. via
+        ``np.log1p`` / ``np.cumsum``) before ``animate_choropleth()`` validates its
+        inputs — the caller sees a stack trace naming ufunc dtype signatures instead of
+        a clean API-level error naming ``values_by_frame``.
         """
         gdf = _square_regions([10, 20, 30])
         frames = [["a", "b", "c"], ["d", "e", "f"]]
@@ -489,18 +523,32 @@ class TestChoroplethInputValidation:
             animate_choropleth(gdf, frames)
 
         msg = str(excinfo.value)
-        assert "ufunc" not in msg and "did not contain a loop with signature" not in msg, (
+        assert "ufunc" not in msg, (
             "animate_choropleth() currently leaks a low-level NumPy dtype/reduction error "
-            "instead of raising a clean API-level validation error."
+            "referencing 'ufunc' instead of raising a clean API-level validation error."
+        )
+        assert "did not contain a loop with signature" not in msg, (
+            "animate_choropleth() currently leaks a low-level NumPy dtype/reduction error "
+            "referencing 'loop with signature' instead of raising a clean API-level validation error."
         )
 
+
 class TestAnimateChoroplethEdgeCases:
-    """Red-team regression tests for animation edge cases."""
+    """Regression tests for edge cases in the animation-specific behavior of
+    ``animate_choropleth`` — the interaction of ``log=True`` with the flattened
+    frame array, and the degenerate shared-scale case where every frame is constant.
+    These behaviors are not observable from the single-panel ``choropleth`` API.
+    """
 
     def test_log_rejects_frame_values_less_than_or_equal_to_negative_one(self):
-        """Given frame values invalid for log1p, when log=True,
-        animate_choropleth() should reject them clearly instead of computing
-        NaN-filled display frames.
+        """Given a per-frame array with any entry ``<= -1`` (invalid input to ``log1p``),
+        when ``animate_choropleth()`` is called with ``log=True``, then it raises
+        ``ValueError`` with a message identifying the ``log1p`` domain requirement.
+
+        Failure indicates the animation would silently populate the display frames with
+        ``-inf`` / ``NaN`` under the shared color scale, producing masked or otherwise
+        misleading regions across every frame — worse than the single-frame equivalent
+        because it corrupts every panel of the animation.
         """
         gdf = _square_regions([10, 20, 30])
         frames = np.array([[1.0, 2.0, 3.0], [0.5, -1.0, 4.0]])
@@ -512,8 +560,16 @@ class TestAnimateChoroplethEdgeCases:
             animate_choropleth(gdf, frames, log=True)
 
     def test_constant_frames_are_accepted_under_shared_scale(self):
-        """Given constant-valued frames, animate_choropleth() should still return
-        a valid animation object rather than failing on a degenerate shared scale.
+        """Given a per-frame array whose every value is identical across every frame (so
+        the auto-computed shared scale collapses to ``vmin == vmax``), when
+        ``animate_choropleth()`` is called with no explicit ``vmin`` / ``vmax``, then it
+        returns a valid ``FuncAnimation`` (does not raise on the degenerate range).
+
+        Failure indicates a degenerate shared color scale causes matplotlib's
+        ``Normalize`` to warn or error — legitimate constant-value scenarios (e.g. an
+        all-zero warm-up window, or the first tick of a simulation before any signal has
+        propagated) should still animate cleanly, even if every frame renders as a
+        single color.
         """
         from matplotlib.animation import FuncAnimation
 
@@ -524,6 +580,7 @@ class TestAnimateChoroplethEdgeCases:
 
         assert isinstance(anim, FuncAnimation)
         plt.close(anim._fig)
+
 
 if __name__ == "__main__":
     pytest.main()

@@ -111,10 +111,12 @@ def choropleth(
 
     Raises:
         RuntimeError: If ``data`` is a path that cannot be read.
-        ValueError: If neither ``column`` nor ``values`` is given, or if ``values`` does
-            not have one entry per row of ``data``.
+        ValueError: If neither ``column`` nor ``values`` is given, if ``values`` does not
+            have one entry per row of ``data``, or if ``log=True`` and any plotted value
+            is ``<= -1`` (``log1p`` is undefined there).
         KeyError: If ``column`` is given (without ``values``) but is not a column of
             ``data``.
+        TypeError: If the resolved plot column is not numeric.
 
     Example:
         ```python
@@ -148,6 +150,17 @@ def choropleth(
     elif column not in gdf.columns:
         numeric = [c for c in gdf.columns if c != gdf.geometry.name]
         raise KeyError(f"Column '{column}' not found. Available columns: {sorted(numeric)}.")
+
+    # Numeric validation — matplotlib will produce an opaque error deep in gdf.plot() if
+    # the resolved column isn't numeric (or, worse, silently render nothing), so fail
+    # cleanly at the API boundary instead.
+    if not np.issubdtype(gdf[column].dtype, np.number):
+        raise TypeError(f"choropleth() requires numeric values for column {column!r}; got dtype {gdf[column].dtype!r}")
+
+    # log1p(x) is real-valued only for x > -1 (log1p(-1) = -inf; log1p(x < -1) is NaN).
+    # Rather than silently producing -inf/NaN in the display, reject at the API boundary.
+    if log and not (gdf[column] > -1).all():
+        raise ValueError("log=True requires all plotted values to be greater than -1 (log1p is undefined otherwise)")
 
     # Optionally log-transform for display (log10(1 + value) tolerates zeros).
     if log:
@@ -262,9 +275,11 @@ def animate_choropleth(
         RuntimeError: If ``data`` is a path that cannot be read, or if an ``.mp4`` /
             ``.webm`` / ``.mov`` output is requested but ``ffmpeg`` is not on PATH
             (message points at the installation steps).
-        ValueError: If ``values_by_frame`` is empty, if any frame's length disagrees with
-            the number of regions in ``data``, if ``frame_titles`` length disagrees with
-            the number of frames, or if ``fps <= 0``.
+        ValueError: If ``values_by_frame`` cannot be coerced to a rectangular numeric
+            array (ragged input, non-numeric elements), is empty, has a per-frame length
+            that disagrees with the number of regions in ``data``, if ``frame_titles``
+            length disagrees with the number of frames, if ``fps <= 0``, or if
+            ``log=True`` and any frame value is ``<= -1`` (``log1p`` is undefined there).
 
     Example:
         ```python
@@ -290,8 +305,15 @@ def animate_choropleth(
         except Exception as e:
             raise RuntimeError(f"Failed to read vector data from {data}: {e}") from e
 
-    # Normalize frames to a (nframes, nregions) 2-D NumPy array.
-    frames = np.asarray(values_by_frame)
+    # Normalize frames to a (nframes, nregions) 2-D NumPy array. ``dtype=float`` catches
+    # both ragged inputs (``[[1, 2, 3], [4, 5]]``) and non-numeric elements
+    # (``[["a", "b"], ...]``) at the coercion step and lets us re-raise them as clean
+    # API errors instead of leaking NumPy's "setting an array element with a sequence"
+    # or "ufunc did not contain a loop" messages up to the caller.
+    try:
+        frames = np.asarray(values_by_frame, dtype=float)
+    except (ValueError, TypeError) as e:
+        raise ValueError("values_by_frame must be a rectangular numeric array of shape (nframes, nregions)") from e
     if frames.ndim == 1:
         # A caller who hands in a single 1-D vector meant a one-frame animation.
         frames = frames[np.newaxis, :]
@@ -311,6 +333,10 @@ def animate_choropleth(
     # either reject it downstream or silently emit garbage. Reject at the API boundary.
     if fps <= 0:
         raise ValueError(f"fps must be a positive integer, got {fps}")
+    # log1p(x) is real-valued only for x > -1; reject invalid inputs cleanly rather than
+    # populating the display frames with -inf / NaN.
+    if log and not np.all(frames > -1):
+        raise ValueError("log=True requires all plotted values to be greater than -1 (log1p is undefined otherwise)")
 
     # Compute the shared color scale (post-log-transform if requested) so every frame
     # renders on the same numeric range and colors are directly comparable across frames.

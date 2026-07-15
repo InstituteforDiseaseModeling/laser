@@ -4,6 +4,22 @@ Changelog
 Unreleased
 ----------
 
+* ``laser.core.plotting`` input-validation hardening. Both ``choropleth`` and
+  ``animate_choropleth`` now reject bad inputs at the API boundary with clean
+  ``ValueError`` / ``TypeError`` messages rather than leaking low-level NumPy,
+  matplotlib, or geopandas errors:
+
+  - Non-numeric ``values`` / ``column`` / ``values_by_frame`` → ``TypeError`` /
+    ``ValueError`` naming the offending dtype, instead of a downstream matplotlib
+    or NumPy ``ufunc`` error.
+  - Ragged ``values_by_frame`` (e.g. ``[[1, 2, 3], [4, 5]]``) → clean
+    ``ValueError("values_by_frame must be a rectangular numeric array ...")``
+    instead of NumPy's ``"setting an array element with a sequence"`` internals
+    surfacing up.
+  - ``log=True`` with any value ``<= -1`` → ``ValueError("log=True requires all
+    plotted values to be greater than -1")`` instead of silently plotting
+    ``-inf`` / ``NaN`` (``log1p`` is undefined there).
+
 * Add ``laser.core.plotting`` — a new dependency-light module for region-keyed
   spatial plotting, ported into ``laser.core`` from an upstream project. Two
   helpers, both operating on a ``GeoDataFrame`` (or a path to a vector file
